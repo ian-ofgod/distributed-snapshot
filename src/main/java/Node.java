@@ -5,12 +5,16 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
 import java.util.Objects;
 
+//the methods exposed in this class are the ones that a future application will use
+//they are the exposed function of the library
 public class Node extends RemoteImplementation {
 
+    //store remote references to the linked nodes
     HashMap<IpPort,RemoteInterface> remoteInterfaces = new HashMap<>();
 
     public Node(){}
 
+    //start the registry in the current node and bind our methods to the registry
     public void init(int id, int rmi_port){
         try {
             RemoteImplementation obj = new RemoteImplementation();
@@ -24,6 +28,7 @@ public class Node extends RemoteImplementation {
         }
     }
 
+    //add a new link, so look for his registry and save his reference
     public void addConnection(String host, int rmi_port) {
         try {
             Registry registry = LocateRegistry.getRegistry(host, rmi_port);
@@ -36,6 +41,7 @@ public class Node extends RemoteImplementation {
         }
     }
 
+    //send a message to a specific node using the saved remote object
     public void send(String host, int rmi_port, Message message){
         try {
             RemoteInterface remoteNode = remoteInterfaces.get(new IpPort(host, rmi_port));
