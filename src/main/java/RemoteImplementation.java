@@ -12,6 +12,8 @@ public class RemoteImplementation implements RemoteInterface {
     //this is the provided implementation of the class Observer
     private Observer observer;
 
+    //useful to debug
+    int id;
 
     @Override
     public <MessageType> void receiveMessage(MessageType message) throws RemoteException {
@@ -53,7 +55,7 @@ public class RemoteImplementation implements RemoteInterface {
 
 
             //for debug purposes
-            System.out.println("RECEIVED MARKER => initiator: "+((MarkerMessage) message).initiatorIp+":"+((MarkerMessage) message).initiatorPort);
+            System.out.println(id+") RECEIVED MARKER => initiator: "+((MarkerMessage) message).initiatorIp+":"+((MarkerMessage) message).initiatorPort);
         }
         else{
             if(status==NodeStatus.IDLE){ //no marker received

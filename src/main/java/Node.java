@@ -5,13 +5,15 @@ import java.rmi.server.UnicastRemoteObject;
 
 public class Node extends RemoteImplementation {
 
+
     /**
      * This method starts the registry in the current host and bind the methods specified in the RemoteInterface to it.
      * It also populate the ip_address with the external ip address of the current host.
      * @param port the port that will be associated to the rmi registry
      */
-    public Node(Observer observer, int port){
+    public Node(Observer observer, int port, int id){
         setObserver(observer);
+        this.id=id;
 
         try {
             RemoteImplementation obj = new RemoteImplementation();
@@ -77,8 +79,8 @@ public class Node extends RemoteImplementation {
         BasicApp1 basicApp1 = new BasicApp1();
         BasicApp2 basicApp2 = new BasicApp2();
 
-        Node node1 = new Node(basicApp1, 1111);
-        Node node2 = new Node(basicApp2, 1112);
+        Node node1 = new Node( basicApp1, 1111,1);
+        Node node2 = new Node(basicApp2, 1112,2 );
 
         node1.addConnection("127.0.0.1", 1112);
         node2.addConnection("127.0.0.1", 1111);
