@@ -1,3 +1,5 @@
+package library;
+
 public class BasicApp2 implements Observer {
     @Override
     public void notify(Object o) {

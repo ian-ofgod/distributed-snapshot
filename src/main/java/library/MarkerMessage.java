@@ -1,3 +1,5 @@
+package library;
+
 import java.io.Serializable;
 
 public class MarkerMessage implements Serializable {
