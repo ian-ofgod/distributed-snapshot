@@ -9,17 +9,16 @@ import java.rmi.server.UnicastRemoteObject;
 
 public class Node extends RemoteImplementation {
 
-    int port;
-
-    /**
+     /**
      * This method starts the registry in the current host and bind the methods specified in the RemoteInterface to it.
      * It also populate the ip_address with the external ip address of the current host.
      * @param port the port that will be associated to the rmi registry
      */
-    public Node(Observer observer, int port, int id){
-        setObserver(observer);
+    public Node(AppConnector appConnector, String ip_address, int port, int id){
+        setAppConnector(appConnector);
         this.id=id;
         this.port=port;
+        this.ip_address=ip_address;
 
         try {
             RemoteInterface stub = (RemoteInterface) UnicastRemoteObject.exportObject(this, 0);
@@ -43,7 +42,7 @@ public class Node extends RemoteImplementation {
             RemoteInterface remoteInterface = (RemoteInterface) registry.lookup("RemoteInterface");
             remoteNodes.add(new RemoteNode(ip_address,port,remoteInterface));
 
-            //add the connection on the remote node
+            //TODO: addMeBack
             //remoteInterface.addMeBack(InetAddress.getLocalHost().getHostAddress(), this.port);
         }
         catch (Exception e) {
@@ -61,7 +60,7 @@ public class Node extends RemoteImplementation {
      */
     public <MessageType> void sendMessage(String ip_address, int port, MessageType message){
         try {
-            getRemoteInterface(ip_address, port).receiveMessage(message);
+            getRemoteInterface(ip_address, port).receiveMessage(this.ip_address, this.port,message);
         }
         catch (Exception e) {
             e.printStackTrace();
@@ -69,7 +68,7 @@ public class Node extends RemoteImplementation {
     }
 
     public <StateType> void updateState(StateType state){
-        //TODO: save current state to disk
+        //TODO: save current state to a variable (probably variable in the remoteImplementation)
     }
 
     public void initiateSnapshot(){
@@ -78,22 +77,26 @@ public class Node extends RemoteImplementation {
 
         for (RemoteNode remoteNode : remoteNodes){
             try{
+                System.out.println(ip_address + ":" + port + " | Sending MARKER to: "+remoteNode.getIp_address()+":"+remoteNode.getPort());
                 //TODO: come si decide ID del marker? numero randomico grosso? dovrebbero fare agree sul successivo markerId, ma non credo sia necessario
-                remoteNode.getMarkerIdsSent().add(snapshotId);
-                remoteNode.getRemoteInterface().receiveMessage(new MarkerMessage("fake_ip",-1,snapshotId));
+                remoteNode.getSnapshotIdsSent().add(snapshotId);
+                remoteNode.getRemoteInterface().receiveMarker(this.ip_address, this.port, this.ip_address, this.port, 1);
             }catch (Exception e){
                 e.printStackTrace();
             }
         }
     }
 
+    //TODO: method remove link
+    
+    //TODO: method stop library (rmiRegistry)
 
     public static void main(String[] args) throws RemoteException, UnknownHostException {
         BasicApp1 basicApp1 = new BasicApp1();
         BasicApp2 basicApp2 = new BasicApp2();
 
-        Node node1 = new Node( basicApp1, 1111,1);
-        Node node2 = new Node(basicApp2, 1112,2 );
+        Node node1 = new Node(basicApp1, InetAddress.getLocalHost().getHostAddress(), 1111,1);
+        Node node2 = new Node(basicApp2,InetAddress.getLocalHost().getHostAddress(), 1112,2 );
 
         node1.addConnection(InetAddress.getLocalHost().getHostAddress(), 1112);
         node2.addConnection(InetAddress.getLocalHost().getHostAddress(), 1111);

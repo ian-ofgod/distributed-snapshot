@@ -1,14 +1,14 @@
 package oilwells;
 
 import library.Node;
-import library.Observer;
+import library.AppConnector;
 
 import java.util.ArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-public class OilWell implements Observer {
+public class OilWell implements AppConnector {
 
     private String hostname;
     private int port;
@@ -50,7 +50,7 @@ public class OilWell implements Observer {
     }
 
     @Override
-    public void notify(Object o) {
+    public void handleIncomingMessage(Object o) {
         //TODO: on message receive
     }
 

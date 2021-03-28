@@ -7,13 +7,8 @@ public class RemoteNode {
     String ip_address;
     int port;
     RemoteInterface remoteInterface; //the remote interface of the node
-    ArrayList<Integer> markerIdsReceived = new ArrayList<>(); //holds the marker.id received from this remoteNode (for multiple concurrent distributed snapshots)
-
-    public ArrayList<Integer> getMarkerIdsSent() {
-        return markerIdsSent;
-    }
-
-    ArrayList<Integer> markerIdsSent = new ArrayList<>(); //holds the marker.id sent to this remoteNode (for multiple concurrent distributed snapshots)
+    ArrayList<Integer> snapshotIdsReceived = new ArrayList<>(); //holds the marker.id received from this remoteNode (for multiple concurrent distributed snapshots)
+    ArrayList<Integer> snapshotIdsSent = new ArrayList<>(); //holds the marker.id sent to this remoteNode (for multiple concurrent distributed snapshots)
 
 
 
@@ -23,6 +18,10 @@ public class RemoteNode {
         this.remoteInterface = remoteInterface;
     }
 
+
+    public ArrayList<Integer> getSnapshotIdsSent() {
+        return snapshotIdsSent;
+    }
 
     @Override
     public boolean equals(Object o) {
@@ -46,8 +45,8 @@ public class RemoteNode {
     }
 
 
-    public ArrayList<Integer> getMarkerIdsReceived() {
-        return markerIdsReceived;
+    public ArrayList<Integer> getSnapshotIdsReceived() {
+        return snapshotIdsReceived;
     }
 
 
