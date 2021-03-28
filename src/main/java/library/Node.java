@@ -9,6 +9,7 @@ import java.rmi.server.UnicastRemoteObject;
 
 public class Node extends RemoteImplementation {
 
+    int port;
 
     /**
      * This method starts the registry in the current host and bind the methods specified in the RemoteInterface to it.
@@ -18,6 +19,7 @@ public class Node extends RemoteImplementation {
     public Node(Observer observer, int port, int id){
         setObserver(observer);
         this.id=id;
+        this.port=port;
 
         try {
             RemoteInterface stub = (RemoteInterface) UnicastRemoteObject.exportObject(this, 0);
@@ -40,6 +42,9 @@ public class Node extends RemoteImplementation {
             Registry registry = LocateRegistry.getRegistry(ip_address, port);
             RemoteInterface remoteInterface = (RemoteInterface) registry.lookup("RemoteInterface");
             remoteNodes.add(new RemoteNode(ip_address,port,remoteInterface));
+
+            //add the connection on the remote node
+            //remoteInterface.addMeBack(InetAddress.getLocalHost().getHostAddress(), this.port);
         }
         catch (Exception e) {
             e.printStackTrace();

@@ -1,6 +1,8 @@
 package library;
 
 import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 import java.rmi.server.RemoteServer;
 import java.util.ArrayList;
 
@@ -135,6 +137,20 @@ public class RemoteImplementation implements RemoteInterface {
 
         }
     }
+
+    @Override
+    public void addMeBack(String ip_address, int port){
+        //TODO: NOT WORKING
+        try {
+            Registry registry = LocateRegistry.getRegistry(ip_address, port);
+            RemoteInterface remoteInterface = (RemoteInterface) registry.lookup("RemoteInterface");
+            remoteNodes.add(new RemoteNode(ip_address,port,remoteInterface));
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 
     Observer getObserver(){
         return observer;
