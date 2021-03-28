@@ -30,8 +30,8 @@ public class Storage {
         String fileName = buildFileName(node.getId());
 
         try (PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter(fileName, true)))) {
-            //TODO: get the snapshot
-            Snapshot snapshot = node.getSnapshot();
+            //TODO: get the snapshot from Node
+            Snapshot snapshot = new Snapshot(); // node.getSnapshot();
             String rowToAdd = buildRow(snapshot);
             writer.println(rowToAdd);
             System.out.println("Snapshot is saved.");

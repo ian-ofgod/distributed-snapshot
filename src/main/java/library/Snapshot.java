@@ -13,6 +13,12 @@ public class Snapshot {
     private int snapshotIdentifier;
     private final Set<Integer> markersNotReceived = new HashSet<>();
 
+
+    //TODO: this constructor needs to be removed once we get the Snapshot from nod
+    public Snapshot() {
+
+    }
+
     public Snapshot(int currentAmount, int incomingAmount, int snapshotIdentifier) {
         this.currentAmount = currentAmount;
         this.incomingAmount = incomingAmount;
