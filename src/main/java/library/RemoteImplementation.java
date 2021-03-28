@@ -14,6 +14,8 @@ public class RemoteImplementation implements RemoteInterface {
     //this is the provided implementation of the class Observer
     private Observer observer;
 
+
+
     //useful to debug
     int id;
 
@@ -84,4 +86,9 @@ public class RemoteImplementation implements RemoteInterface {
     void setObserver(Observer o){
         this.observer=o;
     }
+
+    public int getId() {
+        return id;
+    }
+
 } 
