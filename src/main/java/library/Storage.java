@@ -59,8 +59,7 @@ public class Storage {
     }
 
     private static String buildRow(Snapshot snapshot) {
-        // TODO: need to identify the node
-        String row = snapshot.getCurrentAmount() + SEP + snapshot.getCurrentAmount();
+        String row =  snapshot.getSnapshotIdentifier() + SEP + snapshot.getCurrentAmount() + SEP + snapshot.getCurrentAmount();
         return row;
     }
 
