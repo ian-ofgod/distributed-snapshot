@@ -1,5 +1,7 @@
 package library;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.rmi.RemoteException;
 import java.rmi.registry.Registry;
 import java.rmi.registry.LocateRegistry;
@@ -18,8 +20,7 @@ public class Node extends RemoteImplementation {
         this.id=id;
 
         try {
-            RemoteImplementation obj = new RemoteImplementation();
-            RemoteInterface stub = (RemoteInterface) UnicastRemoteObject.exportObject(obj, 0);
+            RemoteInterface stub = (RemoteInterface) UnicastRemoteObject.exportObject(this, 0);
             Registry registry = LocateRegistry.createRegistry(port);
             registry.bind("RemoteInterface", stub);
         } catch (Exception e) {
@@ -67,9 +68,14 @@ public class Node extends RemoteImplementation {
     }
 
     public void initiateSnapshot(){
+        int snapshotId=1;
+        runningSnapshotIds.add(snapshotId);
+
         for (RemoteNode remoteNode : remoteNodes){
             try{
-                remoteNode.getRemoteInterface().receiveMessage(new MarkerMessage("fake_ip",-1));
+                //TODO: come si decide ID del marker? numero randomico grosso? dovrebbero fare agree sul successivo markerId, ma non credo sia necessario
+                remoteNode.getMarkerIdsSent().add(snapshotId);
+                remoteNode.getRemoteInterface().receiveMessage(new MarkerMessage("fake_ip",-1,snapshotId));
             }catch (Exception e){
                 e.printStackTrace();
             }
@@ -77,18 +83,18 @@ public class Node extends RemoteImplementation {
     }
 
 
-    public static void main(String[] args) throws RemoteException {
+    public static void main(String[] args) throws RemoteException, UnknownHostException {
         BasicApp1 basicApp1 = new BasicApp1();
         BasicApp2 basicApp2 = new BasicApp2();
 
         Node node1 = new Node( basicApp1, 1111,1);
         Node node2 = new Node(basicApp2, 1112,2 );
 
-        node1.addConnection("127.0.0.1", 1112);
-        node2.addConnection("127.0.0.1", 1111);
+        node1.addConnection(InetAddress.getLocalHost().getHostAddress(), 1112);
+        node2.addConnection(InetAddress.getLocalHost().getHostAddress(), 1111);
 
-        node1.sendMessage("127.0.0.1", 1112, new Message("Messaggio 1->2 che è stato processato da 2"));
-        node2.sendMessage("127.0.0.1", 1111, new Message("Messaggio 2->1 che è stato processato da 1"));
+        node1.sendMessage(InetAddress.getLocalHost().getHostAddress(), 1112, new Message("Messaggio 1->2 che è stato processato da 2"));
+        node2.sendMessage(InetAddress.getLocalHost().getHostAddress(), 1111, new Message("Messaggio 2->1 che è stato processato da 1"));
 
         node1.initiateSnapshot();
     }
