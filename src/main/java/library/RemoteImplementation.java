@@ -15,6 +15,7 @@ public class RemoteImplementation implements RemoteInterface {
 
     ArrayList<Integer> runningSnapshotIds= new ArrayList<>();
 
+
     //useful to debug
     int id;
 
@@ -140,6 +141,10 @@ public class RemoteImplementation implements RemoteInterface {
     }
     void setObserver(Observer o){
         this.observer=o;
+    }
+
+    public int getId() {
+        return id;
     }
 
 
