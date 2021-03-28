@@ -29,15 +29,12 @@ public class RemoteImplementation implements RemoteInterface {
 
         System.out.println(ip_address + ":" + port + " | RECEIVED MARKER");
         if (!runningSnapshotIds.contains(snapshotId)) {
-            runningSnapshotIds.add(snapshotId);
-        }
-
-        recordSnapshotId(senderIp, senderPort, snapshotId);
-
-        //check if this is the first marker for the provided snapshotID
-        if (checkFirstMarkerById(snapshotId)) {
             System.out.println(ip_address + ":" + port + " | First time receiving a marker");
+            runningSnapshotIds.add(snapshotId);
+            recordSnapshotId(senderIp, senderPort, snapshotId);
             propagateMarker(initiatorIp, initiatorPort, snapshotId);
+        }else{
+            recordSnapshotId(senderIp, senderPort, snapshotId);
         }
 
         if (receivedMarkerFromAllLinks(snapshotId)) { //we have received a marker from all the channels

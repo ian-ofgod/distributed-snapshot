@@ -95,14 +95,22 @@ public class Node extends RemoteImplementation {
         BasicApp1 basicApp1 = new BasicApp1();
         BasicApp2 basicApp2 = new BasicApp2();
 
-        Node node1 = new Node(basicApp1, InetAddress.getLocalHost().getHostAddress(), 1111,1);
-        Node node2 = new Node(basicApp2,InetAddress.getLocalHost().getHostAddress(), 1112,2 );
+        Node node1 = new Node(basicApp1, InetAddress.getLocalHost().getHostAddress(), 11111,1);
+        Node node2 = new Node(basicApp2,InetAddress.getLocalHost().getHostAddress(), 11112,2);
+        Node node3 = new Node(basicApp2,InetAddress.getLocalHost().getHostAddress(), 11113,3);
 
-        node1.addConnection(InetAddress.getLocalHost().getHostAddress(), 1112);
-        node2.addConnection(InetAddress.getLocalHost().getHostAddress(), 1111);
 
-        node1.sendMessage(InetAddress.getLocalHost().getHostAddress(), 1112, new Message("Messaggio 1->2 che è stato processato da 2"));
-        node2.sendMessage(InetAddress.getLocalHost().getHostAddress(), 1111, new Message("Messaggio 2->1 che è stato processato da 1"));
+        node1.addConnection(InetAddress.getLocalHost().getHostAddress(), 11112);
+        node2.addConnection(InetAddress.getLocalHost().getHostAddress(), 11111);
+
+        node1.addConnection(InetAddress.getLocalHost().getHostAddress(), 11113);
+        node3.addConnection(InetAddress.getLocalHost().getHostAddress(), 11111);
+
+        node3.addConnection(InetAddress.getLocalHost().getHostAddress(), 11112);
+        node2.addConnection(InetAddress.getLocalHost().getHostAddress(), 11113);
+
+        node1.sendMessage(InetAddress.getLocalHost().getHostAddress(), 11112, new Message("Messaggio 1->2 che è stato processato da 2"));
+        node2.sendMessage(InetAddress.getLocalHost().getHostAddress(), 11111, new Message("Messaggio 2->1 che è stato processato da 1"));
 
         node1.initiateSnapshot();
     }
