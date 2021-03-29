@@ -5,6 +5,7 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.ArrayList;
+import java.util.Optional;
 
 
 class RemoteImplementation implements RemoteInterface {
@@ -67,6 +68,16 @@ class RemoteImplementation implements RemoteInterface {
        }
     }
 
+
+    @Override
+    public void removeMe(String ip_address, int port) throws RemoteException {
+        if(!this.runningSnapshotIds.isEmpty()) {
+            System.out.println(ip_address+":"+port + " | ERROR: REMOVING DURING SNAPSHOT, ASSUMPTION NOT RESPECTED");
+        }
+        RemoteNode remoteNode = getRemoteNode(ip_address,port);
+        this.remoteNodes.remove(remoteNode);
+    }
+
     private void recordSnapshotId(String senderIp, int senderPort, int snapshotId) {
         RemoteNode remoteNode = getRemoteNode(senderIp,senderPort);
         if(remoteNode!=null) {
@@ -90,7 +101,7 @@ class RemoteImplementation implements RemoteInterface {
         }
     }
 
-    private RemoteNode getRemoteNode(String ip_address, int port){
+    protected RemoteNode getRemoteNode(String ip_address, int port){
         for (RemoteNode remoteNode : remoteNodes) {
             if(remoteNode.ip_address.equals(ip_address) && remoteNode.port==port)
                 return remoteNode;

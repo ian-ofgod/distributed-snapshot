@@ -43,7 +43,12 @@ class BasicApp1 implements AppConnector {
 
     @Override
     public void handleNewConnection(String newConnectionIp, int newConnectionPort) {
-        System.out.println("BASIC APP 1: Connection between me and "+newConnectionIp+":"+newConnectionPort+" was successfully added from remote");
+        System.out.println("BASIC APP 1: Connection between me and "+newConnectionIp+":"+newConnectionPort+" was successfully ADDED from remote");
+    }
+
+    @Override
+    public void handleRemoveConnection(String removeConnectionIp, int removeConnectionPort) {
+        System.out.println("BASIC APP 1: Connection between me and "+removeConnectionIp+":"+removeConnectionPort+" was successfully REMOVED from remote");
     }
 }
 
@@ -55,7 +60,12 @@ class BasicApp2 implements AppConnector {
 
     @Override
     public void handleNewConnection(String newConnectionIp, int newConnectionPort) {
-        System.out.println("BASIC APP 2: Connection between me and "+newConnectionIp+":"+newConnectionPort+" was successfully added from remote");
+        System.out.println("BASIC APP 2: Connection between me and "+newConnectionIp+":"+newConnectionPort+" was successfully ADDED from remote");
+    }
+
+    @Override
+    public void handleRemoveConnection(String removeConnectionIp, int removeConnectionPort) {
+        System.out.println("BASIC APP 2: Connection between me and "+removeConnectionIp+":"+removeConnectionPort+" was successfully REMOVED from remote");
     }
 }
 

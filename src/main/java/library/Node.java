@@ -8,6 +8,7 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.Objects;
 
+//TODO: change to static (only at the end of prj)
 public class Node extends RemoteImplementation {
     public Node(AppConnector appConnector, String ip_address, int port){
         setAppConnector(appConnector);
@@ -22,6 +23,20 @@ public class Node extends RemoteImplementation {
             e.printStackTrace();
         }
 
+    }
+
+    public void init(String yourIp, int rmiRegistryPort,AppConnector appConnector){
+        this.ip_address=yourIp;
+        this.port=rmiRegistryPort;
+        this.appConnector=appConnector;
+
+        try {
+            RemoteInterface stub = (RemoteInterface) UnicastRemoteObject.exportObject(this, 0);
+            Registry registry = LocateRegistry.createRegistry(port);
+            registry.bind("RemoteInterface", stub);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -41,7 +56,6 @@ public class Node extends RemoteImplementation {
             e.printStackTrace();
         }
     }
-
 
     /**
      * This method is used to send a message to a specific node by using rmi
@@ -79,15 +93,31 @@ public class Node extends RemoteImplementation {
         }
     }
 
-    //TODO: method remove link
+    public void removeConnection(String ip_address, int port) {
+        //TODO: test
+        //since no change in the network topology is allowed during a snapshot
+        //this function WONT BE CALLED if any snapshot is running THIS IS AN ASSUMPTION FROM THE TEXT
+        if(!this.runningSnapshotIds.isEmpty()) {
+            System.out.println(ip_address+":"+port + " | ERROR: REMOVING DURING SNAPSHOT, ASSUMPTION NOT RESPECTED");
+        }
+
+        RemoteNode remoteNode = getRemoteNode(ip_address,port);
+        try {
+            remoteNode.remoteInterface.removeMe(this.ip_address, this.port);
+        }catch (RemoteException e){
+            e.printStackTrace();
+        }
+        this.remoteNodes.remove(remoteNode);
+    }
     
-    //TODO: method stop library (rmiRegistry)
+    public void stop(){
+        //TODO: method stop library (rmiRegistry)
+    }
 
 
     /*
         COMMODITY FUNCTIONS
     */
-
     private RemoteInterface getRemoteInterface(String ip_address, int port){
         int index= this.remoteNodes.indexOf(new RemoteNode(ip_address,port,null));
         return this.remoteNodes.get(index).remoteInterface;
