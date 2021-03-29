@@ -1,15 +1,19 @@
 package library;
 
+import java.rmi.AccessException;
+import java.rmi.NoSuchObjectException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.Registry;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Objects;
 
 //TODO: change to static (only at the end of prj)
 public class Node extends RemoteImplementation {
+
     public Node(AppConnector appConnector, String ip_address, int port){
         setAppConnector(appConnector);
         this.port=port;
@@ -110,8 +114,16 @@ public class Node extends RemoteImplementation {
         this.remoteNodes.remove(remoteNode);
     }
     
-    public void stop(){
-        //TODO: method stop library (rmiRegistry)
+    public void stop() {
+        try {
+            //TODO: remove the stop of the whole jvm
+            UnicastRemoteObject.unexportObject(this, true);
+            LocateRegistry.getRegistry(this.port).unbind("RemoteInterface");
+            //SHOULD STOP HERE!!
+            System.exit(0);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
 

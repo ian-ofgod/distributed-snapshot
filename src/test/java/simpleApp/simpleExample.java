@@ -32,6 +32,14 @@ public class simpleExample {
         node2.sendMessage(InetAddress.getLocalHost().getHostAddress(), 11111, new Message("Messaggio 2->1 che è stato processato da 1"));
 
         node1.initiateSnapshot();
+
+        System.out.println("Stopping node1");
+        node1.stop();
+        System.out.println("Stopped node1");
+
+        System.out.println("Stopping node2");
+        node2.stop();
+        System.out.println("Stopped node2");
     }
 }
 
