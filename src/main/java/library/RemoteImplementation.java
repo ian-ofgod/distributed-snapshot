@@ -65,25 +65,19 @@ public class RemoteImplementation implements RemoteInterface {
         //TODO: NOT WORKING
        //forse funziona ho sistemato il fatto che non faceva throws correttamente, ma lascio commentato per ora
 
-       /* try {
+       try {
             Registry registry = LocateRegistry.getRegistry(ip_address, port);
             RemoteInterface remoteInterface = (RemoteInterface) registry.lookup("RemoteInterface");
             remoteNodes.add(new RemoteNode(ip_address, port, remoteInterface));
+            appConnector.handleNewConnection(ip_address,port);
         } catch (Exception e) {
             e.printStackTrace();
-        }*/
-
-    }
-
-
-    AppConnector getObserver() {
-        return appConnector;
+        }
     }
 
     void setAppConnector(AppConnector o) {
         this.appConnector = o;
     }
-
 
     private void recordSnapshotId(String senderIp, int senderPort, int snapshotId) {
         RemoteNode remoteNode = getRemoteNode(senderIp,senderPort);

@@ -1,5 +1,6 @@
 package library;
 
+import java.net.InetAddress;
 import java.rmi.registry.Registry;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.server.UnicastRemoteObject;
@@ -42,7 +43,7 @@ public class Node extends RemoteImplementation {
             getRemoteNodes().add(new RemoteNode(ip_address,port,remoteInterface));
 
             //TODO: addMeBack
-            //remoteInterface.addMeBack(InetAddress.getLocalHost().getHostAddress(), this.port);
+            remoteInterface.addMeBack(this.ip_address, this.port);
         }
         catch (Exception e) {
             e.printStackTrace();
