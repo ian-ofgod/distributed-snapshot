@@ -8,26 +8,24 @@ import java.util.ArrayList;
 
 public class RemoteImplementation implements RemoteInterface {
     //info on the current node
-    String ip_address;
-    int port;
+    protected String ip_address;
+    protected int port;
 
     //store remote references to the linked nodes
-    ArrayList<RemoteNode> remoteNodes = new ArrayList<>();
+    private ArrayList<RemoteNode> remoteNodes = new ArrayList<>();
 
     //this is the provided implementation of the class Observer
     private AppConnector appConnector;
 
     //list of the ids of running snapshots
-    ArrayList<Integer> runningSnapshotIds = new ArrayList<>();
+    private ArrayList<Integer> runningSnapshotIds = new ArrayList<>();
 
-    //TODO: remove in future
-    int id;
 
     //TODO: separare in due funzioni markerMessage e receiveMessage
     @Override
     public void receiveMarker(String senderIp, int senderPort, String initiatorIp, int initiatorPort, int snapshotId) throws RemoteException {
 
-        System.out.println(ip_address + ":" + port + " | RECEIVED MARKER");
+        System.out.println(ip_address + ":" + port + " | RECEIVED MARKER from: "+senderIp+":"+senderPort);
         if (!runningSnapshotIds.contains(snapshotId)) {
             System.out.println(ip_address + ":" + port + " | First time receiving a marker");
             runningSnapshotIds.add(snapshotId);
@@ -86,22 +84,6 @@ public class RemoteImplementation implements RemoteInterface {
         this.appConnector = o;
     }
 
-    public int getId() {
-        return id;
-    }
-
-    //check if this is the first marker for the provided snapshotID
-    private boolean checkFirstMarkerById(int snapshotId) {
-        boolean first_time = true;
-        for (RemoteNode remoteNode : remoteNodes) {
-            if (remoteNode.getSnapshotIdsReceived().contains(snapshotId)) {
-                //this is the case where there is already a running snapshot with that id so we just have to check if we have received a marker from all the nodes
-                first_time = false;
-                break;
-            }
-        }
-        return first_time;
-    }
 
     private void recordSnapshotId(String senderIp, int senderPort, int snapshotId) {
         RemoteNode remoteNode = getRemoteNode(senderIp,senderPort);
@@ -153,6 +135,26 @@ public class RemoteImplementation implements RemoteInterface {
             return true;
         }
         return false;
+    }
+
+    public String getIp_address() {
+        return ip_address;
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    public ArrayList<RemoteNode> getRemoteNodes() {
+        return remoteNodes;
+    }
+
+    public AppConnector getAppConnector() {
+        return appConnector;
+    }
+
+    public ArrayList<Integer> getRunningSnapshotIds() {
+        return runningSnapshotIds;
     }
 
 

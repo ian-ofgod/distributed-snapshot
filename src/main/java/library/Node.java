@@ -1,22 +1,21 @@
 package library;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.rmi.RemoteException;
 import java.rmi.registry.Registry;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.ArrayList;
+import java.util.Objects;
 
 public class Node extends RemoteImplementation {
 
-     /**
-     * This method starts the registry in the current host and bind the methods specified in the RemoteInterface to it.
-     * It also populate the ip_address with the external ip address of the current host.
-     * @param port the port that will be associated to the rmi registry
+    /**
+     *
+     * @param appConnector
+     * @param ip_address
+     * @param port
      */
-    public Node(AppConnector appConnector, String ip_address, int port, int id){
+    public Node(AppConnector appConnector, String ip_address, int port){
         setAppConnector(appConnector);
-        this.id=id;
         this.port=port;
         this.ip_address=ip_address;
 
@@ -40,7 +39,7 @@ public class Node extends RemoteImplementation {
         try {
             Registry registry = LocateRegistry.getRegistry(ip_address, port);
             RemoteInterface remoteInterface = (RemoteInterface) registry.lookup("RemoteInterface");
-            remoteNodes.add(new RemoteNode(ip_address,port,remoteInterface));
+            getRemoteNodes().add(new RemoteNode(ip_address,port,remoteInterface));
 
             //TODO: addMeBack
             //remoteInterface.addMeBack(InetAddress.getLocalHost().getHostAddress(), this.port);
@@ -60,7 +59,7 @@ public class Node extends RemoteImplementation {
      */
     public <MessageType> void sendMessage(String ip_address, int port, MessageType message){
         try {
-            getRemoteInterface(ip_address, port).receiveMessage(this.ip_address, this.port,message);
+            getRemoteInterface(ip_address, port).receiveMessage(this.getIp_address(), this.getPort(),message);
         }
         catch (Exception e) {
             e.printStackTrace();
@@ -73,14 +72,14 @@ public class Node extends RemoteImplementation {
 
     public void initiateSnapshot(){
         int snapshotId=1;
-        runningSnapshotIds.add(snapshotId);
+        this.getRunningSnapshotIds().add(snapshotId);
 
-        for (RemoteNode remoteNode : remoteNodes){
+        for (RemoteNode remoteNode : this.getRemoteNodes()){
             try{
-                System.out.println(ip_address + ":" + port + " | Sending MARKER to: "+remoteNode.getIp_address()+":"+remoteNode.getPort());
+                System.out.println(this.getIp_address() + ":" + this.getPort() + " | Sending MARKER to: "+remoteNode.getIp_address()+":"+remoteNode.getPort());
                 //TODO: come si decide ID del marker? numero randomico grosso? dovrebbero fare agree sul successivo markerId, ma non credo sia necessario
                 remoteNode.getSnapshotIdsSent().add(snapshotId);
-                remoteNode.getRemoteInterface().receiveMarker(this.ip_address, this.port, this.ip_address, this.port, 1);
+                remoteNode.getRemoteInterface().receiveMarker(this.getIp_address(), this.getPort(), this.getIp_address(), this.getPort(), 1);
             }catch (Exception e){
                 e.printStackTrace();
             }
@@ -91,38 +90,59 @@ public class Node extends RemoteImplementation {
     
     //TODO: method stop library (rmiRegistry)
 
-    public static void main(String[] args) throws RemoteException, UnknownHostException {
-        BasicApp1 basicApp1 = new BasicApp1();
-        BasicApp2 basicApp2 = new BasicApp2();
-
-        Node node1 = new Node(basicApp1, InetAddress.getLocalHost().getHostAddress(), 11111,1);
-        Node node2 = new Node(basicApp2,InetAddress.getLocalHost().getHostAddress(), 11112,2);
-        Node node3 = new Node(basicApp2,InetAddress.getLocalHost().getHostAddress(), 11113,3);
-
-
-        node1.addConnection(InetAddress.getLocalHost().getHostAddress(), 11112);
-        node2.addConnection(InetAddress.getLocalHost().getHostAddress(), 11111);
-
-        node1.addConnection(InetAddress.getLocalHost().getHostAddress(), 11113);
-        node3.addConnection(InetAddress.getLocalHost().getHostAddress(), 11111);
-
-        node3.addConnection(InetAddress.getLocalHost().getHostAddress(), 11112);
-        node2.addConnection(InetAddress.getLocalHost().getHostAddress(), 11113);
-
-        node1.sendMessage(InetAddress.getLocalHost().getHostAddress(), 11112, new Message("Messaggio 1->2 che è stato processato da 2"));
-        node2.sendMessage(InetAddress.getLocalHost().getHostAddress(), 11111, new Message("Messaggio 2->1 che è stato processato da 1"));
-
-        node1.initiateSnapshot();
-    }
-
 
     /*
         COMMODITY FUNCTIONS
     */
 
     private RemoteInterface getRemoteInterface(String ip_address, int port){
-        int index= remoteNodes.indexOf(new RemoteNode(ip_address,port,null));
-        return remoteNodes.get(index).getRemoteInterface();
+        int index= getRemoteNodes().indexOf(new RemoteNode(ip_address,port,null));
+        return getRemoteNodes().get(index).getRemoteInterface();
     }
+
+}
+
+class RemoteNode {
+    String ip_address;
+    int port;
+    RemoteInterface remoteInterface; //the remote interface of the node
+    ArrayList<Integer> snapshotIdsReceived = new ArrayList<>(); //holds the marker.id received from this remoteNode (for multiple concurrent distributed snapshots)
+    ArrayList<Integer> snapshotIdsSent = new ArrayList<>(); //holds the marker.id sent to this remoteNode (for multiple concurrent distributed snapshots)
+
+    public RemoteNode(String ip_address, int port, RemoteInterface remoteInterface) {
+        this.ip_address = ip_address;
+        this.port = port;
+        this.remoteInterface = remoteInterface;
+    }
+
+    public ArrayList<Integer> getSnapshotIdsSent() {
+        return snapshotIdsSent;
+    }
+    public String getIp_address() {
+        return ip_address;
+    }
+    public int getPort() {
+        return port;
+    }
+    public ArrayList<Integer> getSnapshotIdsReceived() {
+        return snapshotIdsReceived;
+    }
+    public RemoteInterface getRemoteInterface() {
+        return remoteInterface;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        RemoteNode that = (RemoteNode) o;
+        return port == that.port && Objects.equals(ip_address, that.ip_address);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(ip_address, port);
+    }
+
 
 }

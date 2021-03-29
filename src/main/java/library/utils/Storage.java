@@ -1,4 +1,6 @@
-package library;
+package library.utils;
+
+import library.Node;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -27,7 +29,7 @@ public class Storage {
     }
 
     public static void writeFile( Node node) {
-        String fileName = buildFileName(node.getId());
+        String fileName = buildFileName(node.getIp_address(),node.getPort());
 
         try (PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter(fileName, true)))) {
             //TODO: get the snapshot from Node
@@ -42,9 +44,9 @@ public class Storage {
 
 
 
-    public static void deleteFile(int id) {
+    public static void deleteFile(String ip, int port) {
         try {
-            Path path = Paths.get(buildFileName(id));
+            Path path = Paths.get(buildFileName(ip, port));
             if (Files.exists(path)) {
                 Files.delete(path);
             }
@@ -53,8 +55,8 @@ public class Storage {
         }
     }
 
-    private static String buildFileName(int id) {
-        String fileName = FOLDER + SLASH + id + EXTENSION;
+    private static String buildFileName(String ip, int port) {
+        String fileName = FOLDER + SLASH + ip+"_"+port + EXTENSION;
         return fileName;
     }
 
