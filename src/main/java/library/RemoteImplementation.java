@@ -1,24 +1,25 @@
 package library;
 
+import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.ArrayList;
 
 
-public class RemoteImplementation implements RemoteInterface {
+class RemoteImplementation implements RemoteInterface {
     //info on the current node
     protected String ip_address;
     protected int port;
 
     //store remote references to the linked nodes
-    private ArrayList<RemoteNode> remoteNodes = new ArrayList<>();
+    protected ArrayList<RemoteNode> remoteNodes = new ArrayList<>();
 
     //this is the provided implementation of the class Observer
-    private AppConnector appConnector;
+    protected AppConnector appConnector;
 
     //list of the ids of running snapshots
-    private ArrayList<Integer> runningSnapshotIds = new ArrayList<>();
+    protected ArrayList<Integer> runningSnapshotIds = new ArrayList<>();
 
 
     //TODO: separare in due funzioni markerMessage e receiveMessage
@@ -46,47 +47,34 @@ public class RemoteImplementation implements RemoteInterface {
         //for debug purposes
         System.out.println(ip_address + ":" + port + " | Received a message from remoteNode: " + senderIp + ":" + senderPort);
 
-        if (runningSnapshotIds.isEmpty()) { //no marker received
-            //TODO: normal passing of the messages to the real application with the observer pattern
-            appConnector.handleIncomingMessage(senderIp, senderPort,message);
-        } else if (!runningSnapshotIds.isEmpty()) { //snapshot running, marker received
-            //TODO: we are running a snapshot and the current node has already received the marker so we have to save the current received message including the sender
-                /*
-                    1) get who sent the message
-                    2) add the message and the sender to the local snapshot
-                 */
-            appConnector.handleIncomingMessage(senderIp, senderPort, message);
+        if (!runningSnapshotIds.isEmpty()) { //snapshot running, marker received
+            //TODO: save message into all the running snapshots
         }
+        appConnector.handleIncomingMessage(senderIp, senderPort, message);
+
     }
 
 
     @Override
     public void addMeBack(String ip_address, int port) throws RemoteException{
-        //TODO: NOT WORKING
-       //forse funziona ho sistemato il fatto che non faceva throws correttamente, ma lascio commentato per ora
-
        try {
             Registry registry = LocateRegistry.getRegistry(ip_address, port);
             RemoteInterface remoteInterface = (RemoteInterface) registry.lookup("RemoteInterface");
             remoteNodes.add(new RemoteNode(ip_address, port, remoteInterface));
             appConnector.handleNewConnection(ip_address,port);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    void setAppConnector(AppConnector o) {
-        this.appConnector = o;
+        } catch (RemoteException | NotBoundException e) {
+           e.printStackTrace();
+       }
     }
 
     private void recordSnapshotId(String senderIp, int senderPort, int snapshotId) {
         RemoteNode remoteNode = getRemoteNode(senderIp,senderPort);
         if(remoteNode!=null) {
-            if(remoteNode.getSnapshotIdsReceived().contains(snapshotId)){
+            if(remoteNode.snapshotIdsReceived.contains(snapshotId)){
                 System.out.println(ip_address+":"+port + " | ERROR: received multiple marker (same id) for the same link");
             }else {
                 System.out.println(ip_address+":"+port + " | Added markerId for the remote node who called");
-                remoteNode.getSnapshotIdsReceived().add(snapshotId);
+                remoteNode.snapshotIdsReceived.add(snapshotId);
             }
         }
     }
@@ -95,14 +83,8 @@ public class RemoteImplementation implements RemoteInterface {
     private void propagateMarker(String initiatorIp, int initiatorPort, int snapshotId) {
         for (RemoteNode remoteNode : remoteNodes) {
             try {
-                if (!remoteNode.getSnapshotIdsSent().contains(snapshotId)) {
-                    System.out.println(ip_address+":"+port + " | Sending marker");
-                    remoteNode.getSnapshotIdsSent().add(snapshotId);
-                    remoteNode.getRemoteInterface().receiveMarker(this.ip_address, this.port, initiatorIp, initiatorPort, snapshotId);
-                } else {
-                    System.out.println(ip_address+":"+port + " | Received a marker from a node where i have already sent the marker");
-                }
-            } catch (Exception e) {
+                remoteNode.remoteInterface.receiveMarker(this.ip_address, this.port, initiatorIp, initiatorPort, snapshotId);
+            } catch (RemoteException e) {
                 e.printStackTrace();
             }
         }
@@ -110,7 +92,7 @@ public class RemoteImplementation implements RemoteInterface {
 
     private RemoteNode getRemoteNode(String ip_address, int port){
         for (RemoteNode remoteNode : remoteNodes) {
-            if(remoteNode.getIp_address().equals(ip_address) && remoteNode.getPort()==port)
+            if(remoteNode.ip_address.equals(ip_address) && remoteNode.port==port)
                 return remoteNode;
         }
         return null;
@@ -120,7 +102,7 @@ public class RemoteImplementation implements RemoteInterface {
     private boolean receivedMarkerFromAllLinks(int snapshotId){
         int numOfLinks = remoteNodes.size();
         for (RemoteNode remoteNode : remoteNodes) {
-            if (remoteNode.getSnapshotIdsReceived().contains(snapshotId)) {
+            if (remoteNode.snapshotIdsReceived.contains(snapshotId)) {
                 numOfLinks--;
             }
         }
@@ -131,25 +113,7 @@ public class RemoteImplementation implements RemoteInterface {
         return false;
     }
 
-    public String getIp_address() {
-        return ip_address;
+    void setAppConnector(AppConnector o) {
+        this.appConnector = o;
     }
-
-    public int getPort() {
-        return port;
-    }
-
-    public ArrayList<RemoteNode> getRemoteNodes() {
-        return remoteNodes;
-    }
-
-    public AppConnector getAppConnector() {
-        return appConnector;
-    }
-
-    public ArrayList<Integer> getRunningSnapshotIds() {
-        return runningSnapshotIds;
-    }
-
-
 }

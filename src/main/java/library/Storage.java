@@ -1,6 +1,4 @@
-package library.utils;
-
-import library.Node;
+package library;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -9,7 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-public class Storage {
+class Storage {
 
     private static final String FOLDER = "storage_folder";
     private static final String SEP = ",";
@@ -29,7 +27,7 @@ public class Storage {
     }
 
     public static void writeFile( Node node) {
-        String fileName = buildFileName(node.getIp_address(),node.getPort());
+        String fileName = buildFileName(node.ip_address, node.port);
 
         try (PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter(fileName, true)))) {
             //TODO: get the snapshot from Node

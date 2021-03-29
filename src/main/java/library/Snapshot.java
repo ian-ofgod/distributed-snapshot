@@ -1,11 +1,11 @@
-package library.utils;
+package library;
 
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class Snapshot {
+class Snapshot {
     // TODO: here we assume that all snapshots have CURRENT and INCOMING fields only
 
     private int currentAmount;

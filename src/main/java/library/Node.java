@@ -1,6 +1,7 @@
 package library;
 
-import java.net.InetAddress;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
 import java.rmi.registry.Registry;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.server.UnicastRemoteObject;
@@ -8,13 +9,6 @@ import java.util.ArrayList;
 import java.util.Objects;
 
 public class Node extends RemoteImplementation {
-
-    /**
-     *
-     * @param appConnector
-     * @param ip_address
-     * @param port
-     */
     public Node(AppConnector appConnector, String ip_address, int port){
         setAppConnector(appConnector);
         this.port=port;
@@ -40,12 +34,10 @@ public class Node extends RemoteImplementation {
         try {
             Registry registry = LocateRegistry.getRegistry(ip_address, port);
             RemoteInterface remoteInterface = (RemoteInterface) registry.lookup("RemoteInterface");
-            getRemoteNodes().add(new RemoteNode(ip_address,port,remoteInterface));
-
-            //TODO: addMeBack
+            this.remoteNodes.add(new RemoteNode(ip_address,port,remoteInterface));
             remoteInterface.addMeBack(this.ip_address, this.port);
         }
-        catch (Exception e) {
+        catch (RemoteException | NotBoundException e) {
             e.printStackTrace();
         }
     }
@@ -60,9 +52,9 @@ public class Node extends RemoteImplementation {
      */
     public <MessageType> void sendMessage(String ip_address, int port, MessageType message){
         try {
-            getRemoteInterface(ip_address, port).receiveMessage(this.getIp_address(), this.getPort(),message);
+            getRemoteInterface(ip_address, port).receiveMessage(this.ip_address, this.port,message);
         }
-        catch (Exception e) {
+        catch (RemoteException e) {
             e.printStackTrace();
         }
     }
@@ -73,15 +65,15 @@ public class Node extends RemoteImplementation {
 
     public void initiateSnapshot(){
         int snapshotId=1;
-        this.getRunningSnapshotIds().add(snapshotId);
+        this.runningSnapshotIds.add(snapshotId);
 
-        for (RemoteNode remoteNode : this.getRemoteNodes()){
+        for (RemoteNode remoteNode : this.remoteNodes){
             try{
-                System.out.println(this.getIp_address() + ":" + this.getPort() + " | Sending MARKER to: "+remoteNode.getIp_address()+":"+remoteNode.getPort());
+                System.out.println(this.ip_address + ":" + this.port + " | Sending MARKER to: "+remoteNode.ip_address+":"+remoteNode.port);
                 //TODO: come si decide ID del marker? numero randomico grosso? dovrebbero fare agree sul successivo markerId, ma non credo sia necessario
-                remoteNode.getSnapshotIdsSent().add(snapshotId);
-                remoteNode.getRemoteInterface().receiveMarker(this.getIp_address(), this.getPort(), this.getIp_address(), this.getPort(), 1);
-            }catch (Exception e){
+                //remoteNode.getSnapshotIdsSent().add(snapshotId);
+                remoteNode.remoteInterface.receiveMarker(this.ip_address, this.port, this.ip_address, this.port, 1);
+            }catch (RemoteException e) {
                 e.printStackTrace();
             }
         }
@@ -97,39 +89,22 @@ public class Node extends RemoteImplementation {
     */
 
     private RemoteInterface getRemoteInterface(String ip_address, int port){
-        int index= getRemoteNodes().indexOf(new RemoteNode(ip_address,port,null));
-        return getRemoteNodes().get(index).getRemoteInterface();
+        int index= this.remoteNodes.indexOf(new RemoteNode(ip_address,port,null));
+        return this.remoteNodes.get(index).remoteInterface;
     }
 
 }
 
 class RemoteNode {
-    String ip_address;
-    int port;
-    RemoteInterface remoteInterface; //the remote interface of the node
-    ArrayList<Integer> snapshotIdsReceived = new ArrayList<>(); //holds the marker.id received from this remoteNode (for multiple concurrent distributed snapshots)
-    ArrayList<Integer> snapshotIdsSent = new ArrayList<>(); //holds the marker.id sent to this remoteNode (for multiple concurrent distributed snapshots)
+    protected String ip_address;
+    protected int port;
+    protected RemoteInterface remoteInterface; //the remote interface of the node
+    protected ArrayList<Integer> snapshotIdsReceived = new ArrayList<>(); //holds the marker.id received from this remoteNode (for multiple concurrent distributed snapshots)
 
     public RemoteNode(String ip_address, int port, RemoteInterface remoteInterface) {
         this.ip_address = ip_address;
         this.port = port;
         this.remoteInterface = remoteInterface;
-    }
-
-    public ArrayList<Integer> getSnapshotIdsSent() {
-        return snapshotIdsSent;
-    }
-    public String getIp_address() {
-        return ip_address;
-    }
-    public int getPort() {
-        return port;
-    }
-    public ArrayList<Integer> getSnapshotIdsReceived() {
-        return snapshotIdsReceived;
-    }
-    public RemoteInterface getRemoteInterface() {
-        return remoteInterface;
     }
 
     @Override
