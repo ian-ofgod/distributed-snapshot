@@ -28,7 +28,7 @@ public class OilWell implements AppConnector {
         this.oilAmount = oilAmount;
         this.id = id;
         //TODO: Check if new Node has failed
-        node = new Node(this, port, id);
+        node = new Node(this,hostname,port);
     }
 
     private void connect(String hostname, int port) {
@@ -49,16 +49,27 @@ public class OilWell implements AppConnector {
         System.out.println("Example: snapshot");
     }
 
-    @Override
-    public void handleIncomingMessage(Object o) {
-        //TODO: on message receive
-    }
 
     private void startOilTransfers(int frequency, int minAmount, int maxAmount) {
         executor.scheduleAtFixedRate((Runnable) () -> {
             ConnectionDetails randomWell = directConnections.get((int)(Math.random() * (directConnections.size() + 1)));
             node.sendMessage(randomWell.getHostname(), randomWell.getPort(), new OilCargo(minAmount + (int)(Math.random() * ((maxAmount - minAmount) + 1))));
         }, 0, frequency, TimeUnit.MILLISECONDS);
+    }
+
+    @Override
+    public void handleIncomingMessage(String senderIp, int senderPort, Object o) {
+
+    }
+
+    @Override
+    public void handleNewConnection(String newConnectionIp, int newConnectionPort) {
+
+    }
+
+    @Override
+    public void handleRemoveConnection(String removeConnectionIp, int removeConnectionPort) {
+
     }
 }
 

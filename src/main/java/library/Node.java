@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Objects;
 
-//TODO: change to static (only at the end of prj)
+//TODO: change to static (only at the end of prj) ; correct trhrow of RemoteException
 public class Node extends RemoteImplementation {
 
     public Node(AppConnector appConnector, String ip_address, int port){
@@ -103,7 +103,9 @@ public class Node extends RemoteImplementation {
         //this function WONT BE CALLED if any snapshot is running THIS IS AN ASSUMPTION FROM THE TEXT
         if(!this.runningSnapshotIds.isEmpty()) {
             System.out.println(ip_address+":"+port + " | ERROR: REMOVING DURING SNAPSHOT, ASSUMPTION NOT RESPECTED");
+        //TODO: change in exception
         }
+
 
         RemoteNode remoteNode = getRemoteNode(ip_address,port);
         try {

@@ -9,7 +9,6 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.Optional;
 
-
 class RemoteImplementation implements RemoteInterface {
     //info on the current node
     protected String ip_address;
@@ -76,6 +75,7 @@ class RemoteImplementation implements RemoteInterface {
     public void removeMe(String ip_address, int port) throws RemoteException {
         if(!this.runningSnapshotIds.isEmpty()) {
             System.out.println(ip_address+":"+port + " | ERROR: REMOVING DURING SNAPSHOT, ASSUMPTION NOT RESPECTED");
+            //TODO: change in exception
         }
         RemoteNode remoteNode = getRemoteNode(ip_address,port);
         this.remoteNodes.remove(remoteNode);
@@ -86,6 +86,7 @@ class RemoteImplementation implements RemoteInterface {
         if(remoteNode!=null) {
             if(remoteNode.snapshotIdsReceived.contains(snapshotId)){
                 System.out.println(ip_address+":"+port + " | ERROR: received multiple marker (same id) for the same link");
+                //TODO: change in exception
             }else {
                 System.out.println(ip_address+":"+port + " | Added markerId for the remote node who called");
                 remoteNode.snapshotIdsReceived.add(snapshotId);
