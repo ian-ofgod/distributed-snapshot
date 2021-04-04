@@ -1,6 +1,8 @@
 package oilwells;
 
-public class OilCargo {
+import java.io.Serializable;
+
+public class OilCargo implements Serializable {
     private int oilAmount;
 
     public OilCargo(int oilAmount) {
