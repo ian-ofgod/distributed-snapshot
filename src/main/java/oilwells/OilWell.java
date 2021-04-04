@@ -12,41 +12,40 @@ public class OilWell implements AppConnector {
 
     private String hostname;
     private int port;
-    private int id;
     private int oilAmount;
 
-    ArrayList<ConnectionDetails> directConnections = new ArrayList<>();
+    private ArrayList<ConnectionDetails> directConnections = new ArrayList<>();
 
     private static final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 
     //TODO: remove and make Node static (?)
     private Node node;
 
-    private void initialize(String hostname, int port, int oilAmount, int id) {
+    public void initialize(String hostname, int port, int oilAmount) {
         this.hostname = hostname;
         this.port = port;
         this.oilAmount = oilAmount;
-        this.id = id;
         //TODO: Check if new Node has failed
         node = new Node(this,hostname,port);
     }
 
-    private void connect(String hostname, int port) {
+    public void connect(String hostname, int port) {
         //TODO: check if node.addConnection has failed
         node.addConnection(hostname, port);
         directConnections.add(new ConnectionDetails(hostname, port));
     }
 
-    private void snapshot() {
+    public void snapshot() {
         node.initiateSnapshot();
     }
 
     public static void main(String[] args) {
         System.out.println("Welcome to the oil-wells system!");
-        System.out.println("Type in: action name, hostname, port, id");
-        System.out.println("Example: initialize, localhost, 10000, 1");
+        System.out.println("Type in: action name, hostname, port, (oilAmount)");
+        System.out.println("Example: initialize, localhost, 10000, 1000");
         System.out.println("Example: connect, localhost, 10001");
         System.out.println("Example: snapshot");
+        Parser.parseInput(OilWell.class.getName());
     }
 
 
