@@ -3,7 +3,7 @@ package oilwells;
 import java.util.Scanner;
 
 public abstract class Parser {
-    public static void parseInput(String className) {
+    public static void parseInput(String className, Object classObject) {
         Scanner input = new Scanner(System.in);
         while (input.hasNext()) {
             String[] inputs = input.nextLine().split(", ");
@@ -33,7 +33,7 @@ public abstract class Parser {
             }
 
             try {
-                    Class.forName(className).getMethod(methodName, methodParameterTypes).invoke(null, parameters);
+                    Class.forName(className).getMethod(methodName, methodParameterTypes).invoke(classObject, parameters);
                 } catch (Exception e) {
                     System.err.println("Unable to parse input: " + e.getMessage());
                 }
