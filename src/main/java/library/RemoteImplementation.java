@@ -1,17 +1,14 @@
 package library;
 
 import java.rmi.NotBoundException;
-import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
-import java.util.Optional;
 
 class RemoteImplementation implements RemoteInterface {
     //info on the current node
-    protected String ip_address;
+    protected String ipAddress;
     protected int port;
 
 
@@ -29,9 +26,9 @@ class RemoteImplementation implements RemoteInterface {
     @Override
     public void receiveMarker(String senderIp, int senderPort, String initiatorIp, int initiatorPort, int snapshotId) throws RemoteException {
 
-        System.out.println(ip_address + ":" + port + " | RECEIVED MARKER from: "+senderIp+":"+senderPort);
+        System.out.println(ipAddress + ":" + port + " | RECEIVED MARKER from: "+senderIp+":"+senderPort);
         if (!runningSnapshotIds.contains(snapshotId)) {
-            System.out.println(ip_address + ":" + port + " | First time receiving a marker");
+            System.out.println(ipAddress + ":" + port + " | First time receiving a marker");
             runningSnapshotIds.add(snapshotId);
             recordSnapshotId(senderIp, senderPort, snapshotId);
             propagateMarker(initiatorIp, initiatorPort, snapshotId);
@@ -48,7 +45,7 @@ class RemoteImplementation implements RemoteInterface {
     @Override
     public <MessageType> void receiveMessage(String senderIp, int senderPort, MessageType message) throws RemoteException {
         //for debug purposes
-        System.out.println(ip_address + ":" + port + " | Received a message from remoteNode: " + senderIp + ":" + senderPort);
+        System.out.println(ipAddress + ":" + port + " | Received a message from remoteNode: " + senderIp + ":" + senderPort);
 
         if (!runningSnapshotIds.isEmpty()) { //snapshot running, marker received
             //TODO: save message into all the running snapshots
@@ -85,10 +82,10 @@ class RemoteImplementation implements RemoteInterface {
         RemoteNode remoteNode = getRemoteNode(senderIp,senderPort);
         if(remoteNode!=null) {
             if(remoteNode.snapshotIdsReceived.contains(snapshotId)){
-                System.out.println(ip_address+":"+port + " | ERROR: received multiple marker (same id) for the same link");
+                System.out.println(ipAddress +":"+port + " | ERROR: received multiple marker (same id) for the same link");
                 //TODO: change in exception
             }else {
-                System.out.println(ip_address+":"+port + " | Added markerId for the remote node who called");
+                System.out.println(ipAddress +":"+port + " | Added markerId for the remote node who called");
                 remoteNode.snapshotIdsReceived.add(snapshotId);
             }
         }
@@ -98,7 +95,7 @@ class RemoteImplementation implements RemoteInterface {
     private void propagateMarker(String initiatorIp, int initiatorPort, int snapshotId) {
         for (RemoteNode remoteNode : remoteNodes) {
             try {
-                remoteNode.remoteInterface.receiveMarker(this.ip_address, this.port, initiatorIp, initiatorPort, snapshotId);
+                remoteNode.remoteInterface.receiveMarker(this.ipAddress, this.port, initiatorIp, initiatorPort, snapshotId);
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
@@ -107,7 +104,7 @@ class RemoteImplementation implements RemoteInterface {
 
     protected RemoteNode getRemoteNode(String ip_address, int port){
         for (RemoteNode remoteNode : remoteNodes) {
-            if(remoteNode.ip_address.equals(ip_address) && remoteNode.port==port)
+            if(remoteNode.ipAddress.equals(ip_address) && remoteNode.port==port)
                 return remoteNode;
         }
         return null;
@@ -122,7 +119,7 @@ class RemoteImplementation implements RemoteInterface {
             }
         }
         if (numOfLinks == 0) { //we have received a marker from all the channels
-            System.out.println(ip_address + ":" + port + " | Received marker from all the channel");
+            System.out.println(ipAddress + ":" + port + " | Received marker from all the channel");
             return true;
         }
         return false;

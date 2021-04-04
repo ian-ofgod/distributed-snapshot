@@ -8,7 +8,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 class Storage {
-
     private static final String FOLDER = "storage_folder";
     private static final String SEP = ",";
     private static final String SLASH = "/";
@@ -26,8 +25,8 @@ class Storage {
         }
     }
 
-    public static void writeFile( Node node) {
-        String fileName = buildFileName(node.ip_address, node.port);
+    public static void writeFile() {
+        String fileName = buildFileName(Node.remoteImplementation.ipAddress, Node.remoteImplementation.port);
 
         try (PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter(fileName, true)))) {
             //TODO: get the snapshot from Node
@@ -39,8 +38,6 @@ class Storage {
             System.err.println("Could not write file ");
         }
     }
-
-
 
     public static void deleteFile(String ip, int port) {
         try {
@@ -62,7 +59,4 @@ class Storage {
         String row =  snapshot.getSnapshotIdentifier() + SEP + snapshot.getCurrentAmount() + SEP + snapshot.getCurrentAmount();
         return row;
     }
-
-
-
 }

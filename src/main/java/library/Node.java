@@ -1,26 +1,26 @@
 package library;
 
-import java.rmi.AccessException;
-import java.rmi.NoSuchObjectException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.Registry;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Objects;
 
 //TODO: change to static (only at the end of prj) ; correct trhrow of RemoteException
-public class Node extends RemoteImplementation {
+public class Node {
+    protected static RemoteImplementation remoteImplementation = new RemoteImplementation();
 
-    public Node(AppConnector appConnector, String ip_address, int port){
-        setAppConnector(appConnector);
-        this.port=port;
-        this.ip_address=ip_address;
+    public Node() {};
+
+    public Node(AppConnector appConnector, String ipAddress, int port){
+        remoteImplementation.setAppConnector(appConnector);
+        remoteImplementation.port=port;
+        remoteImplementation.ipAddress =ipAddress;
 
         try {
-            RemoteInterface stub = (RemoteInterface) UnicastRemoteObject.exportObject(this, 0);
+            RemoteInterface stub = (RemoteInterface) UnicastRemoteObject.exportObject(remoteImplementation, 0);
             Registry registry = LocateRegistry.createRegistry(port);
             registry.bind("RemoteInterface", stub);
         } catch (Exception e) {
@@ -29,14 +29,14 @@ public class Node extends RemoteImplementation {
 
     }
 
-    public void init(String yourIp, int rmiRegistryPort,AppConnector appConnector){
-        this.ip_address=yourIp;
-        this.port=rmiRegistryPort;
-        this.appConnector=appConnector;
+    public static void init(String yourIp, int rmiRegistryPort,AppConnector appConnector){
+        remoteImplementation.ipAddress =yourIp;
+        remoteImplementation.port=rmiRegistryPort;
+        remoteImplementation.appConnector=appConnector;
 
         try {
-            RemoteInterface stub = (RemoteInterface) UnicastRemoteObject.exportObject(this, 0);
-            Registry registry = LocateRegistry.createRegistry(port);
+            RemoteInterface stub = (RemoteInterface) UnicastRemoteObject.exportObject(remoteImplementation, 0);
+            Registry registry = LocateRegistry.createRegistry(remoteImplementation.port);
             registry.bind("RemoteInterface", stub);
         } catch (Exception e) {
             e.printStackTrace();
@@ -46,15 +46,15 @@ public class Node extends RemoteImplementation {
     /**
      * This method adds a new link. To do so, it looks up the registry to the given ip and port and saves the reference.
      * This methods is not exposed in the rmiregistry to avoid it beeing invoked by external entities.
-     * @param ip_address the ip address of the host running the rmiregistry
+     * @param ipAddress the ip address of the host running the rmiregistry
      * @param port the port where the rmi registry is running
      */
-    public void addConnection(String ip_address, int port) {
+    public static void addConnection(String ipAddress, int port) {
         try {
-            Registry registry = LocateRegistry.getRegistry(ip_address, port);
+            Registry registry = LocateRegistry.getRegistry(ipAddress, port);
             RemoteInterface remoteInterface = (RemoteInterface) registry.lookup("RemoteInterface");
-            this.remoteNodes.add(new RemoteNode(ip_address,port,remoteInterface));
-            remoteInterface.addMeBack(this.ip_address, this.port);
+            remoteImplementation.remoteNodes.add(new RemoteNode(ipAddress,port,remoteInterface));
+            remoteInterface.addMeBack(remoteImplementation.ipAddress, remoteImplementation.port);
         }
         catch (RemoteException | NotBoundException e) {
             e.printStackTrace();
@@ -63,64 +63,64 @@ public class Node extends RemoteImplementation {
 
     /**
      * This method is used to send a message to a specific node by using rmi
-     * @param ip_address the ip address of the remote node
+     * @param ipAddress the ip address of the remote node
      * @param port the port associated to the rmi registry in the remote node
      * @param message the message to send to the remote node
      * @param <MessageType> the message type to send
      */
-    public <MessageType> void sendMessage(String ip_address, int port, MessageType message){
+    public static <MessageType> void sendMessage(String ipAddress, int port, MessageType message){
         try {
-            getRemoteInterface(ip_address, port).receiveMessage(this.ip_address, this.port,message);
+            getRemoteInterface(ipAddress, port).receiveMessage(remoteImplementation.ipAddress, remoteImplementation.port, message);
         }
         catch (RemoteException e) {
             e.printStackTrace();
         }
     }
 
-    public <StateType> void updateState(StateType state){
+    public static <StateType> void updateState(StateType state){
         //TODO: save current state to a variable (probably variable in the remoteImplementation)
     }
 
-    public void initiateSnapshot(){
+    public static void initiateSnapshot(){
         int snapshotId=1;
-        this.runningSnapshotIds.add(snapshotId);
+        remoteImplementation.runningSnapshotIds.add(snapshotId);
 
-        for (RemoteNode remoteNode : this.remoteNodes){
+        for (RemoteNode remoteNode : remoteImplementation.remoteNodes){
             try{
-                System.out.println(this.ip_address + ":" + this.port + " | Sending MARKER to: "+remoteNode.ip_address+":"+remoteNode.port);
+                System.out.println(remoteImplementation.ipAddress + ":" + remoteImplementation.port + " | Sending MARKER to: "+remoteNode.ipAddress+":"+remoteNode.port);
                 //TODO: come si decide ID del marker? numero randomico grosso? dovrebbero fare agree sul successivo markerId, ma non credo sia necessario
                 //remoteNode.getSnapshotIdsSent().add(snapshotId);
-                remoteNode.remoteInterface.receiveMarker(this.ip_address, this.port, this.ip_address, this.port, 1);
+                remoteNode.remoteInterface.receiveMarker(remoteImplementation.ipAddress, remoteImplementation.port, remoteImplementation.ipAddress, remoteImplementation.port, 1);
             }catch (RemoteException e) {
                 e.printStackTrace();
             }
         }
     }
 
-    public void removeConnection(String ip_address, int port) {
+    public static void removeConnection(String ipAddress, int port) {
         //TODO: test
         //since no change in the network topology is allowed during a snapshot
         //this function WONT BE CALLED if any snapshot is running THIS IS AN ASSUMPTION FROM THE TEXT
-        if(!this.runningSnapshotIds.isEmpty()) {
-            System.out.println(ip_address+":"+port + " | ERROR: REMOVING DURING SNAPSHOT, ASSUMPTION NOT RESPECTED");
+        if(!remoteImplementation.runningSnapshotIds.isEmpty()) {
+            System.out.println(ipAddress+":"+port + " | ERROR: REMOVING DURING SNAPSHOT, ASSUMPTION NOT RESPECTED");
         //TODO: change in exception
         }
 
 
-        RemoteNode remoteNode = getRemoteNode(ip_address,port);
+        RemoteNode remoteNode = remoteImplementation.getRemoteNode(ipAddress,port);
         try {
-            remoteNode.remoteInterface.removeMe(this.ip_address, this.port);
+            remoteNode.remoteInterface.removeMe(remoteImplementation.ipAddress, remoteImplementation.port);
         }catch (RemoteException e){
             e.printStackTrace();
         }
-        this.remoteNodes.remove(remoteNode);
+        remoteImplementation.remoteNodes.remove(remoteNode);
     }
     
-    public void stop() {
+    public static void stop() {
         try {
             //TODO: remove the stop of the whole jvm
-            UnicastRemoteObject.unexportObject(this, true);
-            LocateRegistry.getRegistry(this.port).unbind("RemoteInterface");
+            UnicastRemoteObject.unexportObject(remoteImplementation, true);
+            LocateRegistry.getRegistry(remoteImplementation.port).unbind("RemoteInterface");
             //SHOULD STOP HERE!!
             System.exit(0);
         } catch (Exception e) {
@@ -132,21 +132,21 @@ public class Node extends RemoteImplementation {
     /*
         COMMODITY FUNCTIONS
     */
-    private RemoteInterface getRemoteInterface(String ip_address, int port){
-        int index= this.remoteNodes.indexOf(new RemoteNode(ip_address,port,null));
-        return this.remoteNodes.get(index).remoteInterface;
+    private static RemoteInterface getRemoteInterface(String ipAddress, int port){
+        int index= remoteImplementation.remoteNodes.indexOf(new RemoteNode(ipAddress,port,null));
+        return remoteImplementation.remoteNodes.get(index).remoteInterface;
     }
 
 }
 
 class RemoteNode {
-    protected String ip_address;
+    protected String ipAddress;
     protected int port;
     protected RemoteInterface remoteInterface; //the remote interface of the node
     protected ArrayList<Integer> snapshotIdsReceived = new ArrayList<>(); //holds the marker.id received from this remoteNode (for multiple concurrent distributed snapshots)
 
-    public RemoteNode(String ip_address, int port, RemoteInterface remoteInterface) {
-        this.ip_address = ip_address;
+    public RemoteNode(String ipAddress, int port, RemoteInterface remoteInterface) {
+        this.ipAddress = ipAddress;
         this.port = port;
         this.remoteInterface = remoteInterface;
     }
@@ -156,12 +156,12 @@ class RemoteNode {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         RemoteNode that = (RemoteNode) o;
-        return port == that.port && Objects.equals(ip_address, that.ip_address);
+        return port == that.port && Objects.equals(ipAddress, that.ipAddress);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(ip_address, port);
+        return Objects.hash(ipAddress, port);
     }
 
 
