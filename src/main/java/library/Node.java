@@ -12,7 +12,7 @@ import java.util.Objects;
 public class Node {
     protected static RemoteImplementation remoteImplementation = new RemoteImplementation();
 
-    public Node() {};
+    public Node() {}
 
     public Node(AppConnector appConnector, String ipAddress, int port){
         remoteImplementation.setAppConnector(appConnector);
@@ -133,6 +133,7 @@ public class Node {
         COMMODITY FUNCTIONS
     */
     private static RemoteInterface getRemoteInterface(String ipAddress, int port){
+        //TODO: add -1 case!!
         int index= remoteImplementation.remoteNodes.indexOf(new RemoteNode(ipAddress,port,null));
         return remoteImplementation.remoteNodes.get(index).remoteInterface;
     }

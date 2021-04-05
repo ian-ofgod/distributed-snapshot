@@ -41,13 +41,23 @@ public class OilWell implements AppConnector {
 
     private void startOilTransfers(int frequency, int minAmount, int maxAmount) {
         System.out.println("Starting automated oil transfers");
-        executor.scheduleAtFixedRate((Runnable) () -> {
+        executor.scheduleAtFixedRate(() -> {
             if (directConnections.size() > 0) {
-                ConnectionDetails randomWell = directConnections.get((int)(Math.random() * (directConnections.size() + 1)));
-                int amount = minAmount + (int)(Math.random() * ((maxAmount - minAmount) + 1));
-                oilAmount -= amount;
-                System.out.println("Sending " + amount + " oil to " + randomWell.getHostname() + ":" + randomWell.getPort() + ". New oilAmount = " + oilAmount);
-                Node.sendMessage(randomWell.getHostname(), randomWell.getPort(), new OilCargo(amount));
+                try {
+                    ConnectionDetails randomWell = directConnections.get((int)(Math.random() * (directConnections.size())));
+                    int amount = minAmount + (int) (Math.random() * ((maxAmount - minAmount) + 1));
+                    if (oilAmount - amount >= 0) {
+                        oilAmount -= amount;
+                        System.out.println("Sending " + amount + " oil to " + randomWell.getHostname() + ":" + randomWell.getPort() + ". New oilAmount = " + oilAmount);
+                        //TODO: add/change exception handling
+                        Node.sendMessage(randomWell.getHostname(), randomWell.getPort(), new OilCargo(amount));
+                    } else {
+                        System.out.println("You are running out of oil, cannot send oil to " + randomWell.getHostname() + ":" + randomWell.getPort());
+                    }
+                }
+                catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
         }, 0, frequency, TimeUnit.MILLISECONDS);
     }
