@@ -45,7 +45,7 @@ class RemoteImplementation implements RemoteInterface {
     @Override
     public <MessageType> void receiveMessage(String senderIp, int senderPort, MessageType message) throws RemoteException {
         //for debug purposes
-        System.out.println(ipAddress + ":" + port + " | Received a message from remoteNode: " + senderIp + ":" + senderPort);
+        //System.out.println(ipAddress + ":" + port + " | Received a message from remoteNode: " + senderIp + ":" + senderPort);
 
         if (!runningSnapshotIds.isEmpty()) { //snapshot running, marker received
             //TODO: save message into all the running snapshots

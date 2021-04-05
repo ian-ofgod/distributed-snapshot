@@ -2,8 +2,10 @@ package oilwells;
 
 import library.AppConnector;
 import library.Node;
+import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
+import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -12,10 +14,15 @@ public class OilWell implements AppConnector {
     private String hostname;
     private int port;
     private int oilAmount;
-
     private ArrayList<ConnectionDetails> directConnections = new ArrayList<>();
 
+    private Logger logger;
+
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+
+    public void setLogger(Logger logger) {
+        this.logger = logger;
+    }
 
     public void initialize(String hostname, int port, int oilAmount) {
         this.hostname = hostname;
@@ -23,16 +30,16 @@ public class OilWell implements AppConnector {
         this.oilAmount = oilAmount;
         //TODO: Check if new Node has failed
         Node.init(hostname, port, this);
-        System.out.println("Successfully initialized new node on " + hostname + ":" + port);
-        startOilTransfers(500, (int)(this.oilAmount*0.001), (int)(this.oilAmount*0.01));
+        logger.info("Successfully initialized new node on " + hostname + ":" + port);
+        startOilTransfers(2*1000, (int)(this.oilAmount*0.001), (int)(this.oilAmount*0.01));
     }
 
     public void connect(String hostname, int port) {
         //TODO: check if node.addConnection has failed
-        System.out.println("Connecting to " + hostname + ":" + port);
+        logger.info("Connecting to " + hostname + ":" + port);
         Node.addConnection(hostname, port);
         directConnections.add(new ConnectionDetails(hostname, port));
-        System.out.println("Successfully connected to " + hostname + ":" + port);
+        logger.info("Successfully connected to " + hostname + ":" + port);
     }
 
     public void snapshot() {
@@ -40,7 +47,7 @@ public class OilWell implements AppConnector {
     }
 
     private void startOilTransfers(int frequency, int minAmount, int maxAmount) {
-        System.out.println("Starting automated oil transfers");
+        logger.info("Starting automated oil transfers");
         executor.scheduleAtFixedRate(() -> {
             if (directConnections.size() > 0) {
                 try {
@@ -48,11 +55,11 @@ public class OilWell implements AppConnector {
                     int amount = minAmount + (int) (Math.random() * ((maxAmount - minAmount) + 1));
                     if (oilAmount - amount >= 0) {
                         oilAmount -= amount;
-                        System.out.println("Sending " + amount + " oil to " + randomWell.getHostname() + ":" + randomWell.getPort() + ". New oilAmount = " + oilAmount);
+                        logger.info("Sending " + amount + " oil to " + randomWell.getHostname() + ":" + randomWell.getPort() + ". New oilAmount = " + oilAmount);
                         //TODO: add/change exception handling
                         Node.sendMessage(randomWell.getHostname(), randomWell.getPort(), new OilCargo(amount));
                     } else {
-                        System.out.println("You are running out of oil, cannot send oil to " + randomWell.getHostname() + ":" + randomWell.getPort());
+                        logger.warn("You are running out of oil, cannot send oil to " + randomWell.getHostname() + ":" + randomWell.getPort());
                     }
                 }
                 catch (Exception e) {
@@ -66,13 +73,14 @@ public class OilWell implements AppConnector {
     public void handleIncomingMessage(String senderIp, int senderPort, Object o) {
         OilCargo message = (OilCargo) o;
         oilAmount += message.getOilAmount();
-        System.out.println("Received " + message.getOilAmount() + " oil from " + senderIp + ":" + senderPort + ". New oilAmount = " + oilAmount);
+        logger.info("Received " + message.getOilAmount() + " oil from " + senderIp + ":" + senderPort + ". New oilAmount = " + oilAmount);
     }
 
     @Override
     public void handleNewConnection(String newConnectionIp, int newConnectionPort) {
+        logger.info("Received connection attempt from " + newConnectionIp + ":" + newConnectionPort);
         directConnections.add(new ConnectionDetails(newConnectionIp, newConnectionPort));
-        System.out.println("Successfully connected to " + newConnectionIp + ":" + newConnectionPort);
+        logger.info("Successfully connected to " + newConnectionIp + ":" + newConnectionPort);
     }
 
     @Override
