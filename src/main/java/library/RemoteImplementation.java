@@ -76,6 +76,7 @@ class RemoteImplementation implements RemoteInterface {
         }
         RemoteNode remoteNode = getRemoteNode(ip_address,port);
         this.remoteNodes.remove(remoteNode);
+        appConnector.handleRemoveConnection(ip_address, port);
     }
 
     private void recordSnapshotId(String senderIp, int senderPort, int snapshotId) {

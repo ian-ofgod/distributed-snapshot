@@ -19,6 +19,7 @@ public abstract class Parser {
                     parameters[1] = Integer.parseInt(inputs[2]);
                     parameters[2] = Integer.parseInt(inputs[3]);
                     break;
+                case "disconnect":
                 case "connect":
                     methodParameterTypes = new Class<?>[]{String.class, int.class};
                     parameters[0] = inputs[1];

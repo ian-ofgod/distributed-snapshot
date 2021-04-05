@@ -42,6 +42,13 @@ public class OilWell implements AppConnector {
         logger.info("Successfully connected to " + hostname + ":" + port);
     }
 
+    public void disconnect(String hostname, int port) {
+        logger.info("Disconnecting from " + hostname + ":" + port);
+        Node.removeConnection(hostname, port);
+        directConnections.remove(new ConnectionDetails(hostname, port));
+        logger.info("Successfully disconnected from " + hostname + ":" + port);
+    }
+
     public void snapshot() {
         Node.initiateSnapshot();
     }
@@ -85,7 +92,9 @@ public class OilWell implements AppConnector {
 
     @Override
     public void handleRemoveConnection(String removeConnectionIp, int removeConnectionPort) {
-
+        logger.info("Received disconnect attempt from " + removeConnectionIp + ":" + removeConnectionPort);
+        directConnections.remove(new ConnectionDetails(removeConnectionIp, removeConnectionPort));
+        logger.info("Successfully disconnected from " + removeConnectionIp + ":" + removeConnectionPort);
     }
 }
 
@@ -104,5 +113,23 @@ class ConnectionDetails {
 
     public int getPort() {
         return port;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        ConnectionDetails that = (ConnectionDetails) o;
+
+        if (port != that.port) return false;
+        return Objects.equals(hostname, that.hostname);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = hostname != null ? hostname.hashCode() : 0;
+        result = 31 * result + port;
+        return result;
     }
 }
