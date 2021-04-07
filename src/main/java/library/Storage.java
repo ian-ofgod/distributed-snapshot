@@ -6,15 +6,17 @@ import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 
 class Storage {
+
     private static final String FOLDER = "storage_folder";
     private static final String SEP = ",";
     private static final String SLASH = "/";
-    private static final String EXTENSION = ".csv";
+    private static final String EXTENSION = ".data";
 
 
-    public static void createFolder() {
+    private static void createFolder() {
         try {
             Path path = Paths.get(FOLDER);
             if (!Files.exists(path)) {
@@ -25,38 +27,24 @@ class Storage {
         }
     }
 
-    public static void writeFile() {
-        String fileName = buildFileName(Node.remoteImplementation.ipAddress, Node.remoteImplementation.port);
-
+    public static void writeFile(ArrayList<Snapshot> runningSnapshots, int snapshotId) {
+        createFolder();
+        Snapshot toSaveSnapshot = runningSnapshots.stream().filter(snap -> snap.snapshotId==snapshotId).findFirst().orElse(null);
+        String fileName = buildFileName(toSaveSnapshot);
         try (PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter(fileName, true)))) {
-            //TODO: get the snapshot from Node
-            Snapshot snapshot = new Snapshot(); // node.getSnapshot();
-            String rowToAdd = buildRow(snapshot);
-            writer.println(rowToAdd);
+            writer.println(toSaveSnapshot);
             System.out.println("Snapshot is saved.");
         } catch (Exception e) {
             System.err.println("Could not write file ");
         }
     }
 
-    public static void deleteFile(String ip, int port) {
-        try {
-            Path path = Paths.get(buildFileName(ip, port));
-            if (Files.exists(path)) {
-                Files.delete(path);
-            }
-        } catch (Exception e) {
-            System.err.println("Could not delete file");
-        }
+    private static String buildFileName(Snapshot snapshot) {
+        return FOLDER + SLASH + snapshot + EXTENSION;
     }
 
-    private static String buildFileName(String ip, int port) {
-        String fileName = FOLDER + SLASH + ip+"_"+port + EXTENSION;
-        return fileName;
-    }
 
-    private static String buildRow(Snapshot snapshot) {
-        String row =  snapshot.getSnapshotIdentifier() + SEP + snapshot.getCurrentAmount() + SEP + snapshot.getCurrentAmount();
-        return row;
-    }
+
+
+
 }
