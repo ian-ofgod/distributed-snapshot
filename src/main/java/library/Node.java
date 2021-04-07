@@ -83,7 +83,8 @@ public class Node {
 
     public static void initiateSnapshot(){
         int snapshotId=1;
-        remoteImplementation.runningSnapshotIds.add(snapshotId);
+        Snapshot snap = new Snapshot(snapshotId);
+        remoteImplementation.runningSnapshots.add(snap);
 
         for (RemoteNode remoteNode : remoteImplementation.remoteNodes){
             try{
@@ -91,7 +92,7 @@ public class Node {
                 //TODO: come si decide ID del marker? numero randomico grosso? dovrebbero fare agree sul successivo markerId, ma non credo sia necessario
                 //remoteNode.getSnapshotIdsSent().add(snapshotId);
                 remoteNode.remoteInterface.receiveMarker(remoteImplementation.ipAddress, remoteImplementation.port, remoteImplementation.ipAddress, remoteImplementation.port, 1);
-            }catch (RemoteException e) {
+            }catch (RemoteException | DoubleMarkerException e) {
                 e.printStackTrace();
             }
         }
@@ -101,7 +102,7 @@ public class Node {
         //TODO: test
         //since no change in the network topology is allowed during a snapshot
         //this function WONT BE CALLED if any snapshot is running THIS IS AN ASSUMPTION FROM THE TEXT
-        if(!remoteImplementation.runningSnapshotIds.isEmpty()) {
+        if(!remoteImplementation.runningSnapshots.isEmpty()) {
             System.out.println(ipAddress+":"+port + " | ERROR: REMOVING DURING SNAPSHOT, ASSUMPTION NOT RESPECTED");
         //TODO: change in exception
         }
@@ -110,7 +111,7 @@ public class Node {
         RemoteNode remoteNode = remoteImplementation.getRemoteNode(ipAddress,port);
         try {
             remoteNode.remoteInterface.removeMe(remoteImplementation.ipAddress, remoteImplementation.port);
-        }catch (RemoteException e){
+        }catch (RemoteException | DoubleMarkerException e){
             e.printStackTrace();
         }
         remoteImplementation.remoteNodes.remove(remoteNode);
