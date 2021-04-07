@@ -113,17 +113,7 @@ class RemoteImplementation implements RemoteInterface {
 
     //check if we have received marker from all the links
     private boolean receivedMarkerFromAllLinks(int snapshotId){
-        int numOfLinks = remoteNodes.size();
-        for (RemoteNode remoteNode : remoteNodes) {
-            if (remoteNode.snapshotIdsReceived.contains(snapshotId)) {
-                numOfLinks--;
-            }
-        }
-        if (numOfLinks == 0) { //we have received a marker from all the channels
-            System.out.println(ipAddress + ":" + port + " | Received marker from all the channel");
-            return true;
-        }
-        return false;
+        return remoteNodes.stream().filter(rn->rn.snapshotIdsReceived.contains(snapshotId)).count() == remoteNodes.size();
     }
 
     void setAppConnector(AppConnector o) {
