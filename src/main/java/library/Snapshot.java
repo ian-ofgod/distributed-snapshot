@@ -1,82 +1,70 @@
 package library;
 
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.*;
 
-class Snapshot {
-    // TODO: here we assume that all snapshots have CURRENT and INCOMING fields only
+/**
+ * Contains the snapshot of a single node
+ * */
+class Snapshot<StateType, MessageType> {
 
-    private int currentAmount;
-    private int incomingAmount;
-    private int snapshotIdentifier;
-    private final Set<Integer> markersNotReceived = new HashSet<>();
+    protected int snapshotId;
+    protected StateType state;
+    protected HashMap<Entity, ArrayList<MessageType>> messages = new HashMap<>();
 
 
-    //TODO: this constructor needs to be removed once we get the Snapshot from nod
-    public Snapshot() {
-
+    public Snapshot(){ //TODO: lasciare solo il costruttore che serve
     }
 
-    public Snapshot(int currentAmount, int incomingAmount, int snapshotIdentifier) {
-        this.currentAmount = currentAmount;
-        this.incomingAmount = incomingAmount;
-        this.snapshotIdentifier = snapshotIdentifier;
+    public Snapshot(int id){
+        this.snapshotId = id;
     }
 
-    public void startSnapshotRecording(int nodeId, int balance, Map<Integer, String> nodes) {
-        snapshotIdentifier++;
-        currentAmount = balance;
-        incomingAmount = 0;
-        markersNotReceived.addAll(nodes.entrySet().parallelStream().filter(n -> n.getKey() != nodeId).map(Map.Entry::getKey).collect(Collectors.toSet()));
+    public Snapshot(int id, StateType state){
+        this.snapshotId = id;
+        this.state = state;
     }
 
-    public void stopSnapshotRecording() {
-        currentAmount = 0;
-        incomingAmount = 0;
-        markersNotReceived.clear();
+    @Override
+    public String toString() {
+        return "Snapshot "+snapshotId+"{" +
+                ", state=" + state +
+                ", messages= {}" + messages+
+                '}';
     }
 
-    public void incrementMoneyInTransfer(int recipientNodeId, int amount) {
-        if (markersNotReceived.contains(recipientNodeId)) {
-            incomingAmount += amount;
-        }
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Snapshot<?, ?> snapshot = (Snapshot<?, ?>) o;
+        return snapshotId == snapshot.snapshotId;
     }
 
-    public void stopRecordingNode(int nodeId) {
-        markersNotReceived.remove(nodeId);
+    @Override
+    public int hashCode() {
+        return Objects.hash(snapshotId);
+    }
+}
+
+
+class Entity {
+    /**
+     * ipAddress string associated to this entity
+     * */
+    protected String ipAddress;
+
+    /**
+     * Port number associated to this entity
+     * */
+    protected int port;
+
+    public Entity(String ip_address, int port) {
+        this.ipAddress = ip_address;
+        this.port = port;
     }
 
-    public boolean isRecording() {
-        return markersNotReceived.size() != 0;
-    }
-
-
-
-    public int getCurrentAmount() {
-        return currentAmount;
-    }
-
-
-
-    public void setCurrentAmount(int currentAmount) {
-        this.currentAmount = currentAmount;
-    }
-
-    public int getIncomingAmount() {
-        return incomingAmount;
-    }
-
-    public void setIncomingAmount(int incomingAmount) {
-        this.incomingAmount = incomingAmount;
-    }
-
-    public int getSnapshotIdentifier() {
-        return snapshotIdentifier;
-    }
-
-    public void setSnapshotIdentifier(int snapshotIdentifier) {
-        this.snapshotIdentifier = snapshotIdentifier;
+    @Override
+    public String toString() {
+        return ipAddress + ':'+ port;
     }
 }
