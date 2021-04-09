@@ -1,4 +1,4 @@
-package library;
+package library.exceptions;
 
 /**
  * Exception to manage the reception of a double identical marker

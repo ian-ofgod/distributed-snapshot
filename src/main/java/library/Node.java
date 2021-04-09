@@ -1,5 +1,8 @@
 package library;
 
+import library.exceptions.DoubleMarkerException;
+import library.exceptions.SnapshotInterruptException;
+
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.Registry;
@@ -82,7 +85,9 @@ public class Node {
     }
 
     public static void initiateSnapshot(){
+        //TODO: how to decide the snapshot id so that it does not conflicts with the others?
         int snapshotId=1;
+
         Snapshot snap = new Snapshot(snapshotId);
         remoteImplementation.runningSnapshots.add(snap);
 
@@ -90,8 +95,6 @@ public class Node {
             RemoteNode remoteNode = (RemoteNode) rn;
             try{
                 System.out.println(remoteImplementation.ipAddress + ":" + remoteImplementation.port + " | Sending MARKER to: "+remoteNode.ipAddress+":"+remoteNode.port);
-                //TODO: come si decide ID del marker? numero randomico grosso? dovrebbero fare agree sul successivo markerId, ma non credo sia necessario
-                //remoteNode.getSnapshotIdsSent().add(snapshotId);
                 remoteNode.remoteInterface.receiveMarker(remoteImplementation.ipAddress, remoteImplementation.port, remoteImplementation.ipAddress, remoteImplementation.port, 1);
             }catch (RemoteException | DoubleMarkerException e) {
                 e.printStackTrace();
@@ -100,12 +103,11 @@ public class Node {
     }
 
     public static void removeConnection(String ipAddress, int port) {
-        //TODO: test
         //since no change in the network topology is allowed during a snapshot
         //this function WONT BE CALLED if any snapshot is running THIS IS AN ASSUMPTION FROM THE TEXT
         if(!remoteImplementation.runningSnapshots.isEmpty()) {
             System.out.println(ipAddress+":"+port + " | ERROR: REMOVING DURING SNAPSHOT, ASSUMPTION NOT RESPECTED");
-        //TODO: change in exception
+            //TODO: throw OperationForbidden (maybe specify the cause inside of the exception message)
         }
 
 
@@ -135,8 +137,10 @@ public class Node {
         COMMODITY FUNCTIONS
     */
     private static RemoteInterface getRemoteInterface(String ipAddress, int port){
-        //TODO: add -1 case!!
         int index= remoteImplementation.remoteNodes.indexOf(new RemoteNode(ipAddress,port,null));
+        if(index==-1){ // RemoteNode with the specified ipAddress and port not found!
+           //TODO: throw RemoteNodeNotFound
+        }
         RemoteNode remoteNode = (RemoteNode) remoteImplementation.remoteNodes.get(index);
         return remoteNode.remoteInterface;
     }

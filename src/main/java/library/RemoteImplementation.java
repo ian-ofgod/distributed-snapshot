@@ -1,5 +1,8 @@
 package library;
 
+import library.exceptions.DoubleMarkerException;
+import library.exceptions.SnapshotInterruptException;
+
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -28,7 +31,6 @@ class RemoteImplementation<StateType>  implements RemoteInterface {
 
 
 
-    //TODO: separare in due funzioni markerMessage e receiveMessage
     @Override
     public void receiveMarker(String senderIp, int senderPort, String initiatorIp, int initiatorPort, int snapshotId) throws RemoteException, DoubleMarkerException {
 

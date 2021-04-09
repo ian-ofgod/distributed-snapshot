@@ -1,4 +1,4 @@
-package library;
+package library.exceptions;
 
 /**
  * Exception to manage the case of network broken or node crash

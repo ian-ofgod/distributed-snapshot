@@ -1,5 +1,8 @@
 package library;
 
+import library.exceptions.DoubleMarkerException;
+import library.exceptions.SnapshotInterruptException;
+
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 
