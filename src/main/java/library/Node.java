@@ -86,7 +86,8 @@ public class Node {
         Snapshot snap = new Snapshot(snapshotId);
         remoteImplementation.runningSnapshots.add(snap);
 
-        for (RemoteNode remoteNode : remoteImplementation.remoteNodes){
+        for (Object rn : remoteImplementation.remoteNodes){
+            RemoteNode remoteNode = (RemoteNode) rn;
             try{
                 System.out.println(remoteImplementation.ipAddress + ":" + remoteImplementation.port + " | Sending MARKER to: "+remoteNode.ipAddress+":"+remoteNode.port);
                 //TODO: come si decide ID del marker? numero randomico grosso? dovrebbero fare agree sul successivo markerId, ma non credo sia necessario
@@ -111,7 +112,7 @@ public class Node {
         RemoteNode remoteNode = remoteImplementation.getRemoteNode(ipAddress,port);
         try {
             remoteNode.remoteInterface.removeMe(remoteImplementation.ipAddress, remoteImplementation.port);
-        }catch (RemoteException | DoubleMarkerException e){
+        }catch (RemoteException | SnapshotInterruptException e){
             e.printStackTrace();
         }
         remoteImplementation.remoteNodes.remove(remoteNode);
@@ -136,7 +137,8 @@ public class Node {
     private static RemoteInterface getRemoteInterface(String ipAddress, int port){
         //TODO: add -1 case!!
         int index= remoteImplementation.remoteNodes.indexOf(new RemoteNode(ipAddress,port,null));
-        return remoteImplementation.remoteNodes.get(index).remoteInterface;
+        RemoteNode remoteNode = (RemoteNode) remoteImplementation.remoteNodes.get(index);
+        return remoteNode.remoteInterface;
     }
 
 }
