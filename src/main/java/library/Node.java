@@ -1,6 +1,8 @@
 package library;
 
 import library.exceptions.DoubleMarkerException;
+import library.exceptions.OperationForbidden;
+import library.exceptions.RemoteNodeNotFound;
 import library.exceptions.SnapshotInterruptException;
 
 import java.rmi.NotBoundException;
@@ -53,14 +55,18 @@ public class Node {
      * @param port the port where the rmi registry is running
      */
     public static void addConnection(String ipAddress, int port) {
-        try {
-            Registry registry = LocateRegistry.getRegistry(ipAddress, port);
-            RemoteInterface remoteInterface = (RemoteInterface) registry.lookup("RemoteInterface");
-            remoteImplementation.remoteNodes.add(new RemoteNode(ipAddress,port,remoteInterface));
-            remoteInterface.addMeBack(remoteImplementation.ipAddress, remoteImplementation.port);
+        if(!remoteImplementation.remoteNodes.contains(new RemoteNode(ipAddress,port,null))) {
+            try {
+                Registry registry = LocateRegistry.getRegistry(ipAddress, port);
+                RemoteInterface remoteInterface = (RemoteInterface) registry.lookup("RemoteInterface");
+                remoteImplementation.remoteNodes.add(new RemoteNode(ipAddress, port, remoteInterface));
+                remoteInterface.addMeBack(remoteImplementation.ipAddress, remoteImplementation.port);
+            } catch (RemoteException | NotBoundException e) {
+                e.printStackTrace();
+            }
         }
-        catch (RemoteException | NotBoundException e) {
-            e.printStackTrace();
+        else{
+            //TODO: throw RemoteNodeAlreadyPresent or just ignore the call?
         }
     }
 
@@ -71,7 +77,7 @@ public class Node {
      * @param message the message to send to the remote node
      * @param <MessageType> the message type to send
      */
-    public static <MessageType> void sendMessage(String ipAddress, int port, MessageType message){
+    public static <MessageType> void sendMessage(String ipAddress, int port, MessageType message) throws RemoteNodeNotFound {
         try {
             getRemoteInterface(ipAddress, port).receiveMessage(remoteImplementation.ipAddress, remoteImplementation.port, message);
         }
@@ -102,14 +108,12 @@ public class Node {
         }
     }
 
-    public static void removeConnection(String ipAddress, int port) {
+    public static void removeConnection(String ipAddress, int port) throws OperationForbidden {
         //since no change in the network topology is allowed during a snapshot
         //this function WONT BE CALLED if any snapshot is running THIS IS AN ASSUMPTION FROM THE TEXT
         if(!remoteImplementation.runningSnapshots.isEmpty()) {
-            System.out.println(ipAddress+":"+port + " | ERROR: REMOVING DURING SNAPSHOT, ASSUMPTION NOT RESPECTED");
-            //TODO: throw OperationForbidden (maybe specify the cause inside of the exception message)
+            throw new OperationForbidden("Unable to remove connection while snapshots are running");
         }
-
 
         RemoteNode remoteNode = remoteImplementation.getRemoteNode(ipAddress,port);
         try {
@@ -136,10 +140,10 @@ public class Node {
     /*
         COMMODITY FUNCTIONS
     */
-    private static RemoteInterface getRemoteInterface(String ipAddress, int port){
+    private static RemoteInterface getRemoteInterface(String ipAddress, int port) throws RemoteNodeNotFound {
         int index= remoteImplementation.remoteNodes.indexOf(new RemoteNode(ipAddress,port,null));
         if(index==-1){ // RemoteNode with the specified ipAddress and port not found!
-           //TODO: throw RemoteNodeNotFound
+           throw new RemoteNodeNotFound();
         }
         RemoteNode remoteNode = (RemoteNode) remoteImplementation.remoteNodes.get(index);
         return remoteNode.remoteInterface;

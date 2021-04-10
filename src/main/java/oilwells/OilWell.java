@@ -2,6 +2,7 @@ package oilwells;
 
 import library.AppConnector;
 import library.Node;
+import library.exceptions.OperationForbidden;
 import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
@@ -44,7 +45,11 @@ public class OilWell implements AppConnector {
 
     public void disconnect(String hostname, int port) {
         logger.info("Disconnecting from " + hostname + ":" + port);
-        Node.removeConnection(hostname, port);
+        try {
+            Node.removeConnection(hostname, port);
+        }catch (OperationForbidden e){
+            e.printStackTrace();
+        }
         directConnections.remove(new ConnectionDetails(hostname, port));
         logger.info("Successfully disconnected from " + hostname + ":" + port);
     }

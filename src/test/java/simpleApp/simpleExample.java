@@ -1,6 +1,7 @@
 package simpleApp;
 
 import library.*;
+import library.exceptions.RemoteNodeNotFound;
 
 import java.io.Serializable;
 import java.net.InetAddress;
@@ -27,9 +28,13 @@ public class simpleExample {
 
  */
         node1.addConnection(InetAddress.getLocalHost().getHostAddress(),11112);
+        try {
+            node1.sendMessage(InetAddress.getLocalHost().getHostAddress(), 11112, new Message("Messaggio 1->2 che è stato processato da 2"));
+            node2.sendMessage(InetAddress.getLocalHost().getHostAddress(), 11111, new Message("Messaggio 2->1 che è stato processato da 1"));
+        }catch (RemoteNodeNotFound e){
+            e.printStackTrace();
+        }
 
-        node1.sendMessage(InetAddress.getLocalHost().getHostAddress(), 11112, new Message("Messaggio 1->2 che è stato processato da 2"));
-        node2.sendMessage(InetAddress.getLocalHost().getHostAddress(), 11111, new Message("Messaggio 2->1 che è stato processato da 1"));
 
         node1.initiateSnapshot();
 
