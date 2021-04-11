@@ -5,6 +5,9 @@ import library.Node;
 import library.exceptions.*;
 import org.apache.logging.log4j.Logger;
 
+import java.rmi.AlreadyBoundException;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.Objects;
 import java.util.concurrent.Executors;
@@ -31,34 +34,47 @@ public class OilWell implements AppConnector {
         this.hostname = hostname;
         this.port = port;
         this.oilAmount = oilAmount;
-        //TODO: Check if new Node has failed
-        Node.init(hostname, port, this);
-        logger.info("Successfully initialized new node on " + hostname + ":" + port);
-        startOilTransfers(2*1000, (int)(this.oilAmount*0.001), (int)(this.oilAmount*0.01));
+        try {
+            Node.init(hostname, port, this);
+            logger.info("Successfully initialized new node on " + hostname + ":" + port);
+            startOilTransfers(2*1000, (int)(this.oilAmount*0.001), (int)(this.oilAmount*0.01));
+        } catch (RemoteException | AlreadyBoundException e) {
+            logger.warn("Cannot initialize new node");
+        }
     }
 
     public void connect(String hostname, int port) {
-        //TODO: check if node.addConnection has failed
         logger.info("Connecting to " + hostname + ":" + port);
-        Node.addConnection(hostname, port);
-        directConnections.add(new ConnectionDetails(hostname, port));
-        logger.info("Successfully connected to " + hostname + ":" + port);
+        try {
+            Node.addConnection(hostname, port);
+            directConnections.add(new ConnectionDetails(hostname, port));
+            logger.info("Successfully connected to " + hostname + ":" + port);
+        } catch (RemoteException | NotBoundException e) {
+            logger.warn("Cannot connect to " + hostname + ":" + port);
+        }
     }
 
     public void disconnect(String hostname, int port) {
         logger.info("Disconnecting from " + hostname + ":" + port);
         try {
             Node.removeConnection(hostname, port);
-        } catch (OperationForbidden e){
+            directConnections.remove(new ConnectionDetails(hostname, port));
+            logger.info("Successfully disconnected from " + hostname + ":" + port);
+        } catch (OperationForbidden | SnapshotInterruptException e){
             logger.warn("You can't remove " + hostname + ":" + port);
+        } catch (RemoteException e) {
+            logger.warn("Cannot disconnect from " + hostname + ":" + port);
         }
-        directConnections.remove(new ConnectionDetails(hostname, port));
-        logger.info("Successfully disconnected from " + hostname + ":" + port);
     }
 
     public void snapshot() {
         logger.info("Starting snapshot");
-        Node.initiateSnapshot();
+        try {
+            Node.initiateSnapshot();
+            logger.info("Snapshot completed");
+        } catch (RemoteException | DoubleMarkerException e) {
+            logger.warn("Cannot complete snapshot");
+        }
     }
 
     private void startOilTransfers(int frequency, int minAmount, int maxAmount) {
@@ -78,7 +94,7 @@ public class OilWell implements AppConnector {
                                 logger.warn("You are running out of oil, cannot send oil to " + randomWell.getHostname() + ":" + randomWell.getPort());
                             }
                         }
-                    } catch (RemoteNodeNotFound e) {
+                    } catch (RemoteNodeNotFound | RemoteException e) {
                         logger.warn("Error sending oil cargo");
                     }
                 }
