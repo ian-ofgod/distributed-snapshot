@@ -90,9 +90,9 @@ public class OilWell implements AppConnector {
                         int amount = minAmount + (int) (Math.random() * ((maxAmount - minAmount) + 1));
                         synchronized (oilAmountLock) {
                             if (oilAmount - amount >= 0) {
-                                oilAmount -= amount;
                                 logger.info("Sending " + amount + " oil to " + randomWell.getHostname() + ":" + randomWell.getPort() + ". New oilAmount = " + oilAmount);
                                 node.sendMessage(randomWell.getHostname(), randomWell.getPort(), new OilCargo(amount));
+                                oilAmount -= amount;
                             } else {
                                 logger.warn("You are running out of oil, cannot send oil to " + randomWell.getHostname() + ":" + randomWell.getPort());
                             }
