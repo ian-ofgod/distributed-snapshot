@@ -2,7 +2,7 @@ package oilwells;
 
 import library.AppConnector;
 import library.Node;
-import library.exceptions.OperationForbidden;
+import library.exceptions.*;
 import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
@@ -15,7 +15,9 @@ public class OilWell implements AppConnector {
     private String hostname;
     private int port;
     private int oilAmount;
-    private ArrayList<ConnectionDetails> directConnections = new ArrayList<>();
+    private final Object oilAmountLock = new Object();
+    private final ArrayList<ConnectionDetails> directConnections = new ArrayList<>();
+    private final Object directConnectionsLock = new Object();
 
     private Logger logger;
 
@@ -47,35 +49,38 @@ public class OilWell implements AppConnector {
         logger.info("Disconnecting from " + hostname + ":" + port);
         try {
             Node.removeConnection(hostname, port);
-        }catch (OperationForbidden e){
-            e.printStackTrace();
+        } catch (OperationForbidden e){
+            logger.warn("You can't remove " + hostname + ":" + port);
         }
         directConnections.remove(new ConnectionDetails(hostname, port));
         logger.info("Successfully disconnected from " + hostname + ":" + port);
     }
 
     public void snapshot() {
+        logger.info("Starting snapshot");
         Node.initiateSnapshot();
     }
 
     private void startOilTransfers(int frequency, int minAmount, int maxAmount) {
         logger.info("Starting automated oil transfers");
         executor.scheduleAtFixedRate(() -> {
-            if (directConnections.size() > 0) {
-                try {
-                    ConnectionDetails randomWell = directConnections.get((int)(Math.random() * (directConnections.size())));
-                    int amount = minAmount + (int) (Math.random() * ((maxAmount - minAmount) + 1));
-                    if (oilAmount - amount >= 0) {
-                        oilAmount -= amount;
-                        logger.info("Sending " + amount + " oil to " + randomWell.getHostname() + ":" + randomWell.getPort() + ". New oilAmount = " + oilAmount);
-                        //TODO: add/change exception handling
-                        Node.sendMessage(randomWell.getHostname(), randomWell.getPort(), new OilCargo(amount));
-                    } else {
-                        logger.warn("You are running out of oil, cannot send oil to " + randomWell.getHostname() + ":" + randomWell.getPort());
+            synchronized (directConnectionsLock) {
+                if (directConnections.size() > 0) {
+                    try {
+                        ConnectionDetails randomWell = directConnections.get((int) (Math.random() * (directConnections.size())));
+                        int amount = minAmount + (int) (Math.random() * ((maxAmount - minAmount) + 1));
+                        synchronized (oilAmountLock) {
+                            if (oilAmount - amount >= 0) {
+                                oilAmount -= amount;
+                                logger.info("Sending " + amount + " oil to " + randomWell.getHostname() + ":" + randomWell.getPort() + ". New oilAmount = " + oilAmount);
+                                Node.sendMessage(randomWell.getHostname(), randomWell.getPort(), new OilCargo(amount));
+                            } else {
+                                logger.warn("You are running out of oil, cannot send oil to " + randomWell.getHostname() + ":" + randomWell.getPort());
+                            }
+                        }
+                    } catch (RemoteNodeNotFound e) {
+                        logger.warn("Error sending oil cargo");
                     }
-                }
-                catch (Exception e) {
-                    e.printStackTrace();
                 }
             }
         }, 0, frequency, TimeUnit.MILLISECONDS);
@@ -83,29 +88,35 @@ public class OilWell implements AppConnector {
 
     @Override
     public void handleIncomingMessage(String senderIp, int senderPort, Object o) {
-        OilCargo message = (OilCargo) o;
-        oilAmount += message.getOilAmount();
-        logger.info("Received " + message.getOilAmount() + " oil from " + senderIp + ":" + senderPort + ". New oilAmount = " + oilAmount);
+        synchronized (oilAmountLock) {
+            OilCargo message = (OilCargo) o;
+            oilAmount += message.getOilAmount();
+            logger.info("Received " + message.getOilAmount() + " oil from " + senderIp + ":" + senderPort + ". New oilAmount = " + oilAmount);
+        }
     }
 
     @Override
     public void handleNewConnection(String newConnectionIp, int newConnectionPort) {
-        logger.info("Received connection attempt from " + newConnectionIp + ":" + newConnectionPort);
-        directConnections.add(new ConnectionDetails(newConnectionIp, newConnectionPort));
-        logger.info("Successfully connected to " + newConnectionIp + ":" + newConnectionPort);
+        synchronized (directConnectionsLock) {
+            logger.info("Received connection attempt from " + newConnectionIp + ":" + newConnectionPort);
+            directConnections.add(new ConnectionDetails(newConnectionIp, newConnectionPort));
+            logger.info("Successfully connected to " + newConnectionIp + ":" + newConnectionPort);
+        }
     }
 
     @Override
     public void handleRemoveConnection(String removeConnectionIp, int removeConnectionPort) {
-        logger.info("Received disconnect attempt from " + removeConnectionIp + ":" + removeConnectionPort);
-        directConnections.remove(new ConnectionDetails(removeConnectionIp, removeConnectionPort));
-        logger.info("Successfully disconnected from " + removeConnectionIp + ":" + removeConnectionPort);
+        synchronized (directConnectionsLock) {
+            logger.info("Received disconnect attempt from " + removeConnectionIp + ":" + removeConnectionPort);
+            directConnections.remove(new ConnectionDetails(removeConnectionIp, removeConnectionPort));
+            logger.info("Successfully disconnected from " + removeConnectionIp + ":" + removeConnectionPort);
+        }
     }
 }
 
 class ConnectionDetails {
-    private String hostname;
-    private int port;
+    private final String hostname;
+    private final int port;
 
     public ConnectionDetails(String hostname, int port) {
         this.hostname = hostname;
