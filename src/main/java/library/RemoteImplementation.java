@@ -91,15 +91,11 @@ class RemoteImplementation<StateType>  implements RemoteInterface {
 
 
     @Override
-    public void addMeBack(String ip_address, int port) throws RemoteException{
-       try {
-            Registry registry = LocateRegistry.getRegistry(ip_address, port);
-            RemoteInterface remoteInterface = (RemoteInterface) registry.lookup("RemoteInterface");
-            remoteNodes.add(new RemoteNode(ip_address, port, remoteInterface));
-            appConnector.handleNewConnection(ip_address,port);
-        } catch (RemoteException | NotBoundException e) {
-           e.printStackTrace();
-       }
+    public void addMeBack(String ip_address, int port) throws RemoteException, NotBoundException {
+        Registry registry = LocateRegistry.getRegistry(ip_address, port);
+        RemoteInterface remoteInterface = (RemoteInterface) registry.lookup("RemoteInterface");
+        remoteNodes.add(new RemoteNode(ip_address, port, remoteInterface));
+        appConnector.handleNewConnection(ip_address,port);
     }
 
 

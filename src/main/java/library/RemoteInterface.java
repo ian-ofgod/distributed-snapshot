@@ -3,6 +3,7 @@ package library;
 import library.exceptions.DoubleMarkerException;
 import library.exceptions.SnapshotInterruptException;
 
+import java.rmi.NotBoundException;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 
@@ -21,7 +22,7 @@ interface RemoteInterface extends Remote {
     /**
      *
      * */
-    void addMeBack(String ip_address, int port) throws RemoteException;
+    void addMeBack(String ip_address, int port) throws RemoteException, NotBoundException;
 
     /**
      *
