@@ -80,7 +80,9 @@ class RemoteImplementation<StateType>  implements RemoteInterface {
         //for debug purposes
         //System.out.println(ipAddress + ":" + port + " | Received a message from remoteNode: " + senderIp + ":" + senderPort);
 
+        //TODO: add the case to handle a remote node sending a message to me without him being in my remote nodes
         if (!runningSnapshots.isEmpty()) { //snapshot running, marker received
+            //TODO: do not save the message when you have already received a marker from the same entity
             runningSnapshots.forEach( (snap) -> snap.messages.put(new Entity(senderIp,senderPort),message));
         }
         appConnector.handleIncomingMessage(senderIp, senderPort, message);
