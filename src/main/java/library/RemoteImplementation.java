@@ -112,7 +112,7 @@ class RemoteImplementation<StateType>  implements RemoteInterface {
     }
 
     /**
-     *  
+     *
      * */
     private void recordSnapshotId(String senderIp, int senderPort, int snapshotId) throws DoubleMarkerException {
         RemoteNode remoteNode = getRemoteNode(senderIp,senderPort);
