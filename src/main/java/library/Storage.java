@@ -65,7 +65,7 @@ class Storage {
      * @param snapshot the snapshot for which the name is built, will be saved on disk
      * */
     private static String buildFileName(Snapshot snapshot) {
-        return FOLDER + "/" + snapshot + EXTENSION;
+        return FOLDER + "/" + snapshot.snapshotId + EXTENSION;
     }
 
 
