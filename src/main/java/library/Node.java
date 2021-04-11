@@ -14,11 +14,23 @@ import java.util.ArrayList;
 import java.util.Objects;
 
 //TODO: change to static (only at the end of prj) ; correct trhrow of RemoteException
+/**
+ *
+ * */
 public class Node {
+    /**
+     *
+     * */
     protected static RemoteImplementation remoteImplementation = new RemoteImplementation();
 
+    /**
+     *
+     * */
     public Node() {}
 
+    /**
+     *
+     * */
     public Node(AppConnector appConnector, String ipAddress, int port){
         remoteImplementation.setAppConnector(appConnector);
         remoteImplementation.port=port;
@@ -34,6 +46,9 @@ public class Node {
 
     }
 
+    /**
+     *
+     * */
     public static void init(String yourIp, int rmiRegistryPort,AppConnector appConnector){
         remoteImplementation.ipAddress =yourIp;
         remoteImplementation.port=rmiRegistryPort;
@@ -86,10 +101,16 @@ public class Node {
         }
     }
 
+    /**
+     *
+     * */
     public static <StateType> void updateState(StateType state){
         //TODO: save current state to a variable (probably variable in the remoteImplementation)
     }
 
+    /**
+     *
+     * */
     public static void initiateSnapshot(){
         //TODO: how to decide the snapshot id so that it does not conflicts with the others?
         int snapshotId=1;
@@ -108,6 +129,9 @@ public class Node {
         }
     }
 
+    /**
+     *
+     * */
     public static void removeConnection(String ipAddress, int port) throws OperationForbidden {
         //since no change in the network topology is allowed during a snapshot
         //this function WONT BE CALLED if any snapshot is running THIS IS AN ASSUMPTION FROM THE TEXT
@@ -123,7 +147,10 @@ public class Node {
         }
         remoteImplementation.remoteNodes.remove(remoteNode);
     }
-    
+
+    /**
+     *
+     * */
     public static void stop() {
         try {
             //TODO: remove the stop of the whole jvm
@@ -137,9 +164,9 @@ public class Node {
     }
 
 
-    /*
-        COMMODITY FUNCTIONS
-    */
+    /**
+     *
+     * */
     private static RemoteInterface getRemoteInterface(String ipAddress, int port) throws RemoteNodeNotFound {
         int index= remoteImplementation.remoteNodes.indexOf(new RemoteNode(ipAddress,port,null));
         if(index==-1){ // RemoteNode with the specified ipAddress and port not found!
@@ -151,17 +178,40 @@ public class Node {
 
 }
 
+/**
+ *
+ * */
 class RemoteNode {
+
+    /**
+     *
+     * */
     protected String ipAddress;
+
+    /**
+     *
+     * */
     protected int port;
+
+    /**
+     *
+     * */
     protected RemoteInterface remoteInterface; //the remote interface of the node
+
+    /**
+     *
+     * */
     protected ArrayList<Integer> snapshotIdsReceived = new ArrayList<>(); //holds the marker.id received from this remoteNode (for multiple concurrent distributed snapshots)
 
+    /**
+     *
+     * */
     public RemoteNode(String ipAddress, int port, RemoteInterface remoteInterface) {
         this.ipAddress = ipAddress;
         this.port = port;
         this.remoteInterface = remoteInterface;
     }
+
 
     @Override
     public boolean equals(Object o) {

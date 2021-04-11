@@ -9,9 +9,19 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.ArrayList;
 
+/**
+ *
+ * */
 class RemoteImplementation<StateType>  implements RemoteInterface {
-    //info on the current node
+
+    /**
+     *
+     * */
     protected String ipAddress;
+
+    /**
+     *
+     * */
     protected int port;
 
 
@@ -21,12 +31,21 @@ class RemoteImplementation<StateType>  implements RemoteInterface {
     StateType current_state;
 
     //store remote references to the linked nodes
+    /**
+     *
+     * */
     protected ArrayList<RemoteNode> remoteNodes = new ArrayList<>();
 
     //this is the provided implementation of the class Observer
+    /**
+     *
+     * */
     protected AppConnector appConnector;
 
     //list of the ids of running snapshots
+    /**
+     *
+     * */
     protected ArrayList<Snapshot> runningSnapshots = new ArrayList<>();
 
 
@@ -92,6 +111,9 @@ class RemoteImplementation<StateType>  implements RemoteInterface {
         appConnector.handleRemoveConnection(ip_address, port);
     }
 
+    /**
+     *  
+     * */
     private void recordSnapshotId(String senderIp, int senderPort, int snapshotId) throws DoubleMarkerException {
         RemoteNode remoteNode = getRemoteNode(senderIp,senderPort);
         if(remoteNode!=null) {
@@ -105,7 +127,14 @@ class RemoteImplementation<StateType>  implements RemoteInterface {
         }
     }
 
-    //send the marker to all connected nodes
+    /**
+     * This methods sends a specific marker to all the connected RemoteNodes via RMI.
+     * Together with the specific marker, also an identifier of the snapshot initiator
+     * is propagated.
+     * @param snapshotId the unique snapshot identifier (i.e. marker) that is being propagated
+     * @param initiatorIp the IP address of the entity that initiated the snapshot
+     * @param initiatorPort the port of the entity that initiated the snapshot
+     * */
     private void propagateMarker(String initiatorIp, int initiatorPort, int snapshotId) {
         for (RemoteNode remoteNode : remoteNodes) {
             try {
@@ -116,6 +145,13 @@ class RemoteImplementation<StateType>  implements RemoteInterface {
         }
     }
 
+    /**
+     * This methods retrieve the RemoteNode object associated to the ip/port couple by
+     * performing a lookup in the list of stored RemoteNode objects, since each one
+     * contains the ip/port as attributes. The association RemoteNode and ip/port is unique.
+     * @param ip_address the IP address of the Remote Node to look up
+     * @param port the port of the Remote Node to look up
+     * */
     protected RemoteNode getRemoteNode(String ip_address, int port){
         for (RemoteNode remoteNode : remoteNodes) {
             if(remoteNode.ipAddress.equals(ip_address) && remoteNode.port==port)
@@ -124,7 +160,11 @@ class RemoteImplementation<StateType>  implements RemoteInterface {
         return null;
     }
 
-    //check if we have received marker from all the links
+    /**
+     * This method checks if the same marker has been received by all nodes connected to the current node.
+     * If all connected nodes have send a specific marker, it means that the related snapshot is over.
+     * @param snapshotId the unique snapshot identifier (i.e. marker) to check.
+     * */
     private boolean receivedMarkerFromAllLinks(int snapshotId){
         return remoteNodes.stream().filter(rn->rn.snapshotIdsReceived.contains(snapshotId)).count() == remoteNodes.size();
     }
