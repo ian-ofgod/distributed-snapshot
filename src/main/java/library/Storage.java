@@ -12,7 +12,6 @@ import java.util.ArrayList;
  * This class provides static methods to handle the storage of snapshots on disk.
  * It performs the creation of the destination folder and the snapshot saving.
  * */
-//TODO: add generic types in storage <StateType, MessageType>
 class Storage {
 
     /**
@@ -48,9 +47,9 @@ class Storage {
      * @param runningSnapshots the list of snapshots running on the current node
      * @param snapshotId the id of the snapshot that the user want to save on disk
      * */
-    public static void writeFile(ArrayList<Snapshot> runningSnapshots, int snapshotId) {
+    public static <StateType, MessageType> void writeFile(ArrayList<Snapshot<StateType, MessageType>> runningSnapshots, int snapshotId) {
         createFolder();
-        Snapshot toSaveSnapshot = runningSnapshots.stream().filter(snap -> snap.snapshotId==snapshotId).findFirst().orElse(null);
+        Snapshot<StateType, MessageType> toSaveSnapshot = runningSnapshots.stream().filter(snap -> snap.snapshotId==snapshotId).findFirst().orElse(null);
         String fileName = buildFileName(toSaveSnapshot);
         try (PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter(fileName, true)))) {
             writer.println(toSaveSnapshot);
@@ -64,7 +63,7 @@ class Storage {
      * Method to build the file name of the current snapshot before saving on disk.
      * @param snapshot the snapshot for which the name is built, will be saved on disk
      * */
-    private static String buildFileName(Snapshot snapshot) {
+    private static <StateType, MessageType> String buildFileName(Snapshot<StateType, MessageType> snapshot) {
         return FOLDER + "/" + snapshot.snapshotId + EXTENSION;
     }
 

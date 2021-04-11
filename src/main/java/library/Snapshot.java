@@ -10,7 +10,6 @@ import java.util.*;
  * */
 class Snapshot<StateType, MessageType> {
 
-
     /**
      * A unique identifier of the current snapshot
      * */
@@ -29,11 +28,6 @@ class Snapshot<StateType, MessageType> {
      * */
     protected HashMap<Entity, ArrayList<MessageType>> messages = new HashMap<>();
 
-
-
-    public Snapshot(){ //TODO: lasciare solo il costruttore che serve
-    }
-
     /**
      * Snapshot constructor with unique id. The snapshot is empty, as it
      * has not received the current state. Can be used to create temporary snapshot
@@ -44,7 +38,6 @@ class Snapshot<StateType, MessageType> {
     public Snapshot(int id){
         this.snapshotId = id;
     }
-
 
     /**
      * Snapshot constructor that builds a full snapshot objects. Additionally to

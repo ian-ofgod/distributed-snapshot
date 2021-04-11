@@ -8,11 +8,11 @@ import java.rmi.Remote;
 import java.rmi.RemoteException;
 
 // Creating Remote interface for our application 
-interface RemoteInterface extends Remote {
+interface RemoteInterface<MessageType> extends Remote {
     /**
      *
      * */
-    <MessageType> void receiveMessage(String senderIp, int senderPort, MessageType message)  throws RemoteException;
+    void receiveMessage(String senderIp, int senderPort, MessageType message)  throws RemoteException;
 
     /**
      *

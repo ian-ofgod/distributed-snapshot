@@ -30,12 +30,15 @@ public class OilWell implements AppConnector {
         this.logger = logger;
     }
 
+    //TODO: temporary
+    Node<Integer, OilCargo> node = new Node<>();
+
     public void initialize(String hostname, int port, int oilAmount) {
         this.hostname = hostname;
         this.port = port;
         this.oilAmount = oilAmount;
         try {
-            Node.init(hostname, port, this);
+            node.init(hostname, port, this);
             logger.info("Successfully initialized new node on " + hostname + ":" + port);
             startOilTransfers(2*1000, (int)(this.oilAmount*0.001), (int)(this.oilAmount*0.01));
         } catch (RemoteException | AlreadyBoundException e) {
@@ -46,7 +49,7 @@ public class OilWell implements AppConnector {
     public void connect(String hostname, int port) {
         logger.info("Connecting to " + hostname + ":" + port);
         try {
-            Node.addConnection(hostname, port);
+            node.addConnection(hostname, port);
             directConnections.add(new ConnectionDetails(hostname, port));
             logger.info("Successfully connected to " + hostname + ":" + port);
         } catch (RemoteException | NotBoundException e) {
@@ -57,7 +60,7 @@ public class OilWell implements AppConnector {
     public void disconnect(String hostname, int port) {
         logger.info("Disconnecting from " + hostname + ":" + port);
         try {
-            Node.removeConnection(hostname, port);
+            node.removeConnection(hostname, port);
             directConnections.remove(new ConnectionDetails(hostname, port));
             logger.info("Successfully disconnected from " + hostname + ":" + port);
         } catch (OperationForbidden | SnapshotInterruptException e){
@@ -70,7 +73,7 @@ public class OilWell implements AppConnector {
     public void snapshot() {
         logger.info("Starting snapshot");
         try {
-            Node.initiateSnapshot();
+            node.initiateSnapshot();
             logger.info("Snapshot completed");
         } catch (RemoteException | DoubleMarkerException e) {
             logger.warn("Cannot complete snapshot");
@@ -89,7 +92,7 @@ public class OilWell implements AppConnector {
                             if (oilAmount - amount >= 0) {
                                 oilAmount -= amount;
                                 logger.info("Sending " + amount + " oil to " + randomWell.getHostname() + ":" + randomWell.getPort() + ". New oilAmount = " + oilAmount);
-                                Node.sendMessage(randomWell.getHostname(), randomWell.getPort(), new OilCargo(amount));
+                                node.sendMessage(randomWell.getHostname(), randomWell.getPort(), new OilCargo(amount));
                             } else {
                                 logger.warn("You are running out of oil, cannot send oil to " + randomWell.getHostname() + ":" + randomWell.getPort());
                             }
