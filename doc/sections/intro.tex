@@ -1,0 +1,21 @@
+\section{Introduction}
+Distributed systems cannot take advantage neither of shared global memory nor of a shared global clock. Consequently, the problem of creating a global snapshot, i.e., a description of the system state at a specific point in time, is nontrivial. \\ 
+
+A solution to the problem was proposed by K. Chandy and L. Lamport in \cite{10.1145/214451.214456}. Their proposed solution is based on the sending of a \textit{marker}, i.e. a unique identifier for a global snapshot, that communicates to the entities involved that a snapshot is being created and that they must record their state and incoming messages. \\ 
+
+In this work we implement the Chandy-Lamport proposed solution by providing a library that allows a distributed application developer to conveniently add the functionality of a distributed snapshot to its project. 
+
+
+\subsection{Project statement}
+Implement a library that offers the capability of storing a distributed snapshot on disk. The library should be state and message agnostic. Implement an application that uses the library to cope with node failures (restarting from the last valid snapshot).
+
+
+\subsection{Acronyms}
+
+\subsection{Assumptions}
+\begin{itemize}
+    \item Nodes do not crash in the middle of the snapshot. 
+    \item The topology of the network (including the set of nodes) does not change during a snapshot.
+    \item Multiple snapshots may run in parallel.
+\end{itemize} 
+ 
