@@ -11,6 +11,7 @@ public interface AppConnector {
      * @param senderPort the port assigned to the RMI registry of the sender
      * @param o the message that the remote node sent
      */
+    //TODO: change to generic MessageType
     void handleIncomingMessage(String senderIp, int senderPort, Object o);
 
     /**

@@ -18,6 +18,9 @@ import java.util.Objects;
 /**
  *
  * */
+//TODO: add generic types inside of class Node <StateType, MessageType>
+//TODO: add method to set the two generic types
+//TODO: add wrapper
 public class Node {
     /**
      *
@@ -44,12 +47,11 @@ public class Node {
         } catch (Exception e) {
             e.printStackTrace();
         }
-
     }
 
     /**
      *
-     * */
+     */
     public static void init(String yourIp, int rmiRegistryPort,AppConnector appConnector) throws RemoteException, AlreadyBoundException {
         remoteImplementation.ipAddress =yourIp;
         remoteImplementation.port=rmiRegistryPort;

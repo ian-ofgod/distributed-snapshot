@@ -12,7 +12,7 @@ import java.util.ArrayList;
  * This class provides static methods to handle the storage of snapshots on disk.
  * It performs the creation of the destination folder and the snapshot saving.
  * */
-
+//TODO: add generic types in storage <StateType, MessageType>
 class Storage {
 
     /**
