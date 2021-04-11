@@ -14,6 +14,12 @@ public final class AppLauncher {
         logger.info("Example: initialize, localhost, 10000, 1000");
         logger.info("Example: connect, localhost, 10001");
         logger.info("Example: snapshot");
-        Parser.parseInput(OilWell.class.getName(), oilWell);
+        while (true) {
+            try {
+                Parser.parseInput(OilWell.class.getName(), oilWell);
+            } catch (IllegalStateException e) {
+                logger.warn(e.getMessage());
+            }
+        }
     }
 }

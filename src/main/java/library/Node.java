@@ -5,6 +5,7 @@ import library.exceptions.OperationForbidden;
 import library.exceptions.RemoteNodeNotFound;
 import library.exceptions.SnapshotInterruptException;
 
+import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.Registry;
@@ -17,6 +18,9 @@ import java.util.Objects;
 /**
  *
  * */
+//TODO: add generic types inside of class Node <StateType, MessageType>
+//TODO: add method to set the two generic types
+//TODO: add wrapper
 public class Node {
     /**
      *
@@ -43,24 +47,19 @@ public class Node {
         } catch (Exception e) {
             e.printStackTrace();
         }
-
     }
 
     /**
      *
-     * */
-    public static void init(String yourIp, int rmiRegistryPort,AppConnector appConnector){
+     */
+    public static void init(String yourIp, int rmiRegistryPort,AppConnector appConnector) throws RemoteException, AlreadyBoundException {
         remoteImplementation.ipAddress =yourIp;
         remoteImplementation.port=rmiRegistryPort;
         remoteImplementation.appConnector=appConnector;
 
-        try {
-            RemoteInterface stub = (RemoteInterface) UnicastRemoteObject.exportObject(remoteImplementation, 0);
-            Registry registry = LocateRegistry.createRegistry(remoteImplementation.port);
-            registry.bind("RemoteInterface", stub);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        RemoteInterface stub = (RemoteInterface) UnicastRemoteObject.exportObject(remoteImplementation, 0);
+        Registry registry = LocateRegistry.createRegistry(remoteImplementation.port);
+        registry.bind("RemoteInterface", stub);
     }
 
     /**
@@ -69,18 +68,13 @@ public class Node {
      * @param ipAddress the ip address of the host running the rmiregistry
      * @param port the port where the rmi registry is running
      */
-    public static void addConnection(String ipAddress, int port) {
-        if(!remoteImplementation.remoteNodes.contains(new RemoteNode(ipAddress,port,null))) {
-            try {
+    public static void addConnection(String ipAddress, int port) throws RemoteException, NotBoundException {
+        if (!remoteImplementation.remoteNodes.contains(new RemoteNode(ipAddress,port,null))) {
                 Registry registry = LocateRegistry.getRegistry(ipAddress, port);
                 RemoteInterface remoteInterface = (RemoteInterface) registry.lookup("RemoteInterface");
                 remoteImplementation.remoteNodes.add(new RemoteNode(ipAddress, port, remoteInterface));
                 remoteInterface.addMeBack(remoteImplementation.ipAddress, remoteImplementation.port);
-            } catch (RemoteException | NotBoundException e) {
-                e.printStackTrace();
-            }
-        }
-        else{
+        } else {
             //TODO: throw RemoteNodeAlreadyPresent or just ignore the call?
         }
     }
@@ -92,13 +86,8 @@ public class Node {
      * @param message the message to send to the remote node
      * @param <MessageType> the message type to send
      */
-    public static <MessageType> void sendMessage(String ipAddress, int port, MessageType message) throws RemoteNodeNotFound {
-        try {
-            getRemoteInterface(ipAddress, port).receiveMessage(remoteImplementation.ipAddress, remoteImplementation.port, message);
-        }
-        catch (RemoteException e) {
-            e.printStackTrace();
-        }
+    public static <MessageType> void sendMessage(String ipAddress, int port, MessageType message) throws RemoteNodeNotFound, RemoteException {
+        getRemoteInterface(ipAddress, port).receiveMessage(remoteImplementation.ipAddress, remoteImplementation.port, message);
     }
 
     /**
@@ -111,40 +100,30 @@ public class Node {
     /**
      *
      * */
-    public static void initiateSnapshot(){
+    public static void initiateSnapshot() throws RemoteException, DoubleMarkerException {
         //TODO: how to decide the snapshot id so that it does not conflicts with the others?
         int snapshotId=1;
-
         Snapshot snap = new Snapshot(snapshotId);
         remoteImplementation.runningSnapshots.add(snap);
 
         for (Object rn : remoteImplementation.remoteNodes){
             RemoteNode remoteNode = (RemoteNode) rn;
-            try{
-                System.out.println(remoteImplementation.ipAddress + ":" + remoteImplementation.port + " | Sending MARKER to: "+remoteNode.ipAddress+":"+remoteNode.port);
-                remoteNode.remoteInterface.receiveMarker(remoteImplementation.ipAddress, remoteImplementation.port, remoteImplementation.ipAddress, remoteImplementation.port, 1);
-            }catch (RemoteException | DoubleMarkerException e) {
-                e.printStackTrace();
-            }
+            System.out.println(remoteImplementation.ipAddress + ":" + remoteImplementation.port + " | Sending MARKER to: "+remoteNode.ipAddress+":"+remoteNode.port);
+            remoteNode.remoteInterface.receiveMarker(remoteImplementation.ipAddress, remoteImplementation.port, remoteImplementation.ipAddress, remoteImplementation.port, 1);
         }
     }
 
     /**
      *
      * */
-    public static void removeConnection(String ipAddress, int port) throws OperationForbidden {
+    public static void removeConnection(String ipAddress, int port) throws OperationForbidden, SnapshotInterruptException, RemoteException {
         //since no change in the network topology is allowed during a snapshot
         //this function WONT BE CALLED if any snapshot is running THIS IS AN ASSUMPTION FROM THE TEXT
-        if(!remoteImplementation.runningSnapshots.isEmpty()) {
+        if (!remoteImplementation.runningSnapshots.isEmpty()) {
             throw new OperationForbidden("Unable to remove connection while snapshots are running");
         }
-
         RemoteNode remoteNode = remoteImplementation.getRemoteNode(ipAddress,port);
-        try {
-            remoteNode.remoteInterface.removeMe(remoteImplementation.ipAddress, remoteImplementation.port);
-        }catch (RemoteException | SnapshotInterruptException e){
-            e.printStackTrace();
-        }
+        remoteNode.remoteInterface.removeMe(remoteImplementation.ipAddress, remoteImplementation.port);
         remoteImplementation.remoteNodes.remove(remoteNode);
     }
 

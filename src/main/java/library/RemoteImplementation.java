@@ -12,6 +12,7 @@ import java.util.ArrayList;
 /**
  *
  * */
+//TODO: add MessageType as a generic type and handle all the Snapshot invocation with <StateType, MessageType>
 class RemoteImplementation<StateType>  implements RemoteInterface {
 
     /**

@@ -13,32 +13,31 @@ public abstract class Parser {
             Class<?>[] methodParameterTypes;
 
             switch (methodName) {
-                case "initialize":
+                case "initialize" -> {
                     methodParameterTypes = new Class<?>[]{String.class, int.class, int.class};
+                    if (parameters.length != 3) throw new IllegalStateException("Unexpected number of parameters");
                     parameters[0] = inputs[1];
                     parameters[1] = Integer.parseInt(inputs[2]);
                     parameters[2] = Integer.parseInt(inputs[3]);
-                    break;
-                case "disconnect":
-                case "connect":
+                }
+                case "disconnect", "connect" -> {
                     methodParameterTypes = new Class<?>[]{String.class, int.class};
+                    if (parameters.length != 2) throw new IllegalStateException("Unexpected number of parameters");
                     parameters[0] = inputs[1];
                     parameters[1] = Integer.parseInt(inputs[2]);
-                    break;
-                case "snapshot":
-                    methodParameterTypes = new Class<?>[]{String.class};
-                    parameters[0] = inputs[1];
-                    break;
-                default:
-                    throw new IllegalStateException("Unexpected value: " + methodName);
+                }
+                case "snapshot" -> {
+                    if (parameters.length != 0) throw new IllegalStateException("Unexpected number of parameters");
+                    methodParameterTypes = new Class<?>[]{};
+                }
+                default -> throw new IllegalStateException("Unexpected value: " + methodName);
             }
 
             try {
-                    Class.forName(className).getMethod(methodName, methodParameterTypes).invoke(classObject, parameters);
-                } catch (Exception e) {
-                    System.err.println("Unable to parse input: " + e.getMessage());
-                }
+                Class.forName(className).getMethod(methodName, methodParameterTypes).invoke(classObject, parameters);
+            } catch (Exception e) {
+                throw new IllegalStateException("Something went wrong calling " + methodName);
             }
-
         }
     }
+}

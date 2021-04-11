@@ -1,11 +1,14 @@
 package simpleApp;
 
 import library.*;
+import library.exceptions.DoubleMarkerException;
 import library.exceptions.RemoteNodeNotFound;
 
 import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
 
 public class simpleExample {
     public static void main(String[] args) throws UnknownHostException {
@@ -27,16 +30,28 @@ public class simpleExample {
         node2.addConnection(InetAddress.getLocalHost().getHostAddress(), 11113);
 
  */
-        node1.addConnection(InetAddress.getLocalHost().getHostAddress(),11112);
+        try {
+            node1.addConnection(InetAddress.getLocalHost().getHostAddress(),11112);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        } catch (NotBoundException e) {
+            e.printStackTrace();
+        }
         try {
             node1.sendMessage(InetAddress.getLocalHost().getHostAddress(), 11112, new Message("Messaggio 1->2 che è stato processato da 2"));
             node2.sendMessage(InetAddress.getLocalHost().getHostAddress(), 11111, new Message("Messaggio 2->1 che è stato processato da 1"));
-        }catch (RemoteNodeNotFound e){
+        }catch (RemoteNodeNotFound | RemoteException e){
             e.printStackTrace();
         }
 
 
-        node1.initiateSnapshot();
+        try {
+            node1.initiateSnapshot();
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        } catch (DoubleMarkerException e) {
+            e.printStackTrace();
+        }
 
         System.out.println("Stopping node1");
         node1.stop();
