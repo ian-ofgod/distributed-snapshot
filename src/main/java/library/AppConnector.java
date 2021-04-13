@@ -4,15 +4,14 @@ package library;
  * This interface must be implemented by the application in order to use the library.
  * It is composed of the methods that will be triggered by the library when an new event occurs.
  */
-public interface AppConnector {
+public interface AppConnector<MessageType> {
     /**
      * This is the method for the application to handle a new incoming message from another node on the network.
      * @param senderIp the hostname of the sender
      * @param senderPort the port assigned to the RMI registry of the sender
      * @param o the message that the remote node sent
      */
-    //TODO: change to generic MessageType
-    void handleIncomingMessage(String senderIp, int senderPort, Object o);
+    void handleIncomingMessage(String senderIp, int senderPort, MessageType o);
 
     /**
      * This is the method for the application to handle a new connection from another node of the network.

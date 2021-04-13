@@ -28,7 +28,7 @@ public class DistributedSnapshot<StateType, MessageType> {
     /**
      *
      * */
-    public DistributedSnapshot(AppConnector appConnector, String ipAddress, int port){
+    public DistributedSnapshot(AppConnector<MessageType> appConnector, String ipAddress, int port){
         remoteImplementation.setAppConnector(appConnector);
         remoteImplementation.port=port;
         remoteImplementation.ipAddress =ipAddress;
@@ -45,7 +45,7 @@ public class DistributedSnapshot<StateType, MessageType> {
     /**
      *
      */
-    public void init(String yourIp, int rmiRegistryPort,AppConnector appConnector) throws RemoteException, AlreadyBoundException {
+    public void init(String yourIp, int rmiRegistryPort, AppConnector<MessageType> appConnector) throws RemoteException, AlreadyBoundException {
         remoteImplementation.ipAddress =yourIp;
         remoteImplementation.port=rmiRegistryPort;
         remoteImplementation.appConnector=appConnector;
@@ -99,10 +99,9 @@ public class DistributedSnapshot<StateType, MessageType> {
         Snapshot<StateType, MessageType> snap = new Snapshot<>(snapshotId);
         remoteImplementation.runningSnapshots.add(snap);
 
-        for (Object rn : remoteImplementation.remoteNodes){
-            RemoteNode<MessageType> remoteNode = (RemoteNode<MessageType>) rn;
+        for (RemoteNode<MessageType> remoteNode : remoteImplementation.remoteNodes){
             System.out.println(remoteImplementation.ipAddress + ":" + remoteImplementation.port + " | Sending MARKER to: "+remoteNode.ipAddress+":"+remoteNode.port);
-            remoteNode.remoteInterface.receiveMarker(remoteImplementation.ipAddress, remoteImplementation.port, remoteImplementation.ipAddress, remoteImplementation.port, 1);
+            remoteNode.remoteInterface.receiveMarker(remoteImplementation.ipAddress, remoteImplementation.port, remoteImplementation.ipAddress, remoteImplementation.port, snapshotId);
         }
     }
 
@@ -144,7 +143,7 @@ public class DistributedSnapshot<StateType, MessageType> {
         if(index==-1){ // RemoteNode with the specified ipAddress and port not found!
            throw new RemoteNodeNotFound();
         }
-        RemoteNode<MessageType> remoteNode = (RemoteNode<MessageType>) remoteImplementation.remoteNodes.get(index);
+        RemoteNode<MessageType> remoteNode = remoteImplementation.remoteNodes.get(index);
         return remoteNode.remoteInterface;
     }
 

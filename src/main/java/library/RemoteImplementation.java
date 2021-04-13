@@ -41,7 +41,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     /**
      *
      * */
-    protected AppConnector appConnector;
+    protected AppConnector<MessageType> appConnector;
 
     //list of the ids of running snapshots
     /**
