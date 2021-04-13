@@ -51,7 +51,7 @@ public class OilWell implements AppConnector {
             node.addConnection(hostname, port);
             directConnections.add(new ConnectionDetails(hostname, port));
             logger.info("Successfully connected to " + hostname + ":" + port);
-        } catch (RemoteException | NotBoundException e) {
+        } catch (RemoteException | NotBoundException | RemoteNodeAlreadyPresent e) {
             logger.warn("Cannot connect to " + hostname + ":" + port);
         }
     }

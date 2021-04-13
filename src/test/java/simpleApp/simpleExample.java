@@ -2,6 +2,7 @@ package simpleApp;
 
 import library.*;
 import library.exceptions.DoubleMarkerException;
+import library.exceptions.RemoteNodeAlreadyPresent;
 import library.exceptions.RemoteNodeNotFound;
 
 import java.io.Serializable;
@@ -30,12 +31,15 @@ public class simpleExample {
         node2.addConnection(InetAddress.getLocalHost().getHostAddress(), 11113);
 
  */
+
         try {
             node1.addConnection(InetAddress.getLocalHost().getHostAddress(),11112);
         } catch (RemoteException e) {
             e.printStackTrace();
         } catch (NotBoundException e) {
             e.printStackTrace();
+        } catch (RemoteNodeAlreadyPresent remoteNodeAlreadyPresent) {
+            remoteNodeAlreadyPresent.printStackTrace();
         }
         try {
             node1.sendMessage(InetAddress.getLocalHost().getHostAddress(), 11112, new Message("Messaggio 1->2 che è stato processato da 2"));

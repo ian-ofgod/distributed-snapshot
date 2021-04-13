@@ -1,9 +1,6 @@
 package library;
 
-import library.exceptions.DoubleMarkerException;
-import library.exceptions.OperationForbidden;
-import library.exceptions.RemoteNodeNotFound;
-import library.exceptions.SnapshotInterruptException;
+import library.exceptions.*;
 
 import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
@@ -64,14 +61,14 @@ public class Node<StateType, MessageType> {
      * @param ipAddress the ip address of the host running the rmi registry
      * @param port the port where the rmi registry is running
      */
-    public void addConnection(String ipAddress, int port) throws RemoteException, NotBoundException {
+    public void addConnection(String ipAddress, int port) throws RemoteException, NotBoundException, RemoteNodeAlreadyPresent {
         if (!remoteImplementation.remoteNodes.contains(new RemoteNode<MessageType>(ipAddress,port,null))) {
                 Registry registry = LocateRegistry.getRegistry(ipAddress, port);
                 RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
                 remoteImplementation.remoteNodes.add(new RemoteNode<>(ipAddress, port, remoteInterface));
                 remoteInterface.addMeBack(remoteImplementation.ipAddress, remoteImplementation.port);
         } else {
-            //TODO: throw RemoteNodeAlreadyPresent or just ignore the call?
+            throw new RemoteNodeAlreadyPresent();
         }
     }
 
