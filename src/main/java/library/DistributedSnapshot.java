@@ -28,10 +28,10 @@ public class DistributedSnapshot<StateType, MessageType> {
     /**
      *
      * */
-    public DistributedSnapshot(AppConnector<MessageType> appConnector, String ipAddress, int port){
+    public DistributedSnapshot(AppConnector<MessageType> appConnector, String hostname, int port){
         remoteImplementation.appConnector=appConnector;
         remoteImplementation.port=port;
-        remoteImplementation.ipAddress =ipAddress;
+        remoteImplementation.hostname =hostname;
 
         try {
             RemoteInterface<MessageType> stub = (RemoteInterface<MessageType>) UnicastRemoteObject.exportObject(remoteImplementation, 0);
@@ -45,8 +45,8 @@ public class DistributedSnapshot<StateType, MessageType> {
     /**
      *
      */
-    public void init(String yourIp, int rmiRegistryPort, AppConnector<MessageType> appConnector) throws RemoteException, AlreadyBoundException {
-        remoteImplementation.ipAddress =yourIp;
+    public void init(String yourHostname, int rmiRegistryPort, AppConnector<MessageType> appConnector) throws RemoteException, AlreadyBoundException {
+        remoteImplementation.hostname =yourHostname;
         remoteImplementation.port=rmiRegistryPort;
         remoteImplementation.appConnector=appConnector;
 
@@ -58,15 +58,15 @@ public class DistributedSnapshot<StateType, MessageType> {
     /**
      * This method adds a new link. To do so, it looks up the registry to the given ip and port and saves the reference.
      * This methods is not exposed in the rmi registry to avoid it being invoked by external entities.
-     * @param ipAddress the ip address of the host running the rmi registry
+     * @param hostname the ip address of the host running the rmi registry
      * @param port the port where the rmi registry is running
      */
-    public void addConnection(String ipAddress, int port) throws RemoteException, NotBoundException, RemoteNodeAlreadyPresent {
-        if (!remoteImplementation.remoteNodes.contains(new RemoteNode<MessageType>(ipAddress,port,null))) {
-                Registry registry = LocateRegistry.getRegistry(ipAddress, port);
+    public void addConnection(String hostname, int port) throws RemoteException, NotBoundException, RemoteNodeAlreadyPresent {
+        if (!remoteImplementation.remoteNodes.contains(new RemoteNode<MessageType>(hostname,port,null))) {
+                Registry registry = LocateRegistry.getRegistry(hostname, port);
                 RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
-                remoteImplementation.remoteNodes.add(new RemoteNode<>(ipAddress, port, remoteInterface));
-                remoteInterface.addMeBack(remoteImplementation.ipAddress, remoteImplementation.port);
+                remoteImplementation.remoteNodes.add(new RemoteNode<>(hostname, port, remoteInterface));
+                remoteInterface.addMeBack(remoteImplementation.hostname, remoteImplementation.port);
         } else {
             throw new RemoteNodeAlreadyPresent();
         }
@@ -74,12 +74,12 @@ public class DistributedSnapshot<StateType, MessageType> {
 
     /**
      * This method is used to send a message to a specific node by using rmi
-     * @param ipAddress the ip address of the remote node
+     * @param hostname the ip address of the remote node
      * @param port the port associated to the rmi registry in the remote node
      * @param message the message to send to the remote node
      */
-    public void sendMessage(String ipAddress, int port, MessageType message) throws RemoteNodeNotFound, RemoteException, NotBoundException, SnapshotInterruptException {
-        getRemoteInterface(ipAddress, port).receiveMessage(remoteImplementation.ipAddress, remoteImplementation.port, message);
+    public void sendMessage(String hostname, int port, MessageType message) throws RemoteNodeNotFound, RemoteException, NotBoundException, SnapshotInterruptException {
+        getRemoteInterface(hostname, port).receiveMessage(remoteImplementation.hostname, remoteImplementation.port, message);
     }
 
     /**
@@ -93,29 +93,29 @@ public class DistributedSnapshot<StateType, MessageType> {
      *
      * */
     public void initiateSnapshot() throws RemoteException, DoubleMarkerException, UnexpectedMarkerReceived {
-        String snapshotIdString= remoteImplementation.ipAddress + remoteImplementation.port + remoteImplementation.localSnapshotCounter;
+        String snapshotIdString= remoteImplementation.hostname + remoteImplementation.port + remoteImplementation.localSnapshotCounter;
         int snapshotId = snapshotIdString.hashCode();
         remoteImplementation.localSnapshotCounter++;
         Snapshot<StateType, MessageType> snap = new Snapshot<>(snapshotId);
         remoteImplementation.runningSnapshots.add(snap);
 
         for (RemoteNode<MessageType> remoteNode : remoteImplementation.remoteNodes){
-            System.out.println(remoteImplementation.ipAddress + ":" + remoteImplementation.port + " | Sending MARKER to: "+remoteNode.ipAddress+":"+remoteNode.port);
-            remoteNode.remoteInterface.receiveMarker(remoteImplementation.ipAddress, remoteImplementation.port, remoteImplementation.ipAddress, remoteImplementation.port, snapshotId);
+            System.out.println(remoteImplementation.hostname + ":" + remoteImplementation.port + " | Sending MARKER to: "+remoteNode.hostname +":"+remoteNode.port);
+            remoteNode.remoteInterface.receiveMarker(remoteImplementation.hostname, remoteImplementation.port, remoteImplementation.hostname, remoteImplementation.port, snapshotId);
         }
     }
 
     /**
      *
      * */
-    public void removeConnection(String ipAddress, int port) throws OperationForbidden, SnapshotInterruptException, RemoteException {
+    public void removeConnection(String hostname, int port) throws OperationForbidden, SnapshotInterruptException, RemoteException {
         //since no change in the network topology is allowed during a snapshot
         //this function WONT BE CALLED if any snapshot is running THIS IS AN ASSUMPTION FROM THE TEXT
         if (!remoteImplementation.runningSnapshots.isEmpty()) {
             throw new OperationForbidden("Unable to remove connection while snapshots are running");
         }
-        RemoteNode<MessageType> remoteNode = remoteImplementation.getRemoteNode(ipAddress,port);
-        remoteNode.remoteInterface.removeMe(remoteImplementation.ipAddress, remoteImplementation.port);
+        RemoteNode<MessageType> remoteNode = remoteImplementation.getRemoteNode(hostname,port);
+        remoteNode.remoteInterface.removeMe(remoteImplementation.hostname, remoteImplementation.port);
         remoteImplementation.remoteNodes.remove(remoteNode);
     }
 
@@ -138,9 +138,9 @@ public class DistributedSnapshot<StateType, MessageType> {
     /**
      *
      * */
-    private RemoteInterface<MessageType> getRemoteInterface(String ipAddress, int port) throws RemoteNodeNotFound {
-        int index= remoteImplementation.remoteNodes.indexOf(new RemoteNode<MessageType>(ipAddress,port,null));
-        if(index==-1){ // RemoteNode with the specified ipAddress and port not found!
+    private RemoteInterface<MessageType> getRemoteInterface(String hostname, int port) throws RemoteNodeNotFound {
+        int index= remoteImplementation.remoteNodes.indexOf(new RemoteNode<MessageType>(hostname,port,null));
+        if(index==-1){ // RemoteNode with the specified hostname and port not found!
            throw new RemoteNodeNotFound();
         }
         RemoteNode<MessageType> remoteNode = remoteImplementation.remoteNodes.get(index);
@@ -157,7 +157,7 @@ class RemoteNode<MessageType> {
     /**
      *
      * */
-    protected String ipAddress;
+    protected String hostname;
 
     /**
      *
@@ -177,8 +177,8 @@ class RemoteNode<MessageType> {
     /**
      *
      * */
-    public RemoteNode(String ipAddress, int port, RemoteInterface<MessageType> remoteInterface) {
-        this.ipAddress = ipAddress;
+    public RemoteNode(String hostname, int port, RemoteInterface<MessageType> remoteInterface) {
+        this.hostname = hostname;
         this.port = port;
         this.remoteInterface = remoteInterface;
     }
@@ -189,12 +189,12 @@ class RemoteNode<MessageType> {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         RemoteNode<MessageType> that = (RemoteNode<MessageType>) o;
-        return port == that.port && Objects.equals(ipAddress, that.ipAddress);
+        return port == that.port && Objects.equals(hostname, that.hostname);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(ipAddress, port);
+        return Objects.hash(hostname, port);
     }
 
 

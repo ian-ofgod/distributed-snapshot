@@ -18,7 +18,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     /**
      *
      * */
-    protected String ipAddress;
+    protected String hostname;
 
     /**
      *
@@ -53,20 +53,20 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     protected int localSnapshotCounter=0;
 
     @Override
-    public void receiveMarker(String senderIp, int senderPort, String initiatorIp, int initiatorPort, int snapshotId) throws RemoteException, DoubleMarkerException, UnexpectedMarkerReceived {
+    public void receiveMarker(String senderHostname, int senderPort, String initiatorHostname, int initiatorPort, int snapshotId) throws RemoteException, DoubleMarkerException, UnexpectedMarkerReceived {
 
-        System.out.println(ipAddress + ":" + port + " | RECEIVED MARKER from: "+senderIp+":"+senderPort);
+        System.out.println(hostname + ":" + port + " | RECEIVED MARKER from: "+senderHostname+":"+senderPort);
 
-        if(checkIfRemoteNodePresent(senderIp,senderPort)) {
+        if(checkIfRemoteNodePresent(senderHostname,senderPort)) {
             Snapshot<StateType, MessageType> snap = new Snapshot<>(snapshotId, current_state); //Creates the snapshot and saves the current state!
 
             if (!runningSnapshots.contains(snap)) {
-                System.out.println(ipAddress + ":" + port + " | First time receiving a marker");
+                System.out.println(hostname + ":" + port + " | First time receiving a marker");
                 runningSnapshots.add(snap);
-                recordSnapshotId(senderIp, senderPort, snapshotId);
-                propagateMarker(initiatorIp, initiatorPort, snapshotId);
+                recordSnapshotId(senderHostname, senderPort, snapshotId);
+                propagateMarker(initiatorHostname, initiatorPort, snapshotId);
             } else {
-                recordSnapshotId(senderIp, senderPort, snapshotId);
+                recordSnapshotId(senderHostname, senderPort, snapshotId);
             }
 
             if (receivedMarkerFromAllLinks(snapshotId)) { //we have received a marker from all the channels
@@ -80,60 +80,60 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     }
 
     @Override
-    public void receiveMessage(String senderIp, int senderPort, MessageType message) throws RemoteException, NotBoundException, SnapshotInterruptException {
+    public void receiveMessage(String senderHostname, int senderPort, MessageType message) throws RemoteException, NotBoundException, SnapshotInterruptException {
         //for debug purposes
-        //System.out.println(ipAddress + ":" + port + " | Received a message from remoteNode: " + senderIp + ":" + senderPort);
+        //System.out.println(ipAddress + ":" + port + " | Received a message from remoteNode: " + senderHostname + ":" + senderPort);
 
-        if(checkIfRemoteNodePresent(senderIp, senderPort)) {
+        if(checkIfRemoteNodePresent(senderHostname, senderPort)) {
             if (!runningSnapshots.isEmpty()) { //snapshot running, marker received
                 runningSnapshots.forEach((snap) -> {
-                    if(!checkIfReceivedMarker(senderIp,senderPort,snap.snapshotId)) {
-                        snap.messages.computeIfAbsent(new Entity(senderIp, senderPort), k -> new ArrayList<>());
-                        snap.messages.get(new Entity(senderIp,senderPort)).add(message);
+                    if(!checkIfReceivedMarker(senderHostname,senderPort,snap.snapshotId)) {
+                        snap.messages.computeIfAbsent(new Entity(senderHostname, senderPort), k -> new ArrayList<>());
+                        snap.messages.get(new Entity(senderHostname,senderPort)).add(message);
                     }
                 });
             }
-            appConnector.handleIncomingMessage(senderIp, senderPort, message);
+            appConnector.handleIncomingMessage(senderHostname, senderPort, message);
         }else{
             //we issue the command to the remote node to remove us!
-            Registry registry = LocateRegistry.getRegistry(senderIp, senderPort);
+            Registry registry = LocateRegistry.getRegistry(senderHostname, senderPort);
             RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
-            remoteInterface.removeMe(this.ipAddress, this.port);
+            remoteInterface.removeMe(this.hostname, this.port);
         }
     }
 
 
     @Override
-    public void addMeBack(String ip_address, int port) throws RemoteException, NotBoundException {
-        Registry registry = LocateRegistry.getRegistry(ip_address, port);
+    public void addMeBack(String hostname, int port) throws RemoteException, NotBoundException {
+        Registry registry = LocateRegistry.getRegistry(hostname, port);
         RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
-        remoteNodes.add(new RemoteNode<>(ip_address, port, remoteInterface));
-        appConnector.handleNewConnection(ip_address,port);
+        remoteNodes.add(new RemoteNode<>(hostname, port, remoteInterface));
+        appConnector.handleNewConnection(hostname,port);
     }
 
 
     @Override
-    public void removeMe(String ip_address, int port) throws RemoteException, SnapshotInterruptException {
+    public void removeMe(String hostname, int port) throws RemoteException, SnapshotInterruptException {
         if(!this.runningSnapshots.isEmpty()) {
-            System.out.println(ip_address+":"+port + " | ERROR: REMOVING DURING SNAPSHOT, ASSUMPTION NOT RESPECTED");
+            System.out.println(hostname+":"+port + " | ERROR: REMOVING DURING SNAPSHOT, ASSUMPTION NOT RESPECTED");
             throw new SnapshotInterruptException();
         }
-        RemoteNode<MessageType> remoteNode = getRemoteNode(ip_address,port);
+        RemoteNode<MessageType> remoteNode = getRemoteNode(hostname,port);
         this.remoteNodes.remove(remoteNode);
-        appConnector.handleRemoveConnection(ip_address, port);
+        appConnector.handleRemoveConnection(hostname, port);
     }
 
     /**
      *
      * */
-    private void recordSnapshotId(String senderIp, int senderPort, int snapshotId) throws DoubleMarkerException {
-        RemoteNode<MessageType> remoteNode = getRemoteNode(senderIp,senderPort);
+    private void recordSnapshotId(String senderHostname, int senderPort, int snapshotId) throws DoubleMarkerException {
+        RemoteNode<MessageType> remoteNode = getRemoteNode(senderHostname,senderPort);
         if(remoteNode!=null) {
             if(remoteNode.snapshotIdsReceived.contains(snapshotId)){
-                System.out.println(ipAddress +":"+port + " | ERROR: received multiple marker (same id) for the same link");
+                System.out.println(hostname +":"+port + " | ERROR: received multiple marker (same id) for the same link");
                 throw new DoubleMarkerException();
             }else {
-                System.out.println(ipAddress +":"+port + " | Added markerId for the remote node who called");
+                System.out.println(hostname +":"+port + " | Added markerId for the remote node who called");
                 remoteNode.snapshotIdsReceived.add(snapshotId);
             }
         }
@@ -144,13 +144,13 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
      * Together with the specific marker, also an identifier of the snapshot initiator
      * is propagated.
      * @param snapshotId the unique snapshot identifier (i.e. marker) that is being propagated
-     * @param initiatorIp the IP address of the entity that initiated the snapshot
+     * @param initiatorHostname the IP address of the entity that initiated the snapshot
      * @param initiatorPort the port of the entity that initiated the snapshot
      * */
-    private void propagateMarker(String initiatorIp, int initiatorPort, int snapshotId) {
+    private void propagateMarker(String initiatorHostname, int initiatorPort, int snapshotId) {
         for (RemoteNode<MessageType> remoteNode : remoteNodes) {
             try {
-                remoteNode.remoteInterface.receiveMarker(this.ipAddress, this.port, initiatorIp, initiatorPort, snapshotId);
+                remoteNode.remoteInterface.receiveMarker(this.hostname, this.port, initiatorHostname, initiatorPort, snapshotId);
             } catch (RemoteException | DoubleMarkerException | UnexpectedMarkerReceived e) {
                 e.printStackTrace();
             }
@@ -161,12 +161,12 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
      * This methods retrieve the RemoteNode object associated to the ip/port couple by
      * performing a lookup in the list of stored RemoteNode objects, since each one
      * contains the ip/port as attributes. The association RemoteNode and ip/port is unique.
-     * @param ip_address the IP address of the Remote Node to look up
+     * @param hostname the IP address of the Remote Node to look up
      * @param port the port of the Remote Node to look up
      * */
-    protected RemoteNode<MessageType> getRemoteNode(String ip_address, int port){
+    protected RemoteNode<MessageType> getRemoteNode(String hostname, int port){
         for (RemoteNode<MessageType> remoteNode : remoteNodes) {
-            if(remoteNode.ipAddress.equals(ip_address) && remoteNode.port==port)
+            if(remoteNode.hostname.equals(hostname) && remoteNode.port==port)
                 return remoteNode;
         }
         return null;
