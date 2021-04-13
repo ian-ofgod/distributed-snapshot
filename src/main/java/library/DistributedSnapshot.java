@@ -29,7 +29,7 @@ public class DistributedSnapshot<StateType, MessageType> {
      *
      * */
     public DistributedSnapshot(AppConnector<MessageType> appConnector, String ipAddress, int port){
-        remoteImplementation.setAppConnector(appConnector);
+        remoteImplementation.appConnector=appConnector;
         remoteImplementation.port=port;
         remoteImplementation.ipAddress =ipAddress;
 

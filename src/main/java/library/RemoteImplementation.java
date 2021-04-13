@@ -12,7 +12,6 @@ import java.util.ArrayList;
 /**
  *
  * */
-//TODO: add MessageType as a generic type and handle all the Snapshot invocation with <StateType, MessageType>
 class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<MessageType> {
 
     /**
@@ -167,9 +166,5 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
      * */
     private boolean receivedMarkerFromAllLinks(int snapshotId){
         return remoteNodes.stream().filter(rn->rn.snapshotIdsReceived.contains(snapshotId)).count() == remoteNodes.size();
-    }
-
-    void setAppConnector(AppConnector o) {
-        this.appConnector = o;
     }
 }
