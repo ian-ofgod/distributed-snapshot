@@ -17,7 +17,6 @@ import java.util.Objects;
 /**
  *
  * */
-//TODO: add wrapper
 public class Node<StateType, MessageType> {
     /**
      *

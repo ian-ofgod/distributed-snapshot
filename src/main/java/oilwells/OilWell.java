@@ -22,6 +22,8 @@ public class OilWell implements AppConnector {
     private final ArrayList<ConnectionDetails> directConnections = new ArrayList<>();
     private final Object directConnectionsLock = new Object();
 
+    private final Node<Integer, OilCargo> node = new Node<>();
+
     private Logger logger;
 
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
@@ -29,9 +31,6 @@ public class OilWell implements AppConnector {
     public void setLogger(Logger logger) {
         this.logger = logger;
     }
-
-    //TODO: temporary
-    Node<Integer, OilCargo> node = new Node<>();
 
     public void initialize(String hostname, int port, int oilAmount) {
         this.hostname = hostname;
