@@ -92,7 +92,7 @@ public class DistributedSnapshot<StateType, MessageType> {
     /**
      *
      * */
-    public void initiateSnapshot() throws RemoteException, DoubleMarkerException {
+    public void initiateSnapshot() throws RemoteException, DoubleMarkerException, UnexpectedMarkerReceived {
         String snapshotIdString= remoteImplementation.ipAddress + remoteImplementation.port + remoteImplementation.localSnapshotCounter;
         int snapshotId = snapshotIdString.hashCode();
         remoteImplementation.localSnapshotCounter++;

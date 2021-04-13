@@ -2,6 +2,7 @@ package library;
 
 import library.exceptions.DoubleMarkerException;
 import library.exceptions.SnapshotInterruptException;
+import library.exceptions.UnexpectedMarkerReceived;
 
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
@@ -52,24 +53,28 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     protected int localSnapshotCounter=0;
 
     @Override
-    public void receiveMarker(String senderIp, int senderPort, String initiatorIp, int initiatorPort, int snapshotId) throws RemoteException, DoubleMarkerException {
+    public void receiveMarker(String senderIp, int senderPort, String initiatorIp, int initiatorPort, int snapshotId) throws RemoteException, DoubleMarkerException, UnexpectedMarkerReceived {
 
         System.out.println(ipAddress + ":" + port + " | RECEIVED MARKER from: "+senderIp+":"+senderPort);
 
-        Snapshot<StateType, MessageType> snap = new Snapshot<>(snapshotId, current_state); //Creates the snapshot and saves the current state!
+        if(checkIfRemoteNodePresent(senderIp,senderPort)) {
+            Snapshot<StateType, MessageType> snap = new Snapshot<>(snapshotId, current_state); //Creates the snapshot and saves the current state!
 
-        if (!runningSnapshots.contains(snap)) {
-            System.out.println(ipAddress + ":" + port + " | First time receiving a marker");
-            runningSnapshots.add(snap);
-            recordSnapshotId(senderIp, senderPort, snapshotId);
-            propagateMarker(initiatorIp, initiatorPort, snapshotId);
-        } else {
-            recordSnapshotId(senderIp, senderPort, snapshotId);
-        }
+            if (!runningSnapshots.contains(snap)) {
+                System.out.println(ipAddress + ":" + port + " | First time receiving a marker");
+                runningSnapshots.add(snap);
+                recordSnapshotId(senderIp, senderPort, snapshotId);
+                propagateMarker(initiatorIp, initiatorPort, snapshotId);
+            } else {
+                recordSnapshotId(senderIp, senderPort, snapshotId);
+            }
 
-        if (receivedMarkerFromAllLinks(snapshotId)) { //we have received a marker from all the channels
-            Storage.writeFile(runningSnapshots, snapshotId);
-            runningSnapshots.remove(snap);
+            if (receivedMarkerFromAllLinks(snapshotId)) { //we have received a marker from all the channels
+                Storage.writeFile(runningSnapshots, snapshotId);
+                runningSnapshots.remove(snap);
+            }
+        }else{
+            throw new UnexpectedMarkerReceived("ERROR: received a marker from a node not present in my remote nodes list");
         }
 
     }
@@ -146,7 +151,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
         for (RemoteNode<MessageType> remoteNode : remoteNodes) {
             try {
                 remoteNode.remoteInterface.receiveMarker(this.ipAddress, this.port, initiatorIp, initiatorPort, snapshotId);
-            } catch (RemoteException| DoubleMarkerException e) {
+            } catch (RemoteException | DoubleMarkerException | UnexpectedMarkerReceived e) {
                 e.printStackTrace();
             }
         }

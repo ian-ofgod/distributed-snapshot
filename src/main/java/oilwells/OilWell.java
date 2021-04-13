@@ -74,7 +74,7 @@ public class OilWell implements AppConnector {
         try {
             distributedSnapshot.initiateSnapshot();
             logger.info("Snapshot completed");
-        } catch (RemoteException | DoubleMarkerException e) {
+        } catch (RemoteException | DoubleMarkerException | UnexpectedMarkerReceived e) {
             logger.warn("Cannot complete snapshot");
         }
     }

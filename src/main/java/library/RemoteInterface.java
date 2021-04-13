@@ -2,6 +2,7 @@ package library;
 
 import library.exceptions.DoubleMarkerException;
 import library.exceptions.SnapshotInterruptException;
+import library.exceptions.UnexpectedMarkerReceived;
 
 import java.rmi.NotBoundException;
 import java.rmi.Remote;
@@ -17,7 +18,7 @@ interface RemoteInterface<MessageType> extends Remote {
     /**
      *
      * */
-    void receiveMarker(String senderIp, int senderPort, String initiatorIp, int initiatorPort, int id) throws RemoteException, DoubleMarkerException;
+    void receiveMarker(String senderIp, int senderPort, String initiatorIp, int initiatorPort, int id) throws RemoteException, DoubleMarkerException, UnexpectedMarkerReceived;
 
     /**
      *
