@@ -98,6 +98,10 @@ public class OilWell implements AppConnector {
                         }
                     } catch (RemoteNodeNotFound | RemoteException e) {
                         logger.warn("Error sending oil cargo");
+                    } catch (NotBoundException e) {
+                        e.printStackTrace();
+                    } catch (SnapshotInterruptException e) {
+                        e.printStackTrace();
                     }
                 }
             }

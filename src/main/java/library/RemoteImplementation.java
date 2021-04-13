@@ -75,18 +75,26 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     }
 
     @Override
-    public void receiveMessage(String senderIp, int senderPort, MessageType message) throws RemoteException {
+    public void receiveMessage(String senderIp, int senderPort, MessageType message) throws RemoteException, NotBoundException, SnapshotInterruptException {
         //for debug purposes
         //System.out.println(ipAddress + ":" + port + " | Received a message from remoteNode: " + senderIp + ":" + senderPort);
 
-        //TODO: add the case to handle a remote node sending a message to me without him being in my remote nodes
-        if (!runningSnapshots.isEmpty()) { //snapshot running, marker received
-            //TODO: do not save the message when you have already received a marker from the same entity
-            //TODO: fix empty arraylist
-            runningSnapshots.forEach( (snap) -> snap.messages.put(new Entity(senderIp,senderPort),new ArrayList<>()));
+        if(checkIfRemoteNodePresent(senderIp, senderPort)) {
+            if (!runningSnapshots.isEmpty()) { //snapshot running, marker received
+                runningSnapshots.forEach((snap) -> {
+                    if(!checkIfReceivedMarker(senderIp,senderPort,snap.snapshotId)) {
+                        snap.messages.computeIfAbsent(new Entity(senderIp, senderPort), k -> new ArrayList<>());
+                        snap.messages.get(new Entity(senderIp,senderPort)).add(message);
+                    }
+                });
+            }
+            appConnector.handleIncomingMessage(senderIp, senderPort, message);
+        }else{
+            //we issue the command to the remote node to remove us!
+            Registry registry = LocateRegistry.getRegistry(senderIp, senderPort);
+            RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
+            remoteInterface.removeMe(this.ipAddress, this.port);
         }
-        appConnector.handleIncomingMessage(senderIp, senderPort, message);
-
     }
 
 
@@ -166,5 +174,22 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
      * */
     private boolean receivedMarkerFromAllLinks(int snapshotId){
         return remoteNodes.stream().filter(rn->rn.snapshotIdsReceived.contains(snapshotId)).count() == remoteNodes.size();
+    }
+
+    private boolean checkIfRemoteNodePresent(String hostname, int port){
+        for (RemoteNode<MessageType> remoteNode : remoteNodes){
+            if(remoteNode.equals(new RemoteNode<>(hostname, port, null)))
+                return true;
+        }
+        return false;
+    }
+
+    private boolean checkIfReceivedMarker(String hostname, int port, int snapshotId){
+        for (RemoteNode<MessageType> remoteNode : remoteNodes){
+            if(remoteNode.equals(new RemoteNode<>(hostname, port, null)))
+                if(remoteNode.snapshotIdsReceived.contains(snapshotId))
+                    return true;
+        }
+        return false;
     }
 }

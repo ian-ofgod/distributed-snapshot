@@ -12,7 +12,7 @@ interface RemoteInterface<MessageType> extends Remote {
     /**
      *
      * */
-    void receiveMessage(String senderIp, int senderPort, MessageType message)  throws RemoteException;
+    void receiveMessage(String senderIp, int senderPort, MessageType message) throws RemoteException, NotBoundException, SnapshotInterruptException;
 
     /**
      *

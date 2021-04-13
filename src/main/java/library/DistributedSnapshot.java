@@ -78,7 +78,7 @@ public class DistributedSnapshot<StateType, MessageType> {
      * @param port the port associated to the rmi registry in the remote node
      * @param message the message to send to the remote node
      */
-    public void sendMessage(String ipAddress, int port, MessageType message) throws RemoteNodeNotFound, RemoteException {
+    public void sendMessage(String ipAddress, int port, MessageType message) throws RemoteNodeNotFound, RemoteException, NotBoundException, SnapshotInterruptException {
         getRemoteInterface(ipAddress, port).receiveMessage(remoteImplementation.ipAddress, remoteImplementation.port, message);
     }
 

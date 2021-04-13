@@ -2,6 +2,7 @@ package library;
 
 import library.exceptions.RemoteNodeAlreadyPresent;
 import library.exceptions.RemoteNodeNotFound;
+import library.exceptions.SnapshotInterruptException;
 import org.junit.Test;
 
 import java.io.Serializable;
@@ -11,7 +12,7 @@ import java.util.ArrayList;
 
 public class DistributedSnapshotTest {
     @Test
-    public void simpleExample() throws NotBoundException, RemoteNodeAlreadyPresent, RemoteException, RemoteNodeNotFound {
+    public void simpleExample() throws NotBoundException, RemoteNodeAlreadyPresent, RemoteException, RemoteNodeNotFound, SnapshotInterruptException {
         BasicApp<Message> basicApp1= new BasicApp<>();
         BasicApp<Message> basicApp2= new BasicApp<>();
         BasicApp<Message> basicApp3= new BasicApp<>();
