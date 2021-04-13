@@ -60,8 +60,8 @@ public class Node<StateType, MessageType> {
 
     /**
      * This method adds a new link. To do so, it looks up the registry to the given ip and port and saves the reference.
-     * This methods is not exposed in the rmiregistry to avoid it beeing invoked by external entities.
-     * @param ipAddress the ip address of the host running the rmiregistry
+     * This methods is not exposed in the rmi registry to avoid it being invoked by external entities.
+     * @param ipAddress the ip address of the host running the rmi registry
      * @param port the port where the rmi registry is running
      */
     public void addConnection(String ipAddress, int port) throws RemoteException, NotBoundException {
