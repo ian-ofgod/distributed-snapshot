@@ -16,9 +16,9 @@ public class simpleExample {
         BasicApp1 basicApp1 = new BasicApp1();
         BasicApp2 basicApp2 = new BasicApp2();
 
-        Node node1 = new Node(basicApp1, InetAddress.getLocalHost().getHostAddress(), 11111);
-        Node node2 = new Node(basicApp2,InetAddress.getLocalHost().getHostAddress(), 11112);
-        Node node3 = new Node(basicApp2,InetAddress.getLocalHost().getHostAddress(), 11113);
+        DistributedSnapshot distributedSnapshot1 = new DistributedSnapshot(basicApp1, InetAddress.getLocalHost().getHostAddress(), 11111);
+        DistributedSnapshot distributedSnapshot2 = new DistributedSnapshot(basicApp2,InetAddress.getLocalHost().getHostAddress(), 11112);
+        DistributedSnapshot distributedSnapshot3 = new DistributedSnapshot(basicApp2,InetAddress.getLocalHost().getHostAddress(), 11113);
 
 /*
         node1.addConnection(InetAddress.getLocalHost().getHostAddress(), 11112);
@@ -33,7 +33,7 @@ public class simpleExample {
  */
 
         try {
-            node1.addConnection(InetAddress.getLocalHost().getHostAddress(),11112);
+            distributedSnapshot1.addConnection(InetAddress.getLocalHost().getHostAddress(),11112);
         } catch (RemoteException e) {
             e.printStackTrace();
         } catch (NotBoundException e) {
@@ -42,15 +42,15 @@ public class simpleExample {
             remoteNodeAlreadyPresent.printStackTrace();
         }
         try {
-            node1.sendMessage(InetAddress.getLocalHost().getHostAddress(), 11112, new Message("Messaggio 1->2 che è stato processato da 2"));
-            node2.sendMessage(InetAddress.getLocalHost().getHostAddress(), 11111, new Message("Messaggio 2->1 che è stato processato da 1"));
+            distributedSnapshot1.sendMessage(InetAddress.getLocalHost().getHostAddress(), 11112, new Message("Messaggio 1->2 che è stato processato da 2"));
+            distributedSnapshot2.sendMessage(InetAddress.getLocalHost().getHostAddress(), 11111, new Message("Messaggio 2->1 che è stato processato da 1"));
         }catch (RemoteNodeNotFound | RemoteException e){
             e.printStackTrace();
         }
 
 
         try {
-            node1.initiateSnapshot();
+            distributedSnapshot1.initiateSnapshot();
         } catch (RemoteException e) {
             e.printStackTrace();
         } catch (DoubleMarkerException e) {
@@ -58,11 +58,11 @@ public class simpleExample {
         }
 
         System.out.println("Stopping node1");
-        node1.stop();
+        distributedSnapshot1.stop();
         System.out.println("Stopped node1");
 
         System.out.println("Stopping node2");
-        node2.stop();
+        distributedSnapshot2.stop();
         System.out.println("Stopped node2");
     }
 }

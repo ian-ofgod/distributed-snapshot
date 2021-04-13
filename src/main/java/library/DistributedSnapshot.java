@@ -14,7 +14,7 @@ import java.util.Objects;
 /**
  *
  * */
-public class Node<StateType, MessageType> {
+public class DistributedSnapshot<StateType, MessageType> {
     /**
      *
      * */
@@ -23,12 +23,12 @@ public class Node<StateType, MessageType> {
     /**
      *
      * */
-    public Node() {}
+    public DistributedSnapshot() {}
 
     /**
      *
      * */
-    public Node(AppConnector appConnector, String ipAddress, int port){
+    public DistributedSnapshot(AppConnector appConnector, String ipAddress, int port){
         remoteImplementation.setAppConnector(appConnector);
         remoteImplementation.port=port;
         remoteImplementation.ipAddress =ipAddress;
@@ -86,15 +86,16 @@ public class Node<StateType, MessageType> {
      *
      * */
     public void updateState(StateType state){
-        //TODO: save current state to a variable (probably variable in the remoteImplementation)
+        this.remoteImplementation.current_state=state;
     }
 
     /**
      *
      * */
     public void initiateSnapshot() throws RemoteException, DoubleMarkerException {
-        //TODO: how to decide the snapshot id so that it does not conflicts with the others?
-        int snapshotId=1;
+        String snapshotIdString= remoteImplementation.ipAddress + remoteImplementation.port + remoteImplementation.localSnapshotCounter;
+        int snapshotId = snapshotIdString.hashCode();
+        remoteImplementation.localSnapshotCounter++;
         Snapshot<StateType, MessageType> snap = new Snapshot<>(snapshotId);
         remoteImplementation.runningSnapshots.add(snap);
 

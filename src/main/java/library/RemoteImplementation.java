@@ -49,7 +49,8 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
      * */
     protected ArrayList<Snapshot<StateType, MessageType>> runningSnapshots = new ArrayList<>();
 
-
+    //counter that is increased each time this node starts a snapshot, it is used to compute the new snapshotId
+    protected int localSnapshotCounter=0;
 
     @Override
     public void receiveMarker(String senderIp, int senderPort, String initiatorIp, int initiatorPort, int snapshotId) throws RemoteException, DoubleMarkerException {
