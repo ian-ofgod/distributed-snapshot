@@ -16,3 +16,6 @@ target/
 /doc/doc.out
 /doc/doc.synctex.gz
 /doc/doc.toc
+
+#Jar xecution
+storage_folder
