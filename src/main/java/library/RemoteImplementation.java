@@ -9,6 +9,8 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  *
@@ -52,6 +54,11 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     //counter that is increased each time this node starts a snapshot, it is used to compute the new snapshotId
     protected int localSnapshotCounter=0;
 
+    /**
+     * Handles the propagateMarker calls (see receiveMarker method)
+     * */
+    private final ExecutorService executors = Executors.newCachedThreadPool();
+
     @Override
     public void receiveMarker(String senderHostname, int senderPort, String initiatorHostname, int initiatorPort, int snapshotId) throws RemoteException, DoubleMarkerException, UnexpectedMarkerReceived {
 
@@ -64,7 +71,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
                 System.out.println(hostname + ":" + port + " | First time receiving a marker");
                 runningSnapshots.add(snap);
                 recordSnapshotId(senderHostname, senderPort, snapshotId);
-                propagateMarker(initiatorHostname, initiatorPort, snapshotId);
+                executors.submit(() -> propagateMarker(initiatorHostname, initiatorPort, snapshotId));
             } else {
                 recordSnapshotId(senderHostname, senderPort, snapshotId);
             }
