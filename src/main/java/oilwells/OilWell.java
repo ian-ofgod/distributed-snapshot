@@ -135,10 +135,10 @@ public class OilWell implements AppConnector<OilCargo> {
                         int amount = minAmount + (int) (Math.random() * ((maxAmount - minAmount) + 1));
                         synchronized (oilAmountLock) {
                             if (oilAmount - amount >= 0) {
-                                logger.info("Sending " + amount + " oil to " + randomWell.getHostname() + ":" + randomWell.getPort() + ". New oilAmount = " + (oilAmount-amount));
                                 distributedSnapshot.sendMessage(randomWell.getHostname(), randomWell.getPort(), new OilCargo(amount));
                                 oilAmount -= amount;
                                 distributedSnapshot.updateState(oilAmount);
+                                logger.info("Sent " + amount + " oil to " + randomWell.getHostname() + ":" + randomWell.getPort() + ". New oilAmount = " + oilAmount);
                             } else {
                                 logger.warn("You are running out of oil, cannot send oil to " + randomWell.getHostname() + ":" + randomWell.getPort());
                             }
