@@ -98,7 +98,7 @@ public class DistributedSnapshot<StateType, MessageType> {
         String snapshotIdString= remoteImplementation.hostname + remoteImplementation.port + remoteImplementation.localSnapshotCounter;
         int snapshotId = snapshotIdString.hashCode();
         remoteImplementation.localSnapshotCounter++;
-        Snapshot<StateType, MessageType> snap = new Snapshot<>(snapshotId);
+        Snapshot<StateType, MessageType> snap = new Snapshot<>(snapshotId, remoteImplementation.current_state);
         remoteImplementation.runningSnapshots.add(snap);
 
         for (RemoteNode<MessageType> remoteNode : remoteImplementation.remoteNodes){

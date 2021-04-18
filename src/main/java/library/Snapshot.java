@@ -29,17 +29,6 @@ class Snapshot<StateType, MessageType> {
     protected HashMap<Entity, ArrayList<MessageType>> messages = new HashMap<>();
 
     /**
-     * Snapshot constructor with unique id. The snapshot is empty, as it
-     * has not received the current state. Can be used to create temporary snapshot
-     * objects to perform comparison via the Equals method, since snapshots are
-     * identified via id.
-     * @param id the snapshot unique identifier
-     * */
-    public Snapshot(int id){
-        this.snapshotId = id;
-    }
-
-    /**
      * Snapshot constructor that builds a full snapshot objects. Additionally to
      * the unique snapshot identifier, this constructor also stores the state of
      * the current node. The snapshot created with this constructor will be stored
