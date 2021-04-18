@@ -4,7 +4,6 @@ import library.AppConnector;
 import library.DistributedSnapshot;
 import library.exceptions.*;
 import org.apache.logging.log4j.Logger;
-
 import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
@@ -14,22 +13,54 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Main class of the application. It implements the AppConnector interface to receive calls from the DistributedSnapshot library.
+ * It implements the public methods that the user can call from the command line interface. It uses a thread to periodically
+ * send oil to a randomly chosen well.
+ */
 public class OilWell implements AppConnector<OilCargo> {
+    /**
+     * The amount of oil contained on the well
+     */
     private Integer oilAmount;
+
+    /**
+     * Lock object for oilAmount variable
+     */
     private final Object oilAmountLock = new Object();
+
+    /**
+     *  The list of currently connected oil wells
+     */
     private final ArrayList<ConnectionDetails> directConnections = new ArrayList<>();
+
+    /**
+     *  Lock object for directConnections variable
+     */
     private final Object directConnectionsLock = new Object();
 
+    /**
+     * The library object used to interact with the library itself
+     */
     private final DistributedSnapshot<Integer, OilCargo> distributedSnapshot = new DistributedSnapshot<>();
 
+    /**
+     * Logger used to print on the command line
+     */
     private Logger logger;
 
+    /**
+     * Thread used to periodically send oil to other oil wells
+     */
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 
     public void setLogger(Logger logger) {
         this.logger = logger;
     }
 
+    /**
+     * It is called to set the initial oil amount and set hostname and port inside the library
+     */
     public void initialize(String hostname, int port, int oilAmount) {
         this.oilAmount = oilAmount;
         try {
@@ -42,6 +73,9 @@ public class OilWell implements AppConnector<OilCargo> {
         }
     }
 
+    /**
+     * It is called to connect to another oil well
+     */
     public void connect(String hostname, int port) {
         logger.info("Connecting to " + hostname + ":" + port);
         try {
@@ -53,6 +87,9 @@ public class OilWell implements AppConnector<OilCargo> {
         }
     }
 
+    /**
+     * It is called to disconnect from another oil well
+     */
     public void disconnect(String hostname, int port) {
         logger.info("Disconnecting from " + hostname + ":" + port);
         try {
@@ -66,6 +103,9 @@ public class OilWell implements AppConnector<OilCargo> {
         }
     }
 
+    /**
+     * It is called to initiate a snapshot on the network
+     */
     public void snapshot() {
         logger.info("Starting snapshot");
         try {
@@ -76,6 +116,9 @@ public class OilWell implements AppConnector<OilCargo> {
         }
     }
 
+    /**
+     * It is used to start the thread that periodically sends oil to another oil well
+     */
     private void startOilTransfers(int frequency, int minAmount, int maxAmount) {
         logger.info("Starting automated oil transfers");
         executor.scheduleAtFixedRate(() -> {
@@ -104,6 +147,9 @@ public class OilWell implements AppConnector<OilCargo> {
         }, 0, frequency, TimeUnit.MILLISECONDS);
     }
 
+    /**
+     * It handles a new incoming message. It updates the oil amount contained on the oil well
+     */
     @Override
     public void handleIncomingMessage(String senderIp, int senderPort, OilCargo message) {
         synchronized (oilAmountLock) {
@@ -113,6 +159,9 @@ public class OilWell implements AppConnector<OilCargo> {
         }
     }
 
+    /**
+     * It handles a new connection initiated from the other oil well. It updates the directConnections variable
+     */
     @Override
     public void handleNewConnection(String newConnectionIp, int newConnectionPort) {
         synchronized (directConnectionsLock) {
@@ -122,6 +171,9 @@ public class OilWell implements AppConnector<OilCargo> {
         }
     }
 
+    /**
+     * It handles the removal of a connection initiated from the other oil well. It updates the directConnections variable
+     */
     @Override
     public void handleRemoveConnection(String removeConnectionIp, int removeConnectionPort) {
         synchronized (directConnectionsLock) {
@@ -132,8 +184,18 @@ public class OilWell implements AppConnector<OilCargo> {
     }
 }
 
+/**
+ * It's a pair of hostname and port
+ * */
 class ConnectionDetails {
+    /**
+     * The hostname of the oil well
+     * */
     private final String hostname;
+
+    /**
+     * The port of the rmi registry of the oil well
+     * */
     private final int port;
 
     public ConnectionDetails(String hostname, int port) {
