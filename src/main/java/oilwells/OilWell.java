@@ -14,9 +14,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-public class OilWell implements AppConnector {
-    private String hostname;
-    private int port;
+public class OilWell implements AppConnector<OilCargo> {
     private int oilAmount;
     private final Object oilAmountLock = new Object();
     private final ArrayList<ConnectionDetails> directConnections = new ArrayList<>();
@@ -33,8 +31,6 @@ public class OilWell implements AppConnector {
     }
 
     public void initialize(String hostname, int port, int oilAmount) {
-        this.hostname = hostname;
-        this.port = port;
         this.oilAmount = oilAmount;
         try {
             distributedSnapshot.init(hostname, port, this);
@@ -98,9 +94,7 @@ public class OilWell implements AppConnector {
                         }
                     } catch (RemoteNodeNotFound | RemoteException e) {
                         logger.warn("Error sending oil cargo");
-                    } catch (NotBoundException e) {
-                        e.printStackTrace();
-                    } catch (SnapshotInterruptException e) {
+                    } catch (NotBoundException | SnapshotInterruptException e) {
                         e.printStackTrace();
                     }
                 }
@@ -109,9 +103,8 @@ public class OilWell implements AppConnector {
     }
 
     @Override
-    public void handleIncomingMessage(String senderIp, int senderPort, Object o) {
+    public void handleIncomingMessage(String senderIp, int senderPort, OilCargo message) {
         synchronized (oilAmountLock) {
-            OilCargo message = (OilCargo) o;
             oilAmount += message.getOilAmount();
             logger.info("Received " + message.getOilAmount() + " oil from " + senderIp + ":" + senderPort + ". New oilAmount = " + oilAmount);
         }
