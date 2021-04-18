@@ -60,8 +60,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     private final ExecutorService executors = Executors.newCachedThreadPool();
 
     @Override
-    public void receiveMarker(String senderHostname, int senderPort, String initiatorHostname, int initiatorPort, int snapshotId) throws RemoteException, DoubleMarkerException, UnexpectedMarkerReceived {
-
+    public synchronized void receiveMarker(String senderHostname, int senderPort, String initiatorHostname, int initiatorPort, int snapshotId) throws RemoteException, DoubleMarkerException, UnexpectedMarkerReceived {
         System.out.println(hostname + ":" + port + " | RECEIVED MARKER from: "+senderHostname+":"+senderPort);
 
         if(checkIfRemoteNodePresent(senderHostname,senderPort)) {
@@ -83,14 +82,10 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
         }else{
             throw new UnexpectedMarkerReceived("ERROR: received a marker from a node not present in my remote nodes list");
         }
-
     }
 
     @Override
-    public void receiveMessage(String senderHostname, int senderPort, MessageType message) throws RemoteException, NotBoundException, SnapshotInterruptException {
-        //for debug purposes
-        //System.out.println(ipAddress + ":" + port + " | Received a message from remoteNode: " + senderHostname + ":" + senderPort);
-
+    public synchronized void receiveMessage(String senderHostname, int senderPort, MessageType message) throws RemoteException, NotBoundException, SnapshotInterruptException {
         if(checkIfRemoteNodePresent(senderHostname, senderPort)) {
             if (!runningSnapshots.isEmpty()) { //snapshot running, marker received
                 runningSnapshots.forEach((snap) -> {
@@ -111,7 +106,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
 
 
     @Override
-    public void addMeBack(String hostname, int port) throws RemoteException, NotBoundException {
+    public synchronized void addMeBack(String hostname, int port) throws RemoteException, NotBoundException {
         Registry registry = LocateRegistry.getRegistry(hostname, port);
         RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
         remoteNodes.add(new RemoteNode<>(hostname, port, remoteInterface));
@@ -120,7 +115,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
 
 
     @Override
-    public void removeMe(String hostname, int port) throws RemoteException, SnapshotInterruptException {
+    public synchronized void removeMe(String hostname, int port) throws RemoteException, SnapshotInterruptException {
         if(!this.runningSnapshots.isEmpty()) {
             System.out.println(hostname+":"+port + " | ERROR: REMOVING DURING SNAPSHOT, ASSUMPTION NOT RESPECTED");
             throw new SnapshotInterruptException();
@@ -146,6 +141,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
         }
     }
 
+    //TODO: printStackTrace()
     /**
      * This methods sends a specific marker to all the connected RemoteNodes via RMI.
      * Together with the specific marker, also an identifier of the snapshot initiator
@@ -154,7 +150,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
      * @param initiatorHostname the IP address of the entity that initiated the snapshot
      * @param initiatorPort the port of the entity that initiated the snapshot
      * */
-    private void propagateMarker(String initiatorHostname, int initiatorPort, int snapshotId) {
+    private synchronized void propagateMarker(String initiatorHostname, int initiatorPort, int snapshotId) {
         for (RemoteNode<MessageType> remoteNode : remoteNodes) {
             try {
                 remoteNode.remoteInterface.receiveMarker(this.hostname, this.port, initiatorHostname, initiatorPort, snapshotId);
