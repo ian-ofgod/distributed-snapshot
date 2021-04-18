@@ -31,7 +31,12 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     /**
      * Stores the current state: will fill the different Snapshot objects when created
      * */
-    StateType current_state;
+    protected StateType current_state;
+
+    /**
+     * Lock object for currentState variable
+     * */
+    protected final Object currentStateLock = new Object();
 
     //store remote references to the linked nodes
     /**
@@ -64,7 +69,10 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
         System.out.println(hostname + ":" + port + " | RECEIVED MARKER from: "+senderHostname+":"+senderPort);
 
         if(checkIfRemoteNodePresent(senderHostname,senderPort)) {
-            Snapshot<StateType, MessageType> snap = new Snapshot<>(snapshotId, current_state); //Creates the snapshot and saves the current state!
+            Snapshot<StateType, MessageType> snap;
+            synchronized (currentStateLock) {
+                snap = new Snapshot<>(snapshotId, current_state); //Creates the snapshot and saves the current state!
+            }
 
             if (!runningSnapshots.contains(snap)) {
                 System.out.println(hostname + ":" + port + " | First time receiving a marker");

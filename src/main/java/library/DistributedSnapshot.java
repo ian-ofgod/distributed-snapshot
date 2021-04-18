@@ -85,8 +85,10 @@ public class DistributedSnapshot<StateType, MessageType> {
     /**
      *
      * */
-    public void updateState(StateType state){
-        this.remoteImplementation.current_state=state;
+    public void updateState(StateType state) {
+        synchronized (remoteImplementation.currentStateLock) {
+            this.remoteImplementation.current_state=state;
+        }
     }
 
     /**
