@@ -22,7 +22,7 @@ public class OilWell implements AppConnector<OilCargo> {
     /**
      * The amount of oil contained on the well
      */
-    private Integer oilAmount;
+    private int oilAmount = -1;
 
     /**
      * Lock object for oilAmount variable
@@ -62,9 +62,9 @@ public class OilWell implements AppConnector<OilCargo> {
      * It is called to set the initial oil amount and set hostname and port inside the library
      */
     public void initialize(String hostname, int port, int oilAmount) {
-        this.oilAmount = oilAmount;
         try {
             distributedSnapshot.init(hostname, port, this);
+            this.oilAmount = oilAmount;
             distributedSnapshot.updateState(oilAmount);
             logger.info("Successfully initialized new node on " + hostname + ":" + port);
             startOilTransfers(2*1000, (int)(this.oilAmount*0.001), (int)(this.oilAmount*0.01));
@@ -77,43 +77,49 @@ public class OilWell implements AppConnector<OilCargo> {
      * It is called to connect to another oil well
      */
     public void connect(String hostname, int port) {
-        logger.info("Connecting to " + hostname + ":" + port);
-        try {
-            distributedSnapshot.addConnection(hostname, port);
-            directConnections.add(new ConnectionDetails(hostname, port));
-            logger.info("Successfully connected to " + hostname + ":" + port);
-        } catch (RemoteException | NotBoundException | RemoteNodeAlreadyPresent e) {
-            logger.warn("Cannot connect to " + hostname + ":" + port);
-        }
+        if (oilAmount != -1) {
+            logger.info("Connecting to " + hostname + ":" + port);
+            try {
+                distributedSnapshot.addConnection(hostname, port);
+                directConnections.add(new ConnectionDetails(hostname, port));
+                logger.info("Successfully connected to " + hostname + ":" + port);
+            } catch (RemoteException | NotBoundException | RemoteNodeAlreadyPresent e) {
+                logger.warn("Cannot connect to " + hostname + ":" + port);
+            }
+        } else logger.info("You must first initialize your oil well!");
     }
 
     /**
      * It is called to disconnect from another oil well
      */
     public void disconnect(String hostname, int port) {
-        logger.info("Disconnecting from " + hostname + ":" + port);
-        try {
-            distributedSnapshot.removeConnection(hostname, port);
-            directConnections.remove(new ConnectionDetails(hostname, port));
-            logger.info("Successfully disconnected from " + hostname + ":" + port);
-        } catch (OperationForbidden | SnapshotInterruptException e){
-            logger.warn("You can't remove " + hostname + ":" + port);
-        } catch (RemoteException e) {
-            logger.warn("Cannot disconnect from " + hostname + ":" + port);
-        }
+        if (oilAmount != -1) {
+            logger.info("Disconnecting from " + hostname + ":" + port);
+            try {
+                distributedSnapshot.removeConnection(hostname, port);
+                directConnections.remove(new ConnectionDetails(hostname, port));
+                logger.info("Successfully disconnected from " + hostname + ":" + port);
+            } catch (OperationForbidden | SnapshotInterruptException e) {
+                logger.warn("You can't remove " + hostname + ":" + port);
+            } catch (RemoteException e) {
+                logger.warn("Cannot disconnect from " + hostname + ":" + port);
+            }
+        } else logger.info("You must first initialize your oil well!");
     }
 
     /**
      * It is called to initiate a snapshot on the network
      */
     public void snapshot() {
-        logger.info("Starting snapshot");
-        try {
-            distributedSnapshot.initiateSnapshot();
-            logger.info("Snapshot completed");
-        } catch (RemoteException | DoubleMarkerException | UnexpectedMarkerReceived e) {
-            logger.warn("Cannot complete snapshot");
-        }
+        if (oilAmount != -1) {
+            logger.info("Starting snapshot");
+            try {
+                distributedSnapshot.initiateSnapshot();
+                logger.info("Snapshot completed");
+            } catch (RemoteException | DoubleMarkerException | UnexpectedMarkerReceived e) {
+                logger.warn("Cannot complete snapshot");
+            }
+        } else logger.info("You must first initialize your oil well!");
     }
 
     /**
@@ -124,12 +130,12 @@ public class OilWell implements AppConnector<OilCargo> {
         executor.scheduleAtFixedRate(() -> {
             synchronized (directConnectionsLock) {
                 if (directConnections.size() > 0) {
+                    ConnectionDetails randomWell = directConnections.get((int) (Math.random() * (directConnections.size())));
                     try {
-                        ConnectionDetails randomWell = directConnections.get((int) (Math.random() * (directConnections.size())));
                         int amount = minAmount + (int) (Math.random() * ((maxAmount - minAmount) + 1));
                         synchronized (oilAmountLock) {
                             if (oilAmount - amount >= 0) {
-                                logger.info("Sending " + amount + " oil to " + randomWell.getHostname() + ":" + randomWell.getPort() + ". New oilAmount = " + oilAmount);
+                                logger.info("Sending " + amount + " oil to " + randomWell.getHostname() + ":" + randomWell.getPort() + ". New oilAmount = " + (oilAmount-amount));
                                 distributedSnapshot.sendMessage(randomWell.getHostname(), randomWell.getPort(), new OilCargo(amount));
                                 oilAmount -= amount;
                                 distributedSnapshot.updateState(oilAmount);
@@ -139,6 +145,7 @@ public class OilWell implements AppConnector<OilCargo> {
                         }
                     } catch (RemoteNodeNotFound | RemoteException e) {
                         logger.warn("Error sending oil cargo");
+                        directConnections.remove(randomWell);
                     } catch (NotBoundException | SnapshotInterruptException e) {
                         e.printStackTrace();
                     }
