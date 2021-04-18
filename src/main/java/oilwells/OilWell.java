@@ -15,7 +15,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class OilWell implements AppConnector<OilCargo> {
-    private int oilAmount;
+    private Integer oilAmount;
     private final Object oilAmountLock = new Object();
     private final ArrayList<ConnectionDetails> directConnections = new ArrayList<>();
     private final Object directConnectionsLock = new Object();
@@ -34,6 +34,7 @@ public class OilWell implements AppConnector<OilCargo> {
         this.oilAmount = oilAmount;
         try {
             distributedSnapshot.init(hostname, port, this);
+            distributedSnapshot.updateState(oilAmount);
             logger.info("Successfully initialized new node on " + hostname + ":" + port);
             startOilTransfers(2*1000, (int)(this.oilAmount*0.001), (int)(this.oilAmount*0.01));
         } catch (RemoteException | AlreadyBoundException e) {
@@ -88,6 +89,7 @@ public class OilWell implements AppConnector<OilCargo> {
                                 logger.info("Sending " + amount + " oil to " + randomWell.getHostname() + ":" + randomWell.getPort() + ". New oilAmount = " + oilAmount);
                                 distributedSnapshot.sendMessage(randomWell.getHostname(), randomWell.getPort(), new OilCargo(amount));
                                 oilAmount -= amount;
+                                distributedSnapshot.updateState(oilAmount);
                             } else {
                                 logger.warn("You are running out of oil, cannot send oil to " + randomWell.getHostname() + ":" + randomWell.getPort());
                             }
@@ -106,6 +108,7 @@ public class OilWell implements AppConnector<OilCargo> {
     public void handleIncomingMessage(String senderIp, int senderPort, OilCargo message) {
         synchronized (oilAmountLock) {
             oilAmount += message.getOilAmount();
+            distributedSnapshot.updateState(oilAmount);
             logger.info("Received " + message.getOilAmount() + " oil from " + senderIp + ":" + senderPort + ". New oilAmount = " + oilAmount);
         }
     }
