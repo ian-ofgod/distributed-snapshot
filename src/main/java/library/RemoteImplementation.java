@@ -31,7 +31,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     /**
      * Stores the current state: will fill the different Snapshot objects when created
      * */
-    protected StateType current_state;
+    protected StateType currentState;
 
     /**
      * Lock object for currentState variable
@@ -71,7 +71,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
         if(checkIfRemoteNodePresent(senderHostname,senderPort)) {
             Snapshot<StateType, MessageType> snap;
             synchronized (currentStateLock) {
-                snap = new Snapshot<>(snapshotId, current_state); //Creates the snapshot and saves the current state!
+                snap = new Snapshot<>(snapshotId, currentState); //Creates the snapshot and saves the current state!
             }
 
             if (!runningSnapshots.contains(snap)) {
