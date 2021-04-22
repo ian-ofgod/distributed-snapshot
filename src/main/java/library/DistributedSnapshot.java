@@ -2,6 +2,8 @@ package library;
 
 import library.exceptions.*;
 
+import javax.swing.plaf.nimbus.State;
+import java.io.*;
 import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
@@ -87,7 +89,11 @@ public class DistributedSnapshot<StateType, MessageType> {
      * */
     public void updateState(StateType state) {
         synchronized (remoteImplementation.currentStateLock) {
-            this.remoteImplementation.current_state=state;
+            try {
+                this.remoteImplementation.current_state=deepClone(state);
+            } catch (IOException | ClassNotFoundException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -149,6 +155,26 @@ public class DistributedSnapshot<StateType, MessageType> {
         return remoteNode.remoteInterface;
     }
 
+    /**
+     * Courtesy of
+     * www.infoworld.com/article/2077578/java-tip-76--an-alternative-to-the-deep-copy-technique.html
+     * given that we decided to make a deep copy of a serializable object this trick allows us
+     * to make it by using only properties deriving from the fact that that object is serializable
+     * (so no Cloneable or similar approaches)
+     */
+    private StateType deepClone(StateType state) throws IOException, ClassNotFoundException {
+        // First serializing the object and its state to memory using
+        // ByteArrayOutputStream instead of FileOutputStream.
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        ObjectOutputStream out = new ObjectOutputStream(bos);
+        out.writeObject(state);
+
+        // And then deserializing it from memory using ByteArrayOutputStream instead of FileInputStream.
+        // Deserialization process will create a new object with the same state as in the serialized object,
+        ByteArrayInputStream bis = new ByteArrayInputStream(bos.toByteArray());
+        ObjectInputStream in = new ObjectInputStream(bis);
+        return (StateType) in.readObject();
+    }
 }
 
 /**
