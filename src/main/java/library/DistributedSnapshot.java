@@ -90,7 +90,7 @@ public class DistributedSnapshot<StateType, MessageType> {
     public void updateState(StateType state) {
         synchronized (remoteImplementation.currentStateLock) {
             try {
-                this.remoteImplementation.current_state=deepClone(state);
+                this.remoteImplementation.currentState=deepClone(state);
             } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
             }
@@ -104,7 +104,7 @@ public class DistributedSnapshot<StateType, MessageType> {
         String snapshotIdString= remoteImplementation.hostname + remoteImplementation.port + remoteImplementation.localSnapshotCounter;
         int snapshotId = snapshotIdString.hashCode();
         remoteImplementation.localSnapshotCounter++;
-        Snapshot<StateType, MessageType> snap = new Snapshot<>(snapshotId, remoteImplementation.current_state);
+        Snapshot<StateType, MessageType> snap = new Snapshot<>(snapshotId, remoteImplementation.currentState);
         remoteImplementation.runningSnapshots.add(snap);
 
         for (RemoteNode<MessageType> remoteNode : remoteImplementation.remoteNodes){
