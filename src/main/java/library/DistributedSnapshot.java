@@ -2,7 +2,6 @@ package library;
 
 import library.exceptions.*;
 
-import javax.swing.plaf.nimbus.State;
 import java.io.*;
 import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
@@ -113,17 +112,18 @@ public class DistributedSnapshot<StateType, MessageType> {
     public void initiateSnapshot() throws RemoteException, DoubleMarkerException, UnexpectedMarkerReceived, NotInitialized {
         if (remoteImplementation.appConnector == null) throw new NotInitialized();
 
+        int snapshotId;
         synchronized (remoteImplementation) {
             String snapshotIdString = remoteImplementation.hostname + remoteImplementation.port + remoteImplementation.localSnapshotCounter;
-            int snapshotId = snapshotIdString.hashCode();
+            snapshotId = snapshotIdString.hashCode();
             remoteImplementation.localSnapshotCounter++;
             Snapshot<StateType, MessageType> snap = new Snapshot<>(snapshotId, remoteImplementation.currentState);
             remoteImplementation.runningSnapshots.add(snap);
-
-            for (RemoteNode<MessageType> remoteNode : remoteImplementation.remoteNodes) {
-                System.out.println(remoteImplementation.hostname + ":" + remoteImplementation.port + " | Sending MARKER to: " + remoteNode.hostname + ":" + remoteNode.port);
-                remoteNode.remoteInterface.receiveMarker(remoteImplementation.hostname, remoteImplementation.port, remoteImplementation.hostname, remoteImplementation.port, snapshotId);
-            }
+        }
+        // Assumption from the text: no change in the network topology is allowed during a snapshot!
+        for (RemoteNode<MessageType> remoteNode : remoteImplementation.remoteNodes) {
+            System.out.println(remoteImplementation.hostname + ":" + remoteImplementation.port + " | Sending MARKER to: " + remoteNode.hostname + ":" + remoteNode.port);
+            remoteNode.remoteInterface.receiveMarker(remoteImplementation.hostname, remoteImplementation.port, remoteImplementation.hostname, remoteImplementation.port, snapshotId);
         }
     }
 
