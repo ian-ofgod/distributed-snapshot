@@ -152,7 +152,7 @@ public class OilWell implements AppConnector<OilCargo> {
                             }
                         }
                     } catch (RemoteNodeNotFound | RemoteException e) {
-                        logger.warn("Error sending oil cargo");
+                        logger.warn("Error sending oil cargo. Removing connection to " + randomWell.getHostname() + ":" + randomWell.getPort());
                         directConnections.remove(randomWell);
                     } catch (NotBoundException | SnapshotInterruptException e) {
                         logger.warn("Error sending oil cargo");

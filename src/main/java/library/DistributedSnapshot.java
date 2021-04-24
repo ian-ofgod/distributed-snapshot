@@ -47,13 +47,16 @@ public class DistributedSnapshot<StateType, MessageType> {
      */
     public void init(String yourHostname, int rmiRegistryPort, AppConnector<MessageType> appConnector) throws RemoteException, AlreadyBoundException, AlreadyInitialized {
         if (remoteImplementation.appConnector != null) throw new AlreadyInitialized();
-        remoteImplementation.hostname = yourHostname;
-        remoteImplementation.port = rmiRegistryPort;
-        remoteImplementation.appConnector = appConnector;
 
-        RemoteInterface<MessageType> stub = (RemoteInterface<MessageType>) UnicastRemoteObject.exportObject(remoteImplementation, 0);
-        Registry registry = LocateRegistry.createRegistry(remoteImplementation.port);
-        registry.bind("RemoteInterface", stub);
+        synchronized (remoteImplementation) {
+            remoteImplementation.hostname = yourHostname;
+            remoteImplementation.port = rmiRegistryPort;
+            remoteImplementation.appConnector = appConnector;
+
+            RemoteInterface<MessageType> stub = (RemoteInterface<MessageType>) UnicastRemoteObject.exportObject(remoteImplementation, 0);
+            Registry registry = LocateRegistry.createRegistry(remoteImplementation.port);
+            registry.bind("RemoteInterface", stub);
+        }
     }
 
     /**
@@ -64,13 +67,16 @@ public class DistributedSnapshot<StateType, MessageType> {
      */
     public void addConnection(String hostname, int port) throws RemoteException, NotBoundException, RemoteNodeAlreadyPresent, NotInitialized {
         if (remoteImplementation.appConnector == null) throw new NotInitialized();
-        if (!remoteImplementation.remoteNodes.contains(new RemoteNode<MessageType>(hostname,port,null))) {
+
+        synchronized (remoteImplementation) {
+            if (!remoteImplementation.remoteNodes.contains(new RemoteNode<MessageType>(hostname, port, null))) {
                 Registry registry = LocateRegistry.getRegistry(hostname, port);
                 RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
                 remoteImplementation.remoteNodes.add(new RemoteNode<>(hostname, port, remoteInterface));
                 remoteInterface.addMeBack(remoteImplementation.hostname, remoteImplementation.port);
-        } else {
-            throw new RemoteNodeAlreadyPresent();
+            } else {
+                throw new RemoteNodeAlreadyPresent();
+            }
         }
     }
 
@@ -82,7 +88,10 @@ public class DistributedSnapshot<StateType, MessageType> {
      */
     public void sendMessage(String hostname, int port, MessageType message) throws RemoteNodeNotFound, RemoteException, NotBoundException, SnapshotInterruptException, NotInitialized {
         if (remoteImplementation.appConnector == null) throw new NotInitialized();
-        getRemoteInterface(hostname, port).receiveMessage(remoteImplementation.hostname, remoteImplementation.port, message);
+
+        synchronized (remoteImplementation) {
+            getRemoteInterface(hostname, port).receiveMessage(remoteImplementation.hostname, remoteImplementation.port, message);
+        }
     }
 
     /**
@@ -103,15 +112,18 @@ public class DistributedSnapshot<StateType, MessageType> {
      * */
     public void initiateSnapshot() throws RemoteException, DoubleMarkerException, UnexpectedMarkerReceived, NotInitialized {
         if (remoteImplementation.appConnector == null) throw new NotInitialized();
-        String snapshotIdString= remoteImplementation.hostname + remoteImplementation.port + remoteImplementation.localSnapshotCounter;
-        int snapshotId = snapshotIdString.hashCode();
-        remoteImplementation.localSnapshotCounter++;
-        Snapshot<StateType, MessageType> snap = new Snapshot<>(snapshotId, remoteImplementation.currentState);
-        remoteImplementation.runningSnapshots.add(snap);
 
-        for (RemoteNode<MessageType> remoteNode : remoteImplementation.remoteNodes){
-            System.out.println(remoteImplementation.hostname + ":" + remoteImplementation.port + " | Sending MARKER to: "+remoteNode.hostname +":"+remoteNode.port);
-            remoteNode.remoteInterface.receiveMarker(remoteImplementation.hostname, remoteImplementation.port, remoteImplementation.hostname, remoteImplementation.port, snapshotId);
+        synchronized (remoteImplementation) {
+            String snapshotIdString = remoteImplementation.hostname + remoteImplementation.port + remoteImplementation.localSnapshotCounter;
+            int snapshotId = snapshotIdString.hashCode();
+            remoteImplementation.localSnapshotCounter++;
+            Snapshot<StateType, MessageType> snap = new Snapshot<>(snapshotId, remoteImplementation.currentState);
+            remoteImplementation.runningSnapshots.add(snap);
+
+            for (RemoteNode<MessageType> remoteNode : remoteImplementation.remoteNodes) {
+                System.out.println(remoteImplementation.hostname + ":" + remoteImplementation.port + " | Sending MARKER to: " + remoteNode.hostname + ":" + remoteNode.port);
+                remoteNode.remoteInterface.receiveMarker(remoteImplementation.hostname, remoteImplementation.port, remoteImplementation.hostname, remoteImplementation.port, snapshotId);
+            }
         }
     }
 
@@ -120,14 +132,17 @@ public class DistributedSnapshot<StateType, MessageType> {
      * */
     public void removeConnection(String hostname, int port) throws OperationForbidden, SnapshotInterruptException, RemoteException, NotInitialized {
         if (remoteImplementation.appConnector == null) throw new NotInitialized();
-        //since no change in the network topology is allowed during a snapshot
-        //this function WONT BE CALLED if any snapshot is running THIS IS AN ASSUMPTION FROM THE TEXT
-        if (!remoteImplementation.runningSnapshots.isEmpty()) {
-            throw new OperationForbidden("Unable to remove connection while snapshots are running");
+
+        // Since no change in the network topology is allowed during a snapshot
+        // this function WONT BE CALLED if any snapshot is running THIS IS AN ASSUMPTION FROM THE TEXT
+        synchronized (remoteImplementation) {
+            if (!remoteImplementation.runningSnapshots.isEmpty()) {
+                throw new OperationForbidden("Unable to remove connection while snapshots are running");
+            }
+            RemoteNode<MessageType> remoteNode = remoteImplementation.getRemoteNode(hostname, port);
+            remoteNode.remoteInterface.removeMe(remoteImplementation.hostname, remoteImplementation.port);
+            remoteImplementation.remoteNodes.remove(remoteNode);
         }
-        RemoteNode<MessageType> remoteNode = remoteImplementation.getRemoteNode(hostname,port);
-        remoteNode.remoteInterface.removeMe(remoteImplementation.hostname, remoteImplementation.port);
-        remoteImplementation.remoteNodes.remove(remoteNode);
     }
 
     /**
