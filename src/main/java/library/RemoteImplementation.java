@@ -13,17 +13,21 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- *
+ * This is the implementation of the RemoteInterface. The RemoteInterface is the stub
+ * that is available to others nodes to interact with this one.
+ * It contains methods such as receiveMarker, receiveMessage, addMeBack and removeMe
+ * @param <MessageType> this is the type that will be exchanged as a message between nodes
+ * @param <StateType> this is the type that will be saved as the state of the application
  * */
 class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<MessageType> {
 
     /**
-     *
+     * The hostname of the local node
      * */
     protected String hostname;
 
     /**
-     *
+     * The RMI registry port of the local node
      * */
     protected int port;
 
@@ -38,25 +42,24 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
      * */
     protected final Object currentStateLock = new Object();
 
-    //store remote references to the linked nodes
     /**
-     *
+     * It stores remote references to the linked nodes
      * */
     protected ArrayList<RemoteNode<MessageType>> remoteNodes = new ArrayList<>();
 
-    //this is the provided implementation of the class Observer
     /**
-     *
+     * Provided implementation of the class AppConnector
      * */
     protected AppConnector<MessageType> appConnector;
 
-    //list of the ids of running snapshots
     /**
-     *
+     * List of the ids of running snapshots
      * */
     protected ArrayList<Snapshot<StateType, MessageType>> runningSnapshots = new ArrayList<>();
 
-    //counter that is increased each time this node starts a snapshot, it is used to compute the new snapshotId
+    /**
+     * Counter that is increased each time this node starts a snapshot, it is used to compute the new snapshotId
+     * */
     protected int localSnapshotCounter=0;
 
     /**
@@ -64,8 +67,18 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
      * */
     private final ExecutorService executors = Executors.newCachedThreadPool();
 
+    /**
+     * It is called from a remote node to send a marker of a running snapshot on the network
+     * @param senderHostname the hostname of the entity that sent the marker that is being received
+     * @param senderPort the RMI registry port of the entity that sent the marker that is being received
+     * @param initiatorHostname the hostname of the entity that initiated the snapshot
+     * @param initiatorPort the RMI registry port of the entity that initiated the snapshot
+     * @param snapshotId the unique snapshot identifier (i.e. marker) that is being received
+     * @throws DoubleMarkerException received multiple marker (same id) from the same link
+     * @throws UnexpectedMarkerReceived the sender node is not present in the remote nodes list
+     * */
     @Override
-    public synchronized void receiveMarker(String senderHostname, int senderPort, String initiatorHostname, int initiatorPort, int snapshotId) throws RemoteException, DoubleMarkerException, UnexpectedMarkerReceived {
+    public synchronized void receiveMarker(String senderHostname, int senderPort, String initiatorHostname, int initiatorPort, int snapshotId) throws DoubleMarkerException, UnexpectedMarkerReceived {
         System.out.println(hostname + ":" + port + " | RECEIVED MARKER from: "+senderHostname+":"+senderPort);
 
         if(checkIfRemoteNodePresent(senderHostname,senderPort)) {
@@ -87,15 +100,25 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
                 Storage.writeFile(runningSnapshots, snapshotId);
                 runningSnapshots.remove(snap);
             }
-        }else{
+        } else {
             throw new UnexpectedMarkerReceived("ERROR: received a marker from a node not present in my remote nodes list");
         }
     }
 
+    /**
+     * This method is called from a remote node to send a message. If the sender node is not present in the remote node list removeMe() is invoked.
+     * If one (or more than one) snapshot is running it checks if it has to save the received message inside the snapshot
+     * @param senderHostname the hostname of the entity that sent the message that is being received
+     * @param senderPort the RMI registry port of the entity that sent the message that is being received
+     * @param message the message that is being received
+     * @throws RemoteException communication-related exception that may occur during remote calls
+     * @throws NotBoundException the remote node that is being removed has not bound its remote implementation
+     * @throws SnapshotInterruptException it's not possible to remove a node when a snapshot is running
+     * */
     @Override
     public synchronized void receiveMessage(String senderHostname, int senderPort, MessageType message) throws RemoteException, NotBoundException, SnapshotInterruptException {
         if(checkIfRemoteNodePresent(senderHostname, senderPort)) {
-            if (!runningSnapshots.isEmpty()) { //snapshot running, marker received
+            if (!runningSnapshots.isEmpty()) { // Snapshot running
                 runningSnapshots.forEach((snap) -> {
                     if(!checkIfReceivedMarker(senderHostname,senderPort,snap.snapshotId)) {
                         snap.messages.computeIfAbsent(new Entity(senderHostname, senderPort), k -> new ArrayList<>());
@@ -104,15 +127,21 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
                 });
             }
             appConnector.handleIncomingMessage(senderHostname, senderPort, message);
-        }else{
-            //we issue the command to the remote node to remove us!
+        } else {
+            // We issue the command to the remote node to remove us!
             Registry registry = LocateRegistry.getRegistry(senderHostname, senderPort);
             RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
             remoteInterface.removeMe(this.hostname, this.port);
         }
     }
 
-
+    /**
+     * This method is called from a remote node to add itself to the remote node list of the local node (this one)
+     * @param hostname the hostname of the entity that should be added
+     * @param port the RMI registry port of the entity that should be added
+     * @throws RemoteException communication-related exception that may occur during remote calls
+     * @throws NotBoundException the remote node has not bound its remote implementation
+     */
     @Override
     public synchronized void addMeBack(String hostname, int port) throws RemoteException, NotBoundException {
         Registry registry = LocateRegistry.getRegistry(hostname, port);
@@ -121,10 +150,17 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
         appConnector.handleNewConnection(hostname,port);
     }
 
-
+    /**
+     * This method is called from a remote node to delete itself from the remote node list of the local node (this one)
+     * @param hostname the hostname of the entity that should be removed
+     * @param port the RMI registry port of the entity that should be removed
+     * @throws RemoteException communication-related exception that may occur during remote calls
+     * @throws SnapshotInterruptException it's not possible to remove a node when a snapshot is running
+     */
     @Override
     public synchronized void removeMe(String hostname, int port) throws RemoteException, SnapshotInterruptException {
         if(!this.runningSnapshots.isEmpty()) {
+            //TODO: remove println
             System.out.println(hostname+":"+port + " | ERROR: REMOVING DURING SNAPSHOT, ASSUMPTION NOT RESPECTED");
             throw new SnapshotInterruptException();
         }
@@ -134,10 +170,15 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     }
 
     /**
-     *
-     * */
+     * This function stores the provided snapshotId inside the provided remote entity
+     * @param senderHostname the hostname of the entity in which the snapshotId will be recorded
+     * @param senderPort the RMI registry port of the entity in which the snapshotId will be recorded
+     * @param snapshotId the snapshot identifier to be recorded
+     * @throws DoubleMarkerException received multiple marker (same id) from the same link
+     */
     private void recordSnapshotId(String senderHostname, int senderPort, int snapshotId) throws DoubleMarkerException {
         RemoteNode<MessageType> remoteNode = getRemoteNode(senderHostname,senderPort);
+        //TODO: remove println
         if(remoteNode!=null) {
             if(remoteNode.snapshotIdsReceived.contains(snapshotId)){
                 System.out.println(hostname +":"+port + " | ERROR: received multiple marker (same id) for the same link");
@@ -149,11 +190,10 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
         }
     }
 
-    //TODO: printStackTrace()
     /**
      * This methods sends a specific marker to all the connected RemoteNodes via RMI.
      * Together with the specific marker, also an identifier of the snapshot initiator
-     * is propagated.
+     * is propagated
      * @param snapshotId the unique snapshot identifier (i.e. marker) that is being propagated
      * @param initiatorHostname the IP address of the entity that initiated the snapshot
      * @param initiatorPort the port of the entity that initiated the snapshot
@@ -163,19 +203,20 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
             try {
                 remoteNode.remoteInterface.receiveMarker(this.hostname, this.port, initiatorHostname, initiatorPort, snapshotId);
             } catch (RemoteException | DoubleMarkerException | UnexpectedMarkerReceived e) {
+                //TODO: printStackTrace()
                 e.printStackTrace();
             }
         }
     }
 
     /**
-     * This methods retrieve the RemoteNode object associated to the ip/port couple by
+     * This methods retrieve the RemoteNode object associated to the hostname/port couple by
      * performing a lookup in the list of stored RemoteNode objects, since each one
-     * contains the ip/port as attributes. The association RemoteNode and ip/port is unique.
-     * @param hostname the IP address of the Remote Node to look up
+     * contains the hostname/port as attributes. The association RemoteNode and hostname/port is unique
+     * @param hostname the hostname of the Remote Node to look up
      * @param port the port of the Remote Node to look up
      * */
-    protected RemoteNode<MessageType> getRemoteNode(String hostname, int port){
+    protected RemoteNode<MessageType> getRemoteNode(String hostname, int port) {
         for (RemoteNode<MessageType> remoteNode : remoteNodes) {
             if(remoteNode.hostname.equals(hostname) && remoteNode.port==port)
                 return remoteNode;
@@ -185,13 +226,18 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
 
     /**
      * This method checks if the same marker has been received by all nodes connected to the current node.
-     * If all connected nodes have send a specific marker, it means that the related snapshot is over.
-     * @param snapshotId the unique snapshot identifier (i.e. marker) to check.
+     * If all connected nodes have send a specific marker, it means that the related snapshot is over
+     * @param snapshotId the unique snapshot identifier (i.e. marker) to check
      * */
-    private boolean receivedMarkerFromAllLinks(int snapshotId){
+    private boolean receivedMarkerFromAllLinks(int snapshotId) {
         return remoteNodes.stream().filter(rn->rn.snapshotIdsReceived.contains(snapshotId)).count() == remoteNodes.size();
     }
 
+    /**
+     * This method checks if inside the remote node list it exists a node with the provided hostname and port
+     * @param hostname the hostname of the node to search for
+     * @param port the RMI registry port of the node to search for
+     */
     private boolean checkIfRemoteNodePresent(String hostname, int port){
         for (RemoteNode<MessageType> remoteNode : remoteNodes){
             if(remoteNode.equals(new RemoteNode<>(hostname, port, null)))
@@ -200,6 +246,12 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
         return false;
     }
 
+    /**
+     * This method checks if from the provided entity the local node has already received the marker
+     * @param hostname the hostname of the provided entity
+     * @param port the RMI port of the provided entity
+     * @param snapshotId the identifier of the snapshot to check for
+     */
     private boolean checkIfReceivedMarker(String hostname, int port, int snapshotId){
         for (RemoteNode<MessageType> remoteNode : remoteNodes){
             if(remoteNode.equals(new RemoteNode<>(hostname, port, null)))
