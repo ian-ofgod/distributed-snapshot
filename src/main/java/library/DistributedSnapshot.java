@@ -20,16 +20,14 @@ public class DistributedSnapshot<StateType, MessageType> {
     /**
      *
      * */
-    protected RemoteImplementation<StateType,MessageType> remoteImplementation = new RemoteImplementation<>();
+    protected final RemoteImplementation<StateType,MessageType> remoteImplementation = new RemoteImplementation<>();
 
     /**
      *
      * */
     public DistributedSnapshot() {}
 
-    /**
-     *
-     * */
+    //TODO: remove
     public DistributedSnapshot(AppConnector<MessageType> appConnector, String hostname, int port){
         remoteImplementation.appConnector=appConnector;
         remoteImplementation.port=port;
@@ -47,10 +45,11 @@ public class DistributedSnapshot<StateType, MessageType> {
     /**
      *
      */
-    public void init(String yourHostname, int rmiRegistryPort, AppConnector<MessageType> appConnector) throws RemoteException, AlreadyBoundException {
-        remoteImplementation.hostname =yourHostname;
-        remoteImplementation.port=rmiRegistryPort;
-        remoteImplementation.appConnector=appConnector;
+    public void init(String yourHostname, int rmiRegistryPort, AppConnector<MessageType> appConnector) throws RemoteException, AlreadyBoundException, AlreadyInitialized {
+        if (remoteImplementation.appConnector != null) throw new AlreadyInitialized();
+        remoteImplementation.hostname = yourHostname;
+        remoteImplementation.port = rmiRegistryPort;
+        remoteImplementation.appConnector = appConnector;
 
         RemoteInterface<MessageType> stub = (RemoteInterface<MessageType>) UnicastRemoteObject.exportObject(remoteImplementation, 0);
         Registry registry = LocateRegistry.createRegistry(remoteImplementation.port);
@@ -63,7 +62,8 @@ public class DistributedSnapshot<StateType, MessageType> {
      * @param hostname the ip address of the host running the rmi registry
      * @param port the port where the rmi registry is running
      */
-    public void addConnection(String hostname, int port) throws RemoteException, NotBoundException, RemoteNodeAlreadyPresent {
+    public void addConnection(String hostname, int port) throws RemoteException, NotBoundException, RemoteNodeAlreadyPresent, NotInitialized {
+        if (remoteImplementation.appConnector == null) throw new NotInitialized();
         if (!remoteImplementation.remoteNodes.contains(new RemoteNode<MessageType>(hostname,port,null))) {
                 Registry registry = LocateRegistry.getRegistry(hostname, port);
                 RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
@@ -80,7 +80,8 @@ public class DistributedSnapshot<StateType, MessageType> {
      * @param port the port associated to the rmi registry in the remote node
      * @param message the message to send to the remote node
      */
-    public void sendMessage(String hostname, int port, MessageType message) throws RemoteNodeNotFound, RemoteException, NotBoundException, SnapshotInterruptException {
+    public void sendMessage(String hostname, int port, MessageType message) throws RemoteNodeNotFound, RemoteException, NotBoundException, SnapshotInterruptException, NotInitialized {
+        if (remoteImplementation.appConnector == null) throw new NotInitialized();
         getRemoteInterface(hostname, port).receiveMessage(remoteImplementation.hostname, remoteImplementation.port, message);
     }
 
@@ -100,7 +101,8 @@ public class DistributedSnapshot<StateType, MessageType> {
     /**
      *
      * */
-    public void initiateSnapshot() throws RemoteException, DoubleMarkerException, UnexpectedMarkerReceived {
+    public void initiateSnapshot() throws RemoteException, DoubleMarkerException, UnexpectedMarkerReceived, NotInitialized {
+        if (remoteImplementation.appConnector == null) throw new NotInitialized();
         String snapshotIdString= remoteImplementation.hostname + remoteImplementation.port + remoteImplementation.localSnapshotCounter;
         int snapshotId = snapshotIdString.hashCode();
         remoteImplementation.localSnapshotCounter++;
@@ -116,7 +118,8 @@ public class DistributedSnapshot<StateType, MessageType> {
     /**
      *
      * */
-    public void removeConnection(String hostname, int port) throws OperationForbidden, SnapshotInterruptException, RemoteException {
+    public void removeConnection(String hostname, int port) throws OperationForbidden, SnapshotInterruptException, RemoteException, NotInitialized {
+        if (remoteImplementation.appConnector == null) throw new NotInitialized();
         //since no change in the network topology is allowed during a snapshot
         //this function WONT BE CALLED if any snapshot is running THIS IS AN ASSUMPTION FROM THE TEXT
         if (!remoteImplementation.runningSnapshots.isEmpty()) {

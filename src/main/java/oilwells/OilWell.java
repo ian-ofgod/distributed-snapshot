@@ -70,6 +70,8 @@ public class OilWell implements AppConnector<OilCargo> {
             startOilTransfers(2*1000, (int)(this.oilAmount*0.001), (int)(this.oilAmount*0.01));
         } catch (RemoteException | AlreadyBoundException e) {
             logger.warn("Cannot initialize new node");
+        } catch (AlreadyInitialized e) {
+            logger.info("You have already initialized your node!");
         }
     }
 
@@ -85,6 +87,8 @@ public class OilWell implements AppConnector<OilCargo> {
                 logger.info("Successfully connected to " + hostname + ":" + port);
             } catch (RemoteException | NotBoundException | RemoteNodeAlreadyPresent e) {
                 logger.warn("Cannot connect to " + hostname + ":" + port);
+            } catch (NotInitialized notInitialized) {
+                logger.info("You must first initialize your oil well!");
             }
         } else logger.info("You must first initialize your oil well!");
     }
@@ -103,6 +107,8 @@ public class OilWell implements AppConnector<OilCargo> {
                 logger.warn("You can't remove " + hostname + ":" + port);
             } catch (RemoteException e) {
                 logger.warn("Cannot disconnect from " + hostname + ":" + port);
+            } catch (NotInitialized notInitialized) {
+                logger.info("You must first initialize your oil well!");
             }
         } else logger.info("You must first initialize your oil well!");
     }
@@ -118,6 +124,8 @@ public class OilWell implements AppConnector<OilCargo> {
                 logger.info("Snapshot completed");
             } catch (RemoteException | DoubleMarkerException | UnexpectedMarkerReceived e) {
                 logger.warn("Cannot complete snapshot");
+            } catch (NotInitialized e) {
+                logger.info("You must first initialize your oil well!");
             }
         } else logger.info("You must first initialize your oil well!");
     }
@@ -147,7 +155,9 @@ public class OilWell implements AppConnector<OilCargo> {
                         logger.warn("Error sending oil cargo");
                         directConnections.remove(randomWell);
                     } catch (NotBoundException | SnapshotInterruptException e) {
-                        e.printStackTrace();
+                        logger.warn("Error sending oil cargo");
+                    } catch (NotInitialized notInitialized) {
+                        logger.info("You must first initialize your oil well!");
                     }
                 }
             }
