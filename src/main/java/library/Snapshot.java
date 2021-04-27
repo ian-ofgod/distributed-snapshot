@@ -80,8 +80,11 @@ class Entity {
     protected int port;
 
     /**
-     *
-     * */
+     * Sole constructor to create an Entity object
+     * starting from an IP address and a port number
+     * @param ip_address the Entity ip address
+     * @param port the Entity port
+     */
     public Entity(String ip_address, int port) {
         this.ipAddress = ip_address;
         this.port = port;

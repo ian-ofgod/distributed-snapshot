@@ -67,16 +67,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
      * */
     private final ExecutorService executors = Executors.newCachedThreadPool();
 
-    /**
-     * It is called from a remote node to send a marker of a running snapshot on the network
-     * @param senderHostname the hostname of the entity that sent the marker that is being received
-     * @param senderPort the RMI registry port of the entity that sent the marker that is being received
-     * @param initiatorHostname the hostname of the entity that initiated the snapshot
-     * @param initiatorPort the RMI registry port of the entity that initiated the snapshot
-     * @param snapshotId the unique snapshot identifier (i.e. marker) that is being received
-     * @throws DoubleMarkerException received multiple marker (same id) from the same link
-     * @throws UnexpectedMarkerReceived the sender node is not present in the remote nodes list
-     * */
+
     @Override
     public synchronized void receiveMarker(String senderHostname, int senderPort, String initiatorHostname, int initiatorPort, int snapshotId) throws DoubleMarkerException, UnexpectedMarkerReceived {
         System.out.println(hostname + ":" + port + " | RECEIVED MARKER from: "+senderHostname+":"+senderPort);
@@ -105,16 +96,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
         }
     }
 
-    /**
-     * This method is called from a remote node to send a message. If the sender node is not present in the remote node list removeMe() is invoked.
-     * If one (or more than one) snapshot is running it checks if it has to save the received message inside the snapshot
-     * @param senderHostname the hostname of the entity that sent the message that is being received
-     * @param senderPort the RMI registry port of the entity that sent the message that is being received
-     * @param message the message that is being received
-     * @throws RemoteException communication-related exception that may occur during remote calls
-     * @throws NotBoundException the remote node that is being removed has not bound its remote implementation
-     * @throws SnapshotInterruptException it's not possible to remove a node when a snapshot is running
-     * */
+
     @Override
     public synchronized void receiveMessage(String senderHostname, int senderPort, MessageType message) throws RemoteException, NotBoundException, SnapshotInterruptException {
         if(checkIfRemoteNodePresent(senderHostname, senderPort)) {
@@ -135,13 +117,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
         }
     }
 
-    /**
-     * This method is called from a remote node to add itself to the remote node list of the local node (this one)
-     * @param hostname the hostname of the entity that should be added
-     * @param port the RMI registry port of the entity that should be added
-     * @throws RemoteException communication-related exception that may occur during remote calls
-     * @throws NotBoundException the remote node has not bound its remote implementation
-     */
+
     @Override
     public synchronized void addMeBack(String hostname, int port) throws RemoteException, NotBoundException {
         Registry registry = LocateRegistry.getRegistry(hostname, port);
@@ -150,13 +126,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
         appConnector.handleNewConnection(hostname,port);
     }
 
-    /**
-     * This method is called from a remote node to delete itself from the remote node list of the local node (this one)
-     * @param hostname the hostname of the entity that should be removed
-     * @param port the RMI registry port of the entity that should be removed
-     * @throws RemoteException communication-related exception that may occur during remote calls
-     * @throws SnapshotInterruptException it's not possible to remove a node when a snapshot is running
-     */
+
     @Override
     public synchronized void removeMe(String hostname, int port) throws RemoteException, SnapshotInterruptException {
         if(!this.runningSnapshots.isEmpty()) {
