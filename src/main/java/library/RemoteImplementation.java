@@ -160,9 +160,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     @Override
     public synchronized void removeMe(String hostname, int port) throws RemoteException, SnapshotInterruptException {
         if(!this.runningSnapshots.isEmpty()) {
-            //TODO: remove println
-            System.out.println(hostname+":"+port + " | ERROR: REMOVING DURING SNAPSHOT, ASSUMPTION NOT RESPECTED");
-            throw new SnapshotInterruptException();
+            throw new SnapshotInterruptException(hostname+":"+port + " | ERROR: REMOVING DURING SNAPSHOT, ASSUMPTION NOT RESPECTED");
         }
         RemoteNode<MessageType> remoteNode = getRemoteNode(hostname,port);
         this.remoteNodes.remove(remoteNode);
@@ -181,8 +179,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
         //TODO: remove println
         if(remoteNode!=null) {
             if(remoteNode.snapshotIdsReceived.contains(snapshotId)){
-                System.out.println(hostname +":"+port + " | ERROR: received multiple marker (same id) for the same link");
-                throw new DoubleMarkerException();
+                throw new DoubleMarkerException(hostname +":"+port + " | ERROR: received multiple marker (same id) for the same link");
             }else {
                 System.out.println(hostname +":"+port + " | Added markerId for the remote node who called");
                 remoteNode.snapshotIdsReceived.add(snapshotId);

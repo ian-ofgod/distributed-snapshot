@@ -5,5 +5,8 @@ package library.exceptions;
  * during a Snapshot, which violates assumptions
  * */
 public class SnapshotInterruptException extends Exception {
+    public SnapshotInterruptException(String message) {
+        super(message);
+    }
 
 }

@@ -5,6 +5,8 @@ package library.exceptions;
  * which should not happen and clearly indicates problems
  * */
 public class DoubleMarkerException extends Exception {
-
+    public DoubleMarkerException(String message) {
+        super(message);
+    }
 
 }

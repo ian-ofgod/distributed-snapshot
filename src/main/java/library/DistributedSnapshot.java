@@ -45,7 +45,7 @@ public class DistributedSnapshot<StateType, MessageType> {
      *
      */
     public void init(String yourHostname, int rmiRegistryPort, AppConnector<MessageType> appConnector) throws RemoteException, AlreadyBoundException, AlreadyInitialized {
-        if (remoteImplementation.appConnector != null) throw new AlreadyInitialized();
+        if (remoteImplementation.appConnector != null) throw new AlreadyInitialized("You are trying to initialize a connection that is already initialized");
 
         synchronized (remoteImplementation) {
             remoteImplementation.hostname = yourHostname;
@@ -65,7 +65,9 @@ public class DistributedSnapshot<StateType, MessageType> {
      * @param port the port where the rmi registry is running
      */
     public void addConnection(String hostname, int port) throws RemoteException, NotBoundException, RemoteNodeAlreadyPresent, NotInitialized {
-        if (remoteImplementation.appConnector == null) throw new NotInitialized();
+        if (remoteImplementation.appConnector == null) throw new NotInitialized("The connection you are trying to perform to (hostname " + hostname +
+                "and port " + port +
+                "must be initialized first)");
 
         synchronized (remoteImplementation) {
             if (!remoteImplementation.remoteNodes.contains(new RemoteNode<MessageType>(hostname, port, null))) {
@@ -74,7 +76,9 @@ public class DistributedSnapshot<StateType, MessageType> {
                 remoteImplementation.remoteNodes.add(new RemoteNode<>(hostname, port, remoteInterface));
                 remoteInterface.addMeBack(remoteImplementation.hostname, remoteImplementation.port);
             } else {
-                throw new RemoteNodeAlreadyPresent();
+                throw new RemoteNodeAlreadyPresent("The host you are trying to connect to (hostname " + hostname +
+                        "and port " + port +
+                        "is already present)");
             }
         }
     }
@@ -86,7 +90,9 @@ public class DistributedSnapshot<StateType, MessageType> {
      * @param message the message to send to the remote node
      */
     public void sendMessage(String hostname, int port, MessageType message) throws RemoteNodeNotFound, RemoteException, NotBoundException, SnapshotInterruptException, NotInitialized {
-        if (remoteImplementation.appConnector == null) throw new NotInitialized();
+        if (remoteImplementation.appConnector == null) throw new NotInitialized("You must initialize the connection with hostname: " + hostname +
+                "and port " + port +
+                "before sending a message");
 
         synchronized (remoteImplementation) {
             getRemoteInterface(hostname, port).receiveMessage(remoteImplementation.hostname, remoteImplementation.port, message);
@@ -110,7 +116,7 @@ public class DistributedSnapshot<StateType, MessageType> {
      *
      * */
     public void initiateSnapshot() throws RemoteException, DoubleMarkerException, UnexpectedMarkerReceived, NotInitialized {
-        if (remoteImplementation.appConnector == null) throw new NotInitialized();
+        if (remoteImplementation.appConnector == null) throw new NotInitialized("You must initialize the connection before starting a snapshot");
 
         int snapshotId;
         synchronized (remoteImplementation) {
@@ -131,7 +137,8 @@ public class DistributedSnapshot<StateType, MessageType> {
      *
      * */
     public void removeConnection(String hostname, int port) throws OperationForbidden, SnapshotInterruptException, RemoteException, NotInitialized {
-        if (remoteImplementation.appConnector == null) throw new NotInitialized();
+        if (remoteImplementation.appConnector == null) throw new NotInitialized("You must initialize the connection before trying to remove the node hostname +" +
+                "");
 
         // Since no change in the network topology is allowed during a snapshot
         // this function WONT BE CALLED if any snapshot is running THIS IS AN ASSUMPTION FROM THE TEXT
@@ -166,8 +173,10 @@ public class DistributedSnapshot<StateType, MessageType> {
      * */
     private RemoteInterface<MessageType> getRemoteInterface(String hostname, int port) throws RemoteNodeNotFound {
         int index= remoteImplementation.remoteNodes.indexOf(new RemoteNode<MessageType>(hostname,port,null));
-        if(index==-1){ // RemoteNode with the specified hostname and port not found!
-           throw new RemoteNodeNotFound();
+        if(index==-1){
+           throw new RemoteNodeNotFound("RemoteNode with the following hostname " + hostname +
+                   "and port" +port+
+                   " not found");
         }
         RemoteNode<MessageType> remoteNode = remoteImplementation.remoteNodes.get(index);
         return remoteNode.remoteInterface;
