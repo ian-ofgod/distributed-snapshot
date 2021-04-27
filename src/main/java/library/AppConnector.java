@@ -3,6 +3,7 @@ package library;
 /**
  * This interface must be implemented by the application in order to use the library.
  * It is composed of the methods that will be triggered by the library when an new event occurs.
+ * @param <MessageType> this is the type that will be exchanged as a message between nodes
  */
 public interface AppConnector<MessageType> {
     /**

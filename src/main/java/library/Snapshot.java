@@ -7,6 +7,8 @@ import java.util.*;
  * It contains the current state at the moment of snapshot initialization, and the
  * list of messages that are received after the marker, as required by the
  * distributed snapshot algorithm
+ * @param <MessageType> this is the type that will be exchanged as a message between nodes
+ * @param <StateType> this is the type that will be saved as the state of the application
  * */
 class Snapshot<StateType, MessageType> {
 

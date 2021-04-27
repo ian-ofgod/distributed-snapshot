@@ -44,6 +44,8 @@ class Storage {
 
     /**
      * Method to save a snapshot portion on disk.
+     * @param <MessageType> this is the type that will be exchanged as a message between nodes
+     * @param <StateType> this is the type that will be saved as the state of the application
      * @param runningSnapshots the list of snapshots running on the current node
      * @param snapshotId the id of the snapshot that the user want to save on disk
      * */
@@ -61,6 +63,8 @@ class Storage {
 
     /**
      * Method to build the file name of the current snapshot before saving on disk.
+     * @param <MessageType> this is the type that will be exchanged as a message between nodes
+     * @param <StateType> this is the type that will be saved as the state of the application
      * @param snapshot the snapshot for which the name is built, will be saved on disk
      * */
     private static <StateType, MessageType> String buildFileName(Snapshot<StateType, MessageType> snapshot) {

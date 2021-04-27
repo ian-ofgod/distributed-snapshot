@@ -26,7 +26,7 @@ interface RemoteInterface<MessageType> extends Remote {
      * @throws RemoteException communication-related exception that may occur during remote calls
      * @throws NotBoundException the remote node that is being removed has not bound its remote implementation
      * @throws SnapshotInterruptException it's not possible to remove a node when a snapshot is running
-     * */
+            * */
     void receiveMessage(String senderIp, int senderPort, MessageType message) throws RemoteException, NotBoundException, SnapshotInterruptException;
 
     /**

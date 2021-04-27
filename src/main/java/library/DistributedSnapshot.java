@@ -99,8 +99,8 @@ public class DistributedSnapshot<StateType, MessageType> {
         }
     }
 
-    /**
-     *
+    /** This method provides connection between a state
+     * @param state
      * */
     public void updateState(StateType state) {
         synchronized (remoteImplementation.currentStateLock) {
@@ -204,33 +204,41 @@ public class DistributedSnapshot<StateType, MessageType> {
     }
 }
 
-/**
- *
+/** Data class that encapsulates the structure of a Remote Node.
+ * It contains the node identifiers (hostname and port) as well as the
+ * reference to its corresponding Remote RMI Interface. The class is also
+ * used to keep track of the Snapshot Received by the corresponding
+ * Remote Node.
+ * @param <MessageType> this is the type that will be exchanged as a message between nodes
  * */
 class RemoteNode<MessageType> {
 
     /**
-     *
+     * ipAddress string associated to this entity
      * */
     protected String hostname;
 
     /**
-     *
+     * Port number associated to this entity
      * */
     protected int port;
 
     /**
-     *
+     * A reference to the Remote RMI Interface associated to this Remote Node
      * */
-    protected RemoteInterface<MessageType> remoteInterface; //the remote interface of the node
+    protected RemoteInterface<MessageType> remoteInterface;
 
     /**
-     *
+     * A List of Integers containind the IDs of the snapshots for which
+     * the corresponding marker has been received by this Remote Node.
+     * It is used to enable management of multiple, parallel, snapshots.
      * */
     protected ArrayList<Integer> snapshotIdsReceived = new ArrayList<>(); //holds the marker.id received from this remoteNode (for multiple concurrent distributed snapshots)
 
     /**
-     *
+     * Constructor for the Remote Node object, it allows encapsulation of hostname
+     * and port, and provides a reference to the Remote RMI Interface corresponding
+     * to the created Remote Node
      * */
     public RemoteNode(String hostname, int port, RemoteInterface<MessageType> remoteInterface) {
         this.hostname = hostname;
