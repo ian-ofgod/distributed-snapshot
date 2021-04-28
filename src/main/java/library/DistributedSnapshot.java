@@ -37,6 +37,7 @@ public class DistributedSnapshot<StateType, MessageType> {
             Registry registry = LocateRegistry.createRegistry(port);
             registry.bind("RemoteInterface", stub);
         } catch (Exception e) {
+            //TODO: rimuovere printStackTrace
             e.printStackTrace();
         }
     }
@@ -107,6 +108,7 @@ public class DistributedSnapshot<StateType, MessageType> {
             try {
                 this.remoteImplementation.currentState=deepClone(state);
             } catch (IOException | ClassNotFoundException e) {
+                //TODO: rimuovere printStackTrace
                 e.printStackTrace();
             }
         }
@@ -128,6 +130,7 @@ public class DistributedSnapshot<StateType, MessageType> {
         }
         // Assumption from the text: no change in the network topology is allowed during a snapshot!
         for (RemoteNode<MessageType> remoteNode : remoteImplementation.remoteNodes) {
+            //TODO: remove SystemPrintln
             System.out.println(remoteImplementation.hostname + ":" + remoteImplementation.port + " | Sending MARKER to: " + remoteNode.hostname + ":" + remoteNode.port);
             remoteNode.remoteInterface.receiveMarker(remoteImplementation.hostname, remoteImplementation.port, remoteImplementation.hostname, remoteImplementation.port, snapshotId);
         }
@@ -163,6 +166,7 @@ public class DistributedSnapshot<StateType, MessageType> {
             //SHOULD STOP HERE!!
             System.exit(0);
         } catch (Exception e) {
+            //TODO: rimuovere printStackTrace
             e.printStackTrace();
         }
     }

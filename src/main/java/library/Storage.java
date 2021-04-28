@@ -38,6 +38,7 @@ class Storage {
                 Files.createDirectory(path);
             }
         } catch (Exception e) {
+            //TODO: remove SystemPrintln
             System.err.println("Could not create folder");
         }
     }
@@ -55,8 +56,10 @@ class Storage {
         String fileName = buildFileName(toSaveSnapshot);
         try (PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter(fileName, true)))) {
             writer.println(toSaveSnapshot);
+            //TODO: remove SystemPrintln
             System.out.println("Snapshot is saved.");
         } catch (Exception e) {
+            //TODO: remove SystemPrintln
             System.err.println("Could not write file ");
         }
     }

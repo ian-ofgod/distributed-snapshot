@@ -70,6 +70,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
 
     @Override
     public synchronized void receiveMarker(String senderHostname, int senderPort, String initiatorHostname, int initiatorPort, int snapshotId) throws DoubleMarkerException, UnexpectedMarkerReceived {
+        //TODO: remove SystemPrintln
         System.out.println(hostname + ":" + port + " | RECEIVED MARKER from: "+senderHostname+":"+senderPort);
 
         if(checkIfRemoteNodePresent(senderHostname,senderPort)) {
@@ -79,6 +80,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
             }
 
             if (!runningSnapshots.contains(snap)) {
+                //TODO: remove SystemPrintln
                 System.out.println(hostname + ":" + port + " | First time receiving a marker");
                 runningSnapshots.add(snap);
                 recordSnapshotId(senderHostname, senderPort, snapshotId);
@@ -146,11 +148,11 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
      */
     private void recordSnapshotId(String senderHostname, int senderPort, int snapshotId) throws DoubleMarkerException {
         RemoteNode<MessageType> remoteNode = getRemoteNode(senderHostname,senderPort);
-        //TODO: remove println
         if(remoteNode!=null) {
             if(remoteNode.snapshotIdsReceived.contains(snapshotId)){
                 throw new DoubleMarkerException(hostname +":"+port + " | ERROR: received multiple marker (same id) for the same link");
             }else {
+                //TODO: remove SystemPrintln
                 System.out.println(hostname +":"+port + " | Added markerId for the remote node who called");
                 remoteNode.snapshotIdsReceived.add(snapshotId);
             }

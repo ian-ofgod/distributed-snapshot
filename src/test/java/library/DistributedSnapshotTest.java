@@ -46,7 +46,7 @@ public class DistributedSnapshotTest {
         node2.sendMessage("localhost", 11113, new Message("Message from 2 -> 3"));
         node3.sendMessage("localhost", 11114, new Message("Message from 3 -> 4"));
         node3.sendMessage("localhost", 11115, new Message("Message from 3 -> 5"));
-
+        //TODO: remove SystemPrintln
         basicApp2.state.messages.forEach(message -> System.out.println(message.message));
 
         assertEquals(true,true);
@@ -59,17 +59,20 @@ class BasicApp<MessageType> implements AppConnector<MessageType> {
 
     @Override
     public void handleIncomingMessage(String senderIp, int senderPort, MessageType o) {
+        //TODO: remove SystemPrintln
         System.out.println("BASIC APP 1: HANDLING THE MESSAGE");
         state.messages.add((Message) o);
     }
 
     @Override
     public void handleNewConnection(String newConnectionIp, int newConnectionPort) {
+        //TODO: remove SystemPrintln
         System.out.println("BASIC APP 1: Connection between me and "+newConnectionIp+":"+newConnectionPort+" was successfully ADDED from remote");
     }
 
     @Override
     public void handleRemoveConnection(String removeConnectionIp, int removeConnectionPort) {
+        //TODO: remove SystemPrintln
         System.out.println("BASIC APP 1: Connection between me and "+removeConnectionIp+":"+removeConnectionPort+" was successfully REMOVED from remote");
     }
 }
