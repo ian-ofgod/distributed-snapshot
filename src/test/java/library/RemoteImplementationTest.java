@@ -2,6 +2,8 @@ package library;
 
 import library.exceptions.SnapshotInterruptException;
 import library.exceptions.StateUpdateException;
+import library.exceptions.UnexpectedMarkerReceived;
+import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 
 import java.io.Serializable;
@@ -12,10 +14,6 @@ import java.util.ArrayList;
 import static org.junit.jupiter.api.Assertions.*;
 
 class RemoteImplementationTest {
-
-    @Test
-    void receiveMarker() {
-    }
 
     @Test
     void receiveMessageWithRunningSnapshotNoMarker() {
@@ -46,6 +44,13 @@ class RemoteImplementationTest {
         } catch (RemoteException | NotBoundException | SnapshotInterruptException | StateUpdateException e) {
             e.printStackTrace(); //TODO: remove?
         }
+    }
+
+    @Test
+    void receiveMarkerFromNotConnectedNode() {
+        RemoteImplementation<String,String> rm = new RemoteImplementation<>();
+        rm.appConnector = new MockApp<>();
+        assertThrows(UnexpectedMarkerReceived.class, ()->rm.receiveMarker("localhost",12345, "localhost",1234,1));
     }
 }
 
