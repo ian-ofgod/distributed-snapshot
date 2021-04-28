@@ -18,7 +18,7 @@ class RemoteImplementationTest {
     }
 
     @Test
-    void receiveMessageWithRunningSnapshot() {
+    void receiveMessageWithRunningSnapshotNoMarker() {
         RemoteImplementation<String,String> rm = new RemoteImplementation<>();
         try {
             rm.appConnector = new MockApp<>();
@@ -30,7 +30,22 @@ class RemoteImplementationTest {
         } catch (RemoteException | NotBoundException | SnapshotInterruptException | StateUpdateException e) {
             e.printStackTrace(); //TODO: remove?
         }
+    }
 
+    @Test
+    void receiveMessageWithRunningSnapshotAndMarker() {
+        RemoteImplementation<String,String> rm = new RemoteImplementation<>();
+        try {
+            rm.appConnector = new MockApp<>();
+            rm.remoteNodes.add(new RemoteNode<>("localhost", 12345, new RemoteImplementation<>()));
+            rm.runningSnapshots.add(new Snapshot<>(1, "MockState"));
+            rm.getRemoteNode("localhost",12345).snapshotIdsReceived.add(1);
+            rm.receiveMessage("localhost",12345, "MockMessage");
+
+            assert(rm.runningSnapshots.get(0).messages.get(new Entity("localhost",12345))==null);
+        } catch (RemoteException | NotBoundException | SnapshotInterruptException | StateUpdateException e) {
+            e.printStackTrace(); //TODO: remove?
+        }
     }
 }
 
