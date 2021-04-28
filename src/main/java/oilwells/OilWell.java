@@ -61,7 +61,7 @@ public class OilWell implements AppConnector<OilCargo> {
     /**
      * It is called to set the initial oil amount and set hostname and port inside the library
      */
-    public void initialize(String hostname, int port, int oilAmount) {
+    public void initialize(String hostname, int port, int oilAmount) throws StateUpdateException {
         try {
             distributedSnapshot.init(hostname, port, this);
             this.oilAmount = oilAmount;
@@ -158,6 +158,8 @@ public class OilWell implements AppConnector<OilCargo> {
                         logger.warn("Error sending oil cargo");
                     } catch (NotInitialized notInitialized) {
                         logger.info("You must first initialize your oil well!");
+                    } catch (StateUpdateException e) {
+                        logger.info("Error in updating state");
                     }
                 }
             }
@@ -168,7 +170,7 @@ public class OilWell implements AppConnector<OilCargo> {
      * It handles a new incoming message. It updates the oil amount contained on the oil well
      */
     @Override
-    public void handleIncomingMessage(String senderIp, int senderPort, OilCargo message) {
+    public void handleIncomingMessage(String senderIp, int senderPort, OilCargo message) throws StateUpdateException {
         synchronized (oilAmountLock) {
             oilAmount += message.getOilAmount();
             distributedSnapshot.updateState(oilAmount);

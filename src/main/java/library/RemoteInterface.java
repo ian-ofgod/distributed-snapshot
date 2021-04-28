@@ -2,6 +2,7 @@ package library;
 
 import library.exceptions.DoubleMarkerException;
 import library.exceptions.SnapshotInterruptException;
+import library.exceptions.StateUpdateException;
 import library.exceptions.UnexpectedMarkerReceived;
 
 import java.rmi.NotBoundException;
@@ -27,7 +28,7 @@ interface RemoteInterface<MessageType> extends Remote {
      * @throws NotBoundException the remote node that is being removed has not bound its remote implementation
      * @throws SnapshotInterruptException it's not possible to remove a node when a snapshot is running
             * */
-    void receiveMessage(String senderIp, int senderPort, MessageType message) throws RemoteException, NotBoundException, SnapshotInterruptException;
+    void receiveMessage(String senderIp, int senderPort, MessageType message) throws RemoteException, NotBoundException, SnapshotInterruptException, StateUpdateException;
 
     /**
      * It is called from a remote node to send a marker of a running snapshot on the network

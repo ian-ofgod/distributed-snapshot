@@ -2,6 +2,7 @@ package library;
 
 import library.exceptions.DoubleMarkerException;
 import library.exceptions.SnapshotInterruptException;
+import library.exceptions.StateUpdateException;
 import library.exceptions.UnexpectedMarkerReceived;
 
 import java.rmi.NotBoundException;
@@ -100,7 +101,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
 
 
     @Override
-    public synchronized void receiveMessage(String senderHostname, int senderPort, MessageType message) throws RemoteException, NotBoundException, SnapshotInterruptException {
+    public synchronized void receiveMessage(String senderHostname, int senderPort, MessageType message) throws RemoteException, NotBoundException, SnapshotInterruptException, StateUpdateException {
         if(checkIfRemoteNodePresent(senderHostname, senderPort)) {
             if (!runningSnapshots.isEmpty()) { // Snapshot running
                 runningSnapshots.forEach((snap) -> {

@@ -90,7 +90,7 @@ public class DistributedSnapshot<StateType, MessageType> {
      * @param port the port associated to the rmi registry in the remote node
      * @param message the message to send to the remote node
      */
-    public void sendMessage(String hostname, int port, MessageType message) throws RemoteNodeNotFound, RemoteException, NotBoundException, SnapshotInterruptException, NotInitialized {
+    public void sendMessage(String hostname, int port, MessageType message) throws RemoteNodeNotFound, RemoteException, NotBoundException, SnapshotInterruptException, NotInitialized, StateUpdateException {
         if (remoteImplementation.appConnector == null) throw new NotInitialized("You must initialize the connection with hostname: " + hostname +
                 "and port " + port +
                 "before sending a message");
@@ -103,13 +103,13 @@ public class DistributedSnapshot<StateType, MessageType> {
     /** This method provides connection between a state
      * @param state
      * */
-    public void updateState(StateType state) {
+    public void updateState(StateType state) throws StateUpdateException {
         synchronized (remoteImplementation.currentStateLock) {
             try {
                 this.remoteImplementation.currentState=deepClone(state);
             } catch (IOException | ClassNotFoundException e) {
-                //TODO: rimuovere printStackTrace
-                e.printStackTrace();
+                throw new StateUpdateException("Problem in updating the state");
+
             }
         }
     }

@@ -5,7 +5,10 @@ import java.util.Scanner;
 /**
  * It's used to parse the user input from the command line
  * */
-public abstract class Parser {
+public class Parser {
+
+    protected Parser(){};
+
     public static void parseInput(String className, Object classObject) {
         Scanner input = new Scanner(System.in);
         while (input.hasNext()) {
