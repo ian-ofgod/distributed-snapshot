@@ -39,6 +39,7 @@ class Storage {
             }
         } catch (Exception e) {
             //TODO: remove SystemPrintln
+            //TODO: evitare generic exceptions
             System.err.println("Could not create folder");
         }
     }
@@ -60,6 +61,7 @@ class Storage {
             System.out.println("Snapshot is saved.");
         } catch (Exception e) {
             //TODO: remove SystemPrintln
+            //TODO: evitare generic exceptions
             System.err.println("Could not write file ");
         }
     }

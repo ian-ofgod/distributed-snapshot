@@ -38,6 +38,7 @@ public class DistributedSnapshot<StateType, MessageType> {
             registry.bind("RemoteInterface", stub);
         } catch (Exception e) {
             //TODO: rimuovere printStackTrace
+            //TODO: evitare generic exceptions
             e.printStackTrace();
         }
     }
@@ -167,6 +168,7 @@ public class DistributedSnapshot<StateType, MessageType> {
             System.exit(0);
         } catch (Exception e) {
             //TODO: rimuovere printStackTrace
+            //TODO: evitare generic exceptions
             e.printStackTrace();
         }
     }

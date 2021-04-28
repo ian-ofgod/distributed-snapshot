@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class SnapshotAndStorageTest {
 
     @Test
-    public void TestEquals() {
+    public void testEquals() {
         int id = 1;
         MockState1 state1 = new MockState1("bla",1);
         MockState2 state2 = new MockState2('c',2.0);

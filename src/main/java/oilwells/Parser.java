@@ -42,6 +42,7 @@ public class Parser {
             try {
                 Class.forName(className).getMethod(methodName, methodParameterTypes).invoke(classObject, parameters);
             } catch (Exception e) {
+                //TODO: evitare generic exceptions
                 throw new IllegalStateException("Something went wrong calling " + methodName);
             }
         }
