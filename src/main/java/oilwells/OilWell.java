@@ -170,11 +170,11 @@ public class OilWell implements AppConnector<OilCargo> {
      * It handles a new incoming message. It updates the oil amount contained on the oil well
      */
     @Override
-    public void handleIncomingMessage(String senderIp, int senderPort, OilCargo message) throws StateUpdateException {
+    public void handleIncomingMessage(String senderHostname, int senderPort, OilCargo message) throws StateUpdateException {
         synchronized (oilAmountLock) {
             oilAmount += message.getOilAmount();
             distributedSnapshot.updateState(oilAmount);
-            logger.info("Received " + message.getOilAmount() + " oil from " + senderIp + ":" + senderPort + ". New oilAmount = " + oilAmount);
+            logger.info("Received " + message.getOilAmount() + " oil from " + senderHostname + ":" + senderPort + ". New oilAmount = " + oilAmount);
         }
     }
 
@@ -182,11 +182,11 @@ public class OilWell implements AppConnector<OilCargo> {
      * It handles a new connection initiated from the other oil well. It updates the directConnections variable
      */
     @Override
-    public void handleNewConnection(String newConnectionIp, int newConnectionPort) {
+    public void handleNewConnection(String newConnectionHostname, int newConnectionPort) {
         synchronized (directConnectionsLock) {
-            logger.info("Received connection attempt from " + newConnectionIp + ":" + newConnectionPort);
-            directConnections.add(new ConnectionDetails(newConnectionIp, newConnectionPort));
-            logger.info("Successfully connected to " + newConnectionIp + ":" + newConnectionPort);
+            logger.info("Received connection attempt from " + newConnectionHostname + ":" + newConnectionPort);
+            directConnections.add(new ConnectionDetails(newConnectionHostname, newConnectionPort));
+            logger.info("Successfully connected to " + newConnectionHostname + ":" + newConnectionPort);
         }
     }
 
@@ -194,11 +194,11 @@ public class OilWell implements AppConnector<OilCargo> {
      * It handles the removal of a connection initiated from the other oil well. It updates the directConnections variable
      */
     @Override
-    public void handleRemoveConnection(String removeConnectionIp, int removeConnectionPort) {
+    public void handleRemoveConnection(String removeConnectionHostname, int removeConnectionPort) {
         synchronized (directConnectionsLock) {
-            logger.info("Received disconnect attempt from " + removeConnectionIp + ":" + removeConnectionPort);
-            directConnections.remove(new ConnectionDetails(removeConnectionIp, removeConnectionPort));
-            logger.info("Successfully disconnected from " + removeConnectionIp + ":" + removeConnectionPort);
+            logger.info("Received disconnect attempt from " + removeConnectionHostname + ":" + removeConnectionPort);
+            directConnections.remove(new ConnectionDetails(removeConnectionHostname, removeConnectionPort));
+            logger.info("Successfully disconnected from " + removeConnectionHostname + ":" + removeConnectionPort);
         }
     }
 }

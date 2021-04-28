@@ -55,22 +55,22 @@ class BasicApp<MessageType> implements AppConnector<MessageType> {
     State state=new State();
 
     @Override
-    public void handleIncomingMessage(String senderIp, int senderPort, MessageType o) {
+    public void handleIncomingMessage(String senderHostname, int senderPort, MessageType o) {
         //TODO: remove SystemPrintln
         System.out.println("BASIC APP 1: HANDLING THE MESSAGE");
         state.messages.add((Message) o);
     }
 
     @Override
-    public void handleNewConnection(String newConnectionIp, int newConnectionPort) {
+    public void handleNewConnection(String newConnectionHostname, int newConnectionPort) {
         //TODO: remove SystemPrintln
-        System.out.println("BASIC APP 1: Connection between me and "+newConnectionIp+":"+newConnectionPort+" was successfully ADDED from remote");
+        System.out.println("BASIC APP 1: Connection between me and "+ newConnectionHostname +":"+newConnectionPort+" was successfully ADDED from remote");
     }
 
     @Override
-    public void handleRemoveConnection(String removeConnectionIp, int removeConnectionPort) {
+    public void handleRemoveConnection(String removeConnectionHostname, int removeConnectionPort) {
         //TODO: remove SystemPrintln
-        System.out.println("BASIC APP 1: Connection between me and "+removeConnectionIp+":"+removeConnectionPort+" was successfully REMOVED from remote");
+        System.out.println("BASIC APP 1: Connection between me and "+ removeConnectionHostname +":"+removeConnectionPort+" was successfully REMOVED from remote");
     }
 }
 

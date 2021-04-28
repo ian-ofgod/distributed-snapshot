@@ -21,14 +21,14 @@ interface RemoteInterface<MessageType> extends Remote {
     /**
      * This method is called from a remote node to send a message. If the sender node is not present in the remote node list removeMe() is invoked.
      * If one (or more than one) snapshot is running it checks if it has to save the received message inside the snapshot
-     * @param senderIp the hostname of the entity that sent the message that is being received
+     * @param senderHostname the hostname of the entity that sent the message that is being received
      * @param senderPort the RMI registry port of the entity that sent the message that is being received
      * @param message the message that is being received
      * @throws RemoteException communication-related exception that may occur during remote calls
      * @throws NotBoundException the remote node that is being removed has not bound its remote implementation
      * @throws SnapshotInterruptException it's not possible to remove a node when a snapshot is running
             * */
-    void receiveMessage(String senderIp, int senderPort, MessageType message) throws RemoteException, NotBoundException, SnapshotInterruptException, StateUpdateException;
+    void receiveMessage(String senderHostname, int senderPort, MessageType message) throws RemoteException, NotBoundException, SnapshotInterruptException, StateUpdateException;
 
     /**
      * It is called from a remote node to send a marker of a running snapshot on the network
