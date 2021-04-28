@@ -1,11 +1,9 @@
 package library;
 
-
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class SnapshotTest {
-
+public class SnapshotAndStorageTest {
 
     @Test
     public void TestEquals() {
@@ -20,6 +18,16 @@ public class SnapshotTest {
 
         assertEquals(snapshot1,snapshot2);
         assertNotEquals(snapshot2,snapshot3);
+
+    }
+
+    @Test
+    void writeFile() {
+
+    }
+
+    @Test
+    void createFolder(){
 
     }
 }

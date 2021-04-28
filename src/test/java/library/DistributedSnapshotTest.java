@@ -4,7 +4,8 @@ import library.exceptions.NotInitialized;
 import library.exceptions.RemoteNodeAlreadyPresent;
 import library.exceptions.RemoteNodeNotFound;
 import library.exceptions.SnapshotInterruptException;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.Serializable;
 import java.rmi.NotBoundException;
@@ -48,7 +49,7 @@ public class DistributedSnapshotTest {
 
         basicApp2.state.messages.forEach(message -> System.out.println(message.message));
 
-        assert(true);
+        assertEquals(true,true);
     }
 
 }
