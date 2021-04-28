@@ -56,7 +56,7 @@ class Snapshot<StateType, MessageType> {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Snapshot<?, ?> snapshot = (Snapshot<?, ?>) o;
-        return snapshotId == snapshot.snapshotId;
+        return this.snapshotId == snapshot.snapshotId;
     }
 
     @Override
@@ -95,5 +95,18 @@ class Entity {
     @Override
     public String toString() {
         return ipAddress + ':'+ port;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Entity entity = (Entity) o;
+        return port == entity.port && Objects.equals(ipAddress, entity.ipAddress);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(ipAddress, port);
     }
 }
