@@ -14,7 +14,7 @@ public interface AppConnector<MessageType> {
      * @param senderPort the port assigned to the RMI registry of the sender
      * @param o the message that the remote node sent
      */
-    void handleIncomingMessage(String senderHostname, int senderPort, MessageType o) throws StateUpdateException;
+    void handleIncomingMessage(String senderHostname, int senderPort, MessageType o);
 
     /**
      * This is the method for the application to handle a new connection from another node of the network.

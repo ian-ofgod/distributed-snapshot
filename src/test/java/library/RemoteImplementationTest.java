@@ -25,7 +25,7 @@ class RemoteImplementationTest {
             rm.receiveMessage("localhost",12345, "MockMessage");
 
             assert(rm.runningSnapshots.get(0).messages.get(new Entity("localhost",12345)).contains("MockMessage"));
-        } catch (RemoteException | NotBoundException | SnapshotInterruptException | StateUpdateException e) {
+        } catch (RemoteException | NotBoundException | SnapshotInterruptException e) {
             e.printStackTrace(); //TODO: remove?
         }
     }
@@ -41,7 +41,7 @@ class RemoteImplementationTest {
             rm.receiveMessage("localhost",12345, "MockMessage");
 
             assert(rm.runningSnapshots.get(0).messages.get(new Entity("localhost",12345))==null);
-        } catch (RemoteException | NotBoundException | SnapshotInterruptException | StateUpdateException e) {
+        } catch (RemoteException | NotBoundException | SnapshotInterruptException e) {
             e.printStackTrace(); //TODO: remove?
         }
     }

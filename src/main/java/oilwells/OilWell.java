@@ -170,11 +170,15 @@ public class OilWell implements AppConnector<OilCargo> {
      * It handles a new incoming message. It updates the oil amount contained on the oil well
      */
     @Override
-    public void handleIncomingMessage(String senderHostname, int senderPort, OilCargo message) throws StateUpdateException {
+    public void handleIncomingMessage(String senderHostname, int senderPort, OilCargo message) {
         synchronized (oilAmountLock) {
             oilAmount += message.getOilAmount();
-            distributedSnapshot.updateState(oilAmount);
-            logger.info("Received " + message.getOilAmount() + " oil from " + senderHostname + ":" + senderPort + ". New oilAmount = " + oilAmount);
+            try {
+                distributedSnapshot.updateState(oilAmount);
+                logger.info("Received " + message.getOilAmount() + " oil from " + senderHostname + ":" + senderPort + ". New oilAmount = " + oilAmount);
+            } catch (StateUpdateException e) {
+                logger.warn("Received " + message.getOilAmount() + " oil from " + senderHostname + ":" + senderPort + ". Error updating state");
+            }
         }
     }
 

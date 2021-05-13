@@ -102,7 +102,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
 
 
     @Override
-    public synchronized void receiveMessage(String senderHostname, int senderPort, MessageType message) throws RemoteException, NotBoundException, SnapshotInterruptException, StateUpdateException {
+    public synchronized void receiveMessage(String senderHostname, int senderPort, MessageType message) throws RemoteException, NotBoundException, SnapshotInterruptException {
         if(checkIfRemoteNodePresent(senderHostname, senderPort)) {
             if (!runningSnapshots.isEmpty()) { // Snapshot running
                 runningSnapshots.forEach((snap) -> {
