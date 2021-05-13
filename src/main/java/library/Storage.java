@@ -1,5 +1,7 @@
 package library;
 
+import org.apache.logging.log4j.message.Message;
+
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -31,10 +33,16 @@ class Storage {
 
     /**
      * Method to create a folder for the snapshots to be saved.
-     * */
-    private static void createFolder() {
+     *
+     * @param folderName*/
+    private static void createFolder(String folderName) {
         try {
             Path path = Paths.get(FOLDER);
+            if (!Files.exists(path)) {
+                Files.createDirectory(path);
+            }
+
+            path = Paths.get(folderName);
             if (!Files.exists(path)) {
                 Files.createDirectory(path);
             }
@@ -54,13 +62,14 @@ class Storage {
      * */
     //TODO: Testare!
     public static <StateType, MessageType> void writeFile(ArrayList<Snapshot<StateType, MessageType>> runningSnapshots, int snapshotId) {
-        createFolder();
+
         Snapshot<StateType, MessageType> toSaveSnapshot = runningSnapshots.stream().filter(snap -> snap.snapshotId==snapshotId).findFirst().orElse(null);
         StateType state = toSaveSnapshot.state;
         HashMap<Entity, ArrayList<MessageType>> messageMap = toSaveSnapshot.messages;
 
         // ONE FOLDER PER SNAPSHOT - THEN SOURCE ENTITY IS WRITTEN IN MESSAGES FILENAME
         String folderName = buildFolderName(toSaveSnapshot);
+        createFolder(folderName);
 
         try {
             FileOutputStream fos = new FileOutputStream(folderName+"state.ser");
@@ -68,6 +77,8 @@ class Storage {
             // write object to file
             oos.writeObject(state);
             System.out.println("State serialized and saved to file.");
+            oos.flush();
+            fos.flush();
 
             Iterator it = messageMap.entrySet().iterator();
             while (it.hasNext()) {
@@ -77,10 +88,14 @@ class Storage {
                 ArrayList<MessageType> current_messages = (ArrayList<MessageType>) pair.getValue();
 
                 for (int i =0; i < current_messages.size(); i++ ){
-                    fos = new FileOutputStream(folderName+entity_identifier+"_message"+i+".ser");
+                    fos = new FileOutputStream(folderName+entity_identifier+"_message_"+i+".ser");
                     oos = new ObjectOutputStream(fos);
-                    oos.writeObject(current_messages.get(i));
-                    System.out.println("Message "+i+"/"+
+                    MessageType message = current_messages.get(i);
+                    System.out.println(message);
+                    oos.writeObject(message);
+                    oos.flush();
+                    fos.flush();
+                    System.out.println("Message "+(i+1)+"/"+
                             current_messages.size()+
                             " for Entity "+entity_identifier+
                             " serialized and saved to file.");
@@ -94,6 +109,7 @@ class Storage {
             oos.close();
             fos.close();
         } catch (IOException e) {
+            e.printStackTrace();
             System.err.println("Could not write file ");
         }
     }
