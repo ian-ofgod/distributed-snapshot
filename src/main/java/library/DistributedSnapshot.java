@@ -25,26 +25,6 @@ public class DistributedSnapshot<StateType, MessageType> {
      * */
     protected final RemoteImplementation<StateType,MessageType> remoteImplementation = new RemoteImplementation<>();
 
-    //TODO: remove
-    public DistributedSnapshot() {}
-
-    //TODO: remove
-    public DistributedSnapshot(AppConnector<MessageType> appConnector, String hostname, int port){
-        remoteImplementation.appConnector=appConnector;
-        remoteImplementation.port=port;
-        remoteImplementation.hostname =hostname;
-
-        try {
-            RemoteInterface<MessageType> stub = (RemoteInterface<MessageType>) UnicastRemoteObject.exportObject(remoteImplementation, 0);
-            Registry registry = LocateRegistry.createRegistry(port);
-            registry.bind("RemoteInterface", stub);
-        } catch (Exception e) {
-            //TODO: rimuovere printStackTrace
-            //TODO: evitare generic exceptions
-            e.printStackTrace();
-        }
-    }
-
     /**
      * This method is used to initialize a DistributedSnapshot object. It sets the hostname, the port and the appConnector reference.
      * It starts the rmi registry and publishes the RemoteInterface in order to be reachable from other nodes.

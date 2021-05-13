@@ -5,24 +5,30 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.Serializable;
+import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
 
 public class DistributedSnapshotTest {
     @Test
-    public void simpleExample() throws NotBoundException, RemoteNodeAlreadyPresent, RemoteException, RemoteNodeNotFound, SnapshotInterruptException, NotInitialized, StateUpdateException {
+    public void simpleExample() throws NotBoundException, RemoteNodeAlreadyPresent, RemoteException, RemoteNodeNotFound, SnapshotInterruptException, NotInitialized, StateUpdateException, AlreadyBoundException, AlreadyInitialized {
         BasicApp<Message> basicApp1= new BasicApp<>();
         BasicApp<Message> basicApp2= new BasicApp<>();
         BasicApp<Message> basicApp3= new BasicApp<>();
         BasicApp<Message> basicApp4= new BasicApp<>();
         BasicApp<Message> basicApp5= new BasicApp<>();
 
-        DistributedSnapshot<State,Message> node1 = new DistributedSnapshot<>(basicApp1,"localhost", 11111);
-        DistributedSnapshot<State,Message> node2 = new DistributedSnapshot<>(basicApp2,"localhost", 11112);
-        DistributedSnapshot<State,Message> node3 = new DistributedSnapshot<>(basicApp3,"localhost", 11113);
-        DistributedSnapshot<State,Message> node4 = new DistributedSnapshot<>(basicApp4,"localhost", 11114);
-        DistributedSnapshot<State,Message> node5 = new DistributedSnapshot<>(basicApp5,"localhost", 11115);
+        DistributedSnapshot<State,Message> node1 = new DistributedSnapshot<>();
+        node1.init("localhost", 11111, basicApp1);
+        DistributedSnapshot<State,Message> node2 = new DistributedSnapshot<>();
+        node2.init("localhost", 11112, basicApp2);
+        DistributedSnapshot<State,Message> node3 = new DistributedSnapshot<>();
+        node3.init("localhost", 11113, basicApp3);
+        DistributedSnapshot<State,Message> node4 = new DistributedSnapshot<>();
+        node4.init("localhost", 11114, basicApp4);
+        DistributedSnapshot<State,Message> node5 = new DistributedSnapshot<>();
+        node5.init("localhost", 11115, basicApp5);
 
         /*     NETWORK STRUCTURE
                1---2---3 --- 4
