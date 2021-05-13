@@ -2,7 +2,6 @@ package library;
 
 import library.exceptions.DoubleMarkerException;
 import library.exceptions.SnapshotInterruptException;
-import library.exceptions.StateUpdateException;
 import library.exceptions.UnexpectedMarkerReceived;
 
 import java.rmi.NotBoundException;

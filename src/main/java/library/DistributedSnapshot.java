@@ -100,7 +100,7 @@ public class DistributedSnapshot<StateType, MessageType> {
     }
 
     /** This method is used to update the state. It makes a deep copy to store inside the remoteImplementation
-     * @param state
+     * @param state the object to save
      * @throws StateUpdateException something went wrong making a deep copy
      * */
     public void updateState(StateType state) throws StateUpdateException {

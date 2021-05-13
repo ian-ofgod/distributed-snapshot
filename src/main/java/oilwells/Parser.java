@@ -1,5 +1,6 @@
 package oilwells;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.Scanner;
 
 /**
@@ -7,7 +8,7 @@ import java.util.Scanner;
  * */
 public class Parser {
 
-    protected Parser(){};
+    protected Parser(){}
 
     public static void parseInput(String className, Object classObject) {
         Scanner input = new Scanner(System.in);
@@ -41,8 +42,7 @@ public class Parser {
 
             try {
                 Class.forName(className).getMethod(methodName, methodParameterTypes).invoke(classObject, parameters);
-            } catch (Exception e) {
-                //TODO: evitare generic exceptions
+            } catch (NoSuchMethodException | ClassNotFoundException | IllegalAccessException | InvocationTargetException e) {
                 throw new IllegalStateException("Something went wrong calling " + methodName);
             }
         }

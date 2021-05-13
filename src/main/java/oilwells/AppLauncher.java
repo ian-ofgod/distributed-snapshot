@@ -10,7 +10,7 @@ public final class AppLauncher {
     /**
      * The oil well instance
      * */
-    private static OilWell oilWell = new OilWell();
+    private static final OilWell oilWell = new OilWell();
 
     /**
      * The logger instance used to print on the command line

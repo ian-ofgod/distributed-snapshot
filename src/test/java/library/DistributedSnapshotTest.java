@@ -52,7 +52,7 @@ public class DistributedSnapshotTest {
         //TODO: remove SystemPrintln
         basicApp2.state.messages.forEach(message -> System.out.println(message.message));
 
-        assertEquals(true,true);
+        assertTrue(true);
     }
 
 }
