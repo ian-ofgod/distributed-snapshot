@@ -43,6 +43,15 @@ class Snapshot<StateType, MessageType> {
         this.state = state;
     }
 
+    /**
+     * Snapshot constructor that builds an empty snapshot objects.
+     * It only stores the unique snapshot identifier.
+     * It is used for loading Snapshots from disk.
+     * @param id the snapshot unique identifier
+     * */
+    public Snapshot(int id){
+    }
+
     @Override
     public String toString() {
         return "Snapshot "+snapshotId+"{" +

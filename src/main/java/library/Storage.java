@@ -53,6 +53,14 @@ class Storage {
         }
     }
 
+
+    public static <StateType, MessageType> Snapshot<StateType, MessageType> readFile(String folder, int snapshotId) {
+
+        Snapshot<StateType, MessageType> loaded_snapshot = new Snapshot<>(snapshotId);
+
+        return loaded_snapshot;
+    }
+
     /**
      * Method to save a snapshot portion on disk.
      * @param <MessageType> this is the type that will be exchanged as a message between nodes
@@ -77,24 +85,22 @@ class Storage {
             // write object to file
             oos.writeObject(state);
             System.out.println("State serialized and saved to file.");
-            oos.flush();
-            fos.flush();
+
 
             Iterator it = messageMap.entrySet().iterator();
             while (it.hasNext()) {
                 Map.Entry pair = (Map.Entry)it.next();
                 Entity current_entity = (Entity) pair.getKey();
-                String entity_identifier = current_entity.toString();
+                String entity_identifier = current_entity.toString().replace(":","_");
                 ArrayList<MessageType> current_messages = (ArrayList<MessageType>) pair.getValue();
 
                 for (int i =0; i < current_messages.size(); i++ ){
-                    fos = new FileOutputStream(folderName+entity_identifier+"_message_"+i+".ser");
+                    fos = new FileOutputStream(folderName+entity_identifier+"_message_"+(i+1)+".ser");
                     oos = new ObjectOutputStream(fos);
                     MessageType message = current_messages.get(i);
                     System.out.println(message);
                     oos.writeObject(message);
-                    oos.flush();
-                    fos.flush();
+
                     System.out.println("Message "+(i+1)+"/"+
                             current_messages.size()+
                             " for Entity "+entity_identifier+
