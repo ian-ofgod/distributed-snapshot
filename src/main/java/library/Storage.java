@@ -1,12 +1,13 @@
 package library;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.PrintWriter;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 
 /**
  * This class provides static methods to handle the storage of snapshots on disk.
@@ -51,17 +52,48 @@ class Storage {
      * @param runningSnapshots the list of snapshots running on the current node
      * @param snapshotId the id of the snapshot that the user want to save on disk
      * */
+    //TODO: Testare!
     public static <StateType, MessageType> void writeFile(ArrayList<Snapshot<StateType, MessageType>> runningSnapshots, int snapshotId) {
         createFolder();
         Snapshot<StateType, MessageType> toSaveSnapshot = runningSnapshots.stream().filter(snap -> snap.snapshotId==snapshotId).findFirst().orElse(null);
-        String fileName = buildFileName(toSaveSnapshot);
-        try (PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter(fileName, true)))) {
-            writer.println(toSaveSnapshot);
-            //TODO: remove SystemPrintln
-            System.out.println("Snapshot is saved.");
-        } catch (Exception e) {
-            //TODO: remove SystemPrintln
-            //TODO: evitare generic exceptions
+        StateType state = toSaveSnapshot.state;
+        HashMap<Entity, ArrayList<MessageType>> messageMap = toSaveSnapshot.messages;
+
+        // ONE FOLDER PER SNAPSHOT - THEN SOURCE ENTITY IS WRITTEN IN MESSAGES FILENAME
+        String folderName = buildFolderName(toSaveSnapshot);
+
+        try {
+            FileOutputStream fos = new FileOutputStream(folderName+"state.ser");
+            ObjectOutputStream oos = new ObjectOutputStream(fos);
+            // write object to file
+            oos.writeObject(state);
+            System.out.println("State serialized and saved to file.");
+
+            Iterator it = messageMap.entrySet().iterator();
+            while (it.hasNext()) {
+                Map.Entry pair = (Map.Entry)it.next();
+                Entity current_entity = (Entity) pair.getKey();
+                String entity_identifier = current_entity.toString();
+                ArrayList<MessageType> current_messages = (ArrayList<MessageType>) pair.getValue();
+
+                for (int i =0; i < current_messages.size(); i++ ){
+                    fos = new FileOutputStream(folderName+entity_identifier+"_message"+i+".ser");
+                    oos = new ObjectOutputStream(fos);
+                    oos.writeObject(current_messages.get(i));
+                    System.out.println("Message "+i+"/"+
+                            current_messages.size()+
+                            " for Entity "+entity_identifier+
+                            " serialized and saved to file.");
+                }
+                System.out.println("All messages for Entity "+entity_identifier+" serialized and saved to file");
+
+                it.remove(); // avoids a ConcurrentModificationException
+            }
+
+            // closing resources
+            oos.close();
+            fos.close();
+        } catch (IOException e) {
             System.err.println("Could not write file ");
         }
     }
@@ -72,8 +104,8 @@ class Storage {
      * @param <StateType> this is the type that will be saved as the state of the application
      * @param snapshot the snapshot for which the name is built, will be saved on disk
      * */
-    private static <StateType, MessageType> String buildFileName(Snapshot<StateType, MessageType> snapshot) {
-        return FOLDER + "/" + snapshot.snapshotId + EXTENSION;
+    private static <StateType, MessageType> String buildFolderName(Snapshot<StateType, MessageType> snapshot) {
+        return FOLDER + "/" + snapshot.snapshotId + "/" ;
     }
 
 

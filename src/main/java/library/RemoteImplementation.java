@@ -20,6 +20,7 @@ import java.util.concurrent.Executors;
  * @param <MessageType> this is the type that will be exchanged as a message between nodes
  * @param <StateType> this is the type that will be saved as the state of the application
  * */
+//TODO: testare un paio di metodi interni qui
 class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<MessageType> {
 
     /**
@@ -173,8 +174,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
             try {
                 remoteNode.remoteInterface.receiveMarker(this.hostname, this.port, initiatorHostname, initiatorPort, snapshotId);
             } catch (RemoteException | DoubleMarkerException | UnexpectedMarkerReceived e) {
-                //TODO: printStackTrace()
-                e.printStackTrace();
+                System.err.println("Error in propagating marker!");
             }
         }
     }
