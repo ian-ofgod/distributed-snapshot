@@ -50,6 +50,7 @@ class Snapshot<StateType, MessageType> {
      * @param id the snapshot unique identifier
      * */
     public Snapshot(int id){
+        this.snapshotId = id;
     }
 
     @Override

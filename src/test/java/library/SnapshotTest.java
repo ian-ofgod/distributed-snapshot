@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -130,11 +131,47 @@ public class SnapshotTest {
         runningSnapshots3.add(snapshot3b);
         runningSnapshots4.add(snapshot4b);
 
-        Storage.writeFile(runningSnapshots1,1);
-        Storage.writeFile(runningSnapshots2,2);
-        Storage.writeFile(runningSnapshots3,3);
-        Storage.writeFile(runningSnapshots4,4);
 
+        Storage.writeFile(runningSnapshots1,1); // saves snapshot1a
+        Storage.writeFile(runningSnapshots2,2); // saves snapshot2a
+        Storage.writeFile(runningSnapshots3,3); // saves snapshot3a
+        Storage.writeFile(runningSnapshots4,4); // saves snapshot4a
+        Storage.writeFile(runningSnapshots1,5); // saves snapshot1b
+        Storage.writeFile(runningSnapshots2,6); // saves snapshot2b
+        Storage.writeFile(runningSnapshots3,7); // saves snapshot3b
+        Storage.writeFile(runningSnapshots4,8); // saves snapshot4b
+
+
+        Snapshot readSnap1 = Storage.readFile(1);
+        Snapshot readSnap2 = Storage.readFile(2);
+        Snapshot readSnap3 = Storage.readFile(3);
+        Snapshot readSnap4 = Storage.readFile(4);
+        Snapshot readSnap5 = Storage.readFile(5);
+        Snapshot readSnap6 = Storage.readFile(6);
+        Snapshot readSnap7 = Storage.readFile(7);
+        Snapshot readSnap8 = Storage.readFile(8);
+
+        /* we must test state.equals() and messages.equals() separately,
+        because we use Snapshot.equals() with just the snapshot ID
+        to check if a snapshot is already runnning */
+
+        assertEquals(snapshot1a.state, readSnap1.state);
+        assertEquals(snapshot2a.state, readSnap2.state);
+        assertEquals(snapshot3a.state, readSnap3.state);
+        assertEquals(snapshot4a.state, readSnap4.state);
+        assertEquals(snapshot1b.state, readSnap5.state);
+        assertEquals(snapshot2b.state, readSnap6.state);
+        assertEquals(snapshot3b.state, readSnap7.state);
+        assertEquals(snapshot4b.state, readSnap8.state);
+
+        assertEquals(snapshot1a.messages, readSnap1.messages);
+        assertEquals(snapshot2a.messages, readSnap2.messages);
+        assertEquals(snapshot3a.messages, readSnap3.messages);
+        assertEquals(snapshot4a.messages, readSnap4.messages);
+        assertEquals(snapshot1b.messages, readSnap5.messages);
+        assertEquals(snapshot2b.messages, readSnap6.messages);
+        assertEquals(snapshot3b.messages, readSnap7.messages);
+        assertEquals(snapshot4b.messages, readSnap8.messages);
     }
 
 
@@ -142,6 +179,9 @@ public class SnapshotTest {
 }
 
 class MockState1 implements Serializable {
+
+    private static final long serialVersionUID = 6529685098267757690L;
+
     String randomString;
     int randomInt;
 
@@ -149,9 +189,25 @@ class MockState1 implements Serializable {
         this.randomString = randomString;
         this.randomInt = randomInt;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        MockState1 that = (MockState1) o;
+        return randomInt == that.randomInt && randomString.equals(that.randomString);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(randomString, randomInt);
+    }
 }
 
 class MockState2 implements Serializable {
+
+    private static final long serialVersionUID = 6529685098267757690L;
+
     char randomChar;
     double randomFloat;
 
@@ -159,9 +215,24 @@ class MockState2 implements Serializable {
         this.randomChar = randomChar;
         this.randomFloat = randomFloat;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        MockState2 that = (MockState2) o;
+        return randomChar == that.randomChar && Double.compare(that.randomFloat, randomFloat) == 0;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(randomChar, randomFloat);
+    }
 }
 
 class MockMessage1 implements Serializable {
+
+    private static final long serialVersionUID = 6529685098267757690L;
 
     char randomChar;
     String randomString;
@@ -173,11 +244,27 @@ class MockMessage1 implements Serializable {
 
     @Override
     public String toString() {
-        return "###############THIS IS MESSAGE 1####################";
+        return "#MSG1#";
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        MockMessage1 that = (MockMessage1) o;
+        return randomChar == that.randomChar && Objects.equals(randomString, that.randomString);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(randomChar, randomString);
     }
 }
 
 class MockMessage2 implements Serializable {
+
+    private static final long serialVersionUID = 6529685098267757690L;
+
     char randomChar1;
     char randomChar2;
 
@@ -188,6 +275,19 @@ class MockMessage2 implements Serializable {
 
     @Override
     public String toString() {
-        return "###############THIS IS MESSAGE 2####################";
+        return "#MSG2#";
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        MockMessage2 that = (MockMessage2) o;
+        return randomChar1 == that.randomChar1 && randomChar2 == that.randomChar2;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(randomChar1, randomChar2);
     }
 }
