@@ -58,4 +58,10 @@ interface RemoteInterface<MessageType> extends Remote {
      * @throws SnapshotInterruptException it's not possible to remove a node when a snapshot is running
      */
     void removeMe(String hostname, int port) throws RemoteException, SnapshotInterruptException;
+
+    void restoreState(int snapshotId) throws RemoteException;
+    void restoreConnections(int snapshotId) throws RemoteException;
+    void restoreOldIncomingMessages(int snapshotId) throws RemoteException;
+    void setReady(boolean value) throws RemoteException;
+
 }

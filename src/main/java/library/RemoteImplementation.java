@@ -2,7 +2,6 @@ package library;
 
 import library.exceptions.DoubleMarkerException;
 import library.exceptions.SnapshotInterruptException;
-import library.exceptions.StateUpdateException;
 import library.exceptions.UnexpectedMarkerReceived;
 
 import java.rmi.NotBoundException;
@@ -64,39 +63,43 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
      * */
     protected int localSnapshotCounter=0;
 
+    protected boolean nodeReady=true;
+
     /**
      * Handles the propagateMarker calls (see receiveMarker method)
      * */
     private final ExecutorService executors = Executors.newCachedThreadPool();
 
-
     @Override
     public synchronized void receiveMarker(String senderHostname, int senderPort, String initiatorHostname, int initiatorPort, int snapshotId) throws DoubleMarkerException, UnexpectedMarkerReceived {
         //TODO: remove SystemPrintln
         System.out.println(hostname + ":" + port + " | RECEIVED MARKER from: "+senderHostname+":"+senderPort);
+        if(nodeReady) {
+            if (checkIfRemoteNodePresent(senderHostname, senderPort)) {
+                Snapshot<StateType, MessageType> snap;
+                synchronized (currentStateLock) {
+                    snap = new Snapshot<>(snapshotId, currentState, remoteNodes); //Creates the snapshot and saves the current state!
+                }
 
-        if(checkIfRemoteNodePresent(senderHostname,senderPort)) {
-            Snapshot<StateType, MessageType> snap;
-            synchronized (currentStateLock) {
-                snap = new Snapshot<>(snapshotId, currentState, remoteNodes); //Creates the snapshot and saves the current state!
-            }
+                if (!runningSnapshots.contains(snap)) {
+                    //TODO: remove SystemPrintln
+                    System.out.println(hostname + ":" + port + " | First time receiving a marker");
+                    runningSnapshots.add(snap);
+                    recordSnapshotId(senderHostname, senderPort, snapshotId);
+                    executors.submit(() -> propagateMarker(initiatorHostname, initiatorPort, snapshotId));
+                } else {
+                    recordSnapshotId(senderHostname, senderPort, snapshotId);
+                }
 
-            if (!runningSnapshots.contains(snap)) {
-                //TODO: remove SystemPrintln
-                System.out.println(hostname + ":" + port + " | First time receiving a marker");
-                runningSnapshots.add(snap);
-                recordSnapshotId(senderHostname, senderPort, snapshotId);
-                executors.submit(() -> propagateMarker(initiatorHostname, initiatorPort, snapshotId));
+                if (receivedMarkerFromAllLinks(snapshotId)) { //we have received a marker from all the channels
+                    Storage.writeFile(runningSnapshots, snapshotId);
+                    runningSnapshots.remove(snap);
+                }
             } else {
-                recordSnapshotId(senderHostname, senderPort, snapshotId);
+                throw new UnexpectedMarkerReceived("ERROR: received a marker from a node not present in my remote nodes list");
             }
-
-            if (receivedMarkerFromAllLinks(snapshotId)) { //we have received a marker from all the channels
-                Storage.writeFile(runningSnapshots, snapshotId);
-                runningSnapshots.remove(snap);
-            }
-        } else {
-            throw new UnexpectedMarkerReceived("ERROR: received a marker from a node not present in my remote nodes list");
+        }else{
+            //TODO: what to do when the node is not ready?
         }
     }
 
@@ -140,6 +143,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
         this.remoteNodes.remove(remoteNode);
         appConnector.handleRemoveConnection(hostname, port);
     }
+
 
     /**
      * This function stores the provided snapshotId inside the provided remote entity
@@ -230,4 +234,51 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
         }
         return false;
     }
+
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+    @Override
+    public void restoreState(int snapshotId) {
+        //TODO: remove multiple usages of Storage.readFile lots of I/O
+        Snapshot<StateType,MessageType> snapshot= Storage.readFile(snapshotId);
+        //TODO: should the modification on State be synchronized on StateLock? @Luca
+        this.currentState=snapshot.state;
+    }
+
+    @Override
+    public void restoreConnections(int snapshotId) {
+        Snapshot<StateType,MessageType> snapshot= Storage.readFile(snapshotId);
+        this.remoteNodes=new ArrayList<>();
+        snapshot.connectedNodes.forEach(
+                (entity) -> {
+                    Registry registry = null;
+                    try {
+                        registry = LocateRegistry.getRegistry(entity.ipAddress, entity.port);
+                    } catch (RemoteException e) {
+                        e.printStackTrace();
+                    }
+                    RemoteInterface<MessageType> remoteInterface = null;
+                    try {
+                        remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
+                    } catch (RemoteException | NotBoundException e) {
+                        e.printStackTrace();
+                    }
+                    this.remoteNodes.add(new RemoteNode<>(entity.ipAddress, entity.port, remoteInterface));
+                }
+        );
+    }
+
+    @Override
+    public void setReady(boolean value) {
+        this.nodeReady=value;
+    }
+
+    @Override
+    public void restoreOldIncomingMessages(int snapshotId) {
+        Snapshot<StateType,MessageType> snapshot= Storage.readFile(snapshotId);
+        snapshot.messages.forEach(
+                (entity, packets)-> packets.forEach(
+                        (packet)->appConnector.handleIncomingMessage(entity.ipAddress, entity.port, packet)));
+    }
+
 }

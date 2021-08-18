@@ -109,7 +109,6 @@ public class DistributedSnapshot<StateType, MessageType> {
                 this.remoteImplementation.currentState=deepClone(state);
             } catch (IOException | ClassNotFoundException e) {
                 throw new StateUpdateException("Problem in updating the state");
-
             }
         }
     }
@@ -180,6 +179,65 @@ public class DistributedSnapshot<StateType, MessageType> {
             //TODO: evitare generic exceptions
             e.printStackTrace();
         }
+    }
+
+    public void restoreLastSnapshot(){
+        int snapshotToRestore=0; //TODO: get the correct id to restore
+
+        //start restore
+        this.remoteImplementation.setReady(false);
+        //this will be done on the remoteNodes provided by the gateway
+        this.remoteImplementation.remoteNodes.forEach((node)-> {
+            try {
+                node.remoteInterface.setReady(false);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        });
+
+        //restore the connection
+        this.remoteImplementation.restoreConnections(snapshotToRestore);
+        //at this point the remoteNodes inside this node are the ones from the snapshot
+        this.remoteImplementation.remoteNodes.forEach((node)-> {
+            try {
+                node.remoteInterface.restoreConnections(snapshotToRestore);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        });
+        //at this point the remoteNodes of all the nodes (present in the snapshot) will be the ones specified in the snapshot
+
+        //restore state
+        this.remoteImplementation.restoreState(snapshotToRestore);
+        this.remoteImplementation.remoteNodes.forEach((node)-> {
+            try {
+                node.remoteInterface.restoreState(snapshotToRestore);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        });
+        //at this point all the nodes will have the correct initial state from the snapshot
+
+        //end restore
+        this.remoteImplementation.setReady(true);
+        this.remoteImplementation.remoteNodes.forEach((node)-> {
+            try {
+                node.remoteInterface.setReady(true);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        });
+        //now all the "modifying" functions can be called again, hence we will start handling the old messages
+
+        //handle old incoming messages
+        this.remoteImplementation.restoreOldIncomingMessages(snapshotToRestore);
+        this.remoteImplementation.remoteNodes.forEach((node)-> {
+            try {
+                node.remoteInterface.restoreOldIncomingMessages(snapshotToRestore);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        });
     }
 
 
