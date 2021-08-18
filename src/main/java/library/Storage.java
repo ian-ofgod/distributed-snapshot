@@ -67,6 +67,13 @@ class Storage {
                         ObjectInputStream oos = new ObjectInputStream(fos);
                         StateType state = (StateType) oos.readObject();
                         loaded_snapshot.state = state;
+                    } else if (filename.equals("connectedNodes.ser")) { // I'm reading the list of nodes
+                        FileInputStream fos = new FileInputStream(folderName + "connectedNodes.ser");
+                        ObjectInputStream oos = new ObjectInputStream(fos);
+                        ArrayList<Entity> connectedNodes  = (ArrayList<Entity>) oos.readObject();
+                        loaded_snapshot.connectedNodes = connectedNodes;
+                        //todo: valutare se funziona o se bisogna fare il parsing
+
                     } else { // I'm reading a message
                         String[] tokens = filename.split("_");
                         String ip = tokens[0];
@@ -94,6 +101,7 @@ class Storage {
 
         } catch (IOException e) {
             System.err.println("Could not read file");
+            e.printStackTrace();
         } catch (ClassNotFoundException e){
             System.err.println("Could not cast deserialized object to the expected type");
         }
@@ -113,6 +121,7 @@ class Storage {
         Snapshot<StateType, MessageType> toSaveSnapshot = runningSnapshots.stream().filter(snap -> snap.snapshotId==snapshotId).findFirst().orElse(null);
         StateType state = toSaveSnapshot.state;
         HashMap<Entity, ArrayList<MessageType>> messageMap = toSaveSnapshot.messages;
+        ArrayList<Entity> connectedNodes = toSaveSnapshot.connectedNodes;
         String folderName = buildFolderName(toSaveSnapshot);
         createFolder(folderName);
 
@@ -134,6 +143,10 @@ class Storage {
                 //TODO: controllare se non rimuovere it genera effettivamente una ConcurrentModificationException, nel cui caso bisogna clonare prima
                 //it.remove(); // avoids a ConcurrentModificationException
             }
+            fos = new FileOutputStream(folderName+"connectedNodes.ser");
+            oos = new ObjectOutputStream(fos);
+            oos.writeObject(connectedNodes);
+
             oos.close();
             fos.close();
         } catch (IOException e) {

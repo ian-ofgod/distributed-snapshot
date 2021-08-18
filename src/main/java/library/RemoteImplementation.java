@@ -78,7 +78,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
         if(checkIfRemoteNodePresent(senderHostname,senderPort)) {
             Snapshot<StateType, MessageType> snap;
             synchronized (currentStateLock) {
-                snap = new Snapshot<>(snapshotId, currentState); //Creates the snapshot and saves the current state!
+                snap = new Snapshot<>(snapshotId, currentState, remoteNodes); //Creates the snapshot and saves the current state!
             }
 
             if (!runningSnapshots.contains(snap)) {

@@ -129,7 +129,7 @@ public class DistributedSnapshot<StateType, MessageType> {
             String snapshotIdString = remoteImplementation.hostname + remoteImplementation.port + remoteImplementation.localSnapshotCounter;
             snapshotId = snapshotIdString.hashCode();
             remoteImplementation.localSnapshotCounter++;
-            Snapshot<StateType, MessageType> snap = new Snapshot<>(snapshotId, remoteImplementation.currentState);
+            Snapshot<StateType, MessageType> snap = new Snapshot<>(snapshotId, remoteImplementation.currentState, remoteImplementation.remoteNodes);
             remoteImplementation.runningSnapshots.add(snap);
         }
         // Assumption from the text: no change in the network topology is allowed during a snapshot!
