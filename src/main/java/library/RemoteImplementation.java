@@ -72,76 +72,84 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
 
     @Override
     public synchronized void receiveMarker(String senderHostname, int senderPort, String initiatorHostname, int initiatorPort, int snapshotId) throws DoubleMarkerException, UnexpectedMarkerReceived {
-        //TODO: remove SystemPrintln
-        System.out.println(hostname + ":" + port + " | RECEIVED MARKER from: "+senderHostname+":"+senderPort);
         if(nodeReady) {
-            if (checkIfRemoteNodePresent(senderHostname, senderPort)) {
-                Snapshot<StateType, MessageType> snap;
-                synchronized (currentStateLock) {
-                    snap = new Snapshot<>(snapshotId, currentState, remoteNodes); //Creates the snapshot and saves the current state!
-                }
+            //TODO: remove SystemPrintln
+            System.out.println(hostname + ":" + port + " | RECEIVED MARKER from: " + senderHostname + ":" + senderPort);
+            if (nodeReady) {
+                if (checkIfRemoteNodePresent(senderHostname, senderPort)) {
+                    Snapshot<StateType, MessageType> snap;
+                    synchronized (currentStateLock) {
+                        snap = new Snapshot<>(snapshotId, currentState, remoteNodes); //Creates the snapshot and saves the current state!
+                    }
 
-                if (!runningSnapshots.contains(snap)) {
-                    //TODO: remove SystemPrintln
-                    System.out.println(hostname + ":" + port + " | First time receiving a marker");
-                    runningSnapshots.add(snap);
-                    recordSnapshotId(senderHostname, senderPort, snapshotId);
-                    executors.submit(() -> propagateMarker(initiatorHostname, initiatorPort, snapshotId));
+                    if (!runningSnapshots.contains(snap)) {
+                        //TODO: remove SystemPrintln
+                        System.out.println(hostname + ":" + port + " | First time receiving a marker");
+                        runningSnapshots.add(snap);
+                        recordSnapshotId(senderHostname, senderPort, snapshotId);
+                        executors.submit(() -> propagateMarker(initiatorHostname, initiatorPort, snapshotId));
+                    } else {
+                        recordSnapshotId(senderHostname, senderPort, snapshotId);
+                    }
+
+                    if (receivedMarkerFromAllLinks(snapshotId)) { //we have received a marker from all the channels
+                        Storage.writeFile(runningSnapshots, snapshotId);
+                        runningSnapshots.remove(snap);
+                    }
                 } else {
-                    recordSnapshotId(senderHostname, senderPort, snapshotId);
-                }
-
-                if (receivedMarkerFromAllLinks(snapshotId)) { //we have received a marker from all the channels
-                    Storage.writeFile(runningSnapshots, snapshotId);
-                    runningSnapshots.remove(snap);
+                    throw new UnexpectedMarkerReceived("ERROR: received a marker from a node not present in my remote nodes list");
                 }
             } else {
-                throw new UnexpectedMarkerReceived("ERROR: received a marker from a node not present in my remote nodes list");
+                //TODO: what to do when the node is not ready?
             }
-        }else{
-            //TODO: what to do when the node is not ready?
         }
     }
 
 
     @Override
     public synchronized void receiveMessage(String senderHostname, int senderPort, MessageType message) throws RemoteException, NotBoundException, SnapshotInterruptException {
-        if(checkIfRemoteNodePresent(senderHostname, senderPort)) {
-            if (!runningSnapshots.isEmpty()) { // Snapshot running
-                runningSnapshots.forEach((snap) -> {
-                    if(!checkIfReceivedMarker(senderHostname,senderPort,snap.snapshotId)) {
-                        snap.messages.computeIfAbsent(new Entity(senderHostname, senderPort), k -> new ArrayList<>());
-                        snap.messages.get(new Entity(senderHostname,senderPort)).add(message);
-                    }
-                });
+        if(nodeReady) {
+            if (checkIfRemoteNodePresent(senderHostname, senderPort)) {
+                if (!runningSnapshots.isEmpty()) { // Snapshot running
+                    runningSnapshots.forEach((snap) -> {
+                        if (!checkIfReceivedMarker(senderHostname, senderPort, snap.snapshotId)) {
+                            snap.messages.computeIfAbsent(new Entity(senderHostname, senderPort), k -> new ArrayList<>());
+                            snap.messages.get(new Entity(senderHostname, senderPort)).add(message);
+                        }
+                    });
+                }
+                appConnector.handleIncomingMessage(senderHostname, senderPort, message);
+            } else {
+                // We issue the command to the remote node to remove us!
+                Registry registry = LocateRegistry.getRegistry(senderHostname, senderPort);
+                RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
+                remoteInterface.removeMe(this.hostname, this.port);
             }
-            appConnector.handleIncomingMessage(senderHostname, senderPort, message);
-        } else {
-            // We issue the command to the remote node to remove us!
-            Registry registry = LocateRegistry.getRegistry(senderHostname, senderPort);
-            RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
-            remoteInterface.removeMe(this.hostname, this.port);
         }
     }
 
 
     @Override
     public synchronized void addMeBack(String hostname, int port) throws RemoteException, NotBoundException {
-        Registry registry = LocateRegistry.getRegistry(hostname, port);
-        RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
-        remoteNodes.add(new RemoteNode<>(hostname, port, remoteInterface));
-        appConnector.handleNewConnection(hostname,port);
+        if(nodeReady) {
+            Registry registry = LocateRegistry.getRegistry(hostname, port);
+            RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
+            remoteNodes.add(new RemoteNode<>(hostname, port, remoteInterface));
+            appConnector.handleNewConnection(hostname, port);
+        }
     }
 
 
     @Override
     public synchronized void removeMe(String hostname, int port) throws RemoteException, SnapshotInterruptException {
-        if(!this.runningSnapshots.isEmpty()) {
-            throw new SnapshotInterruptException(hostname+":"+port + " | ERROR: REMOVING DURING SNAPSHOT, ASSUMPTION NOT RESPECTED");
+        if(nodeReady) {
+            if (!this.runningSnapshots.isEmpty()) {
+                throw new SnapshotInterruptException(hostname + ":" + port + " | ERROR: REMOVING DURING SNAPSHOT, ASSUMPTION NOT RESPECTED");
+            }
+            RemoteNode<MessageType> remoteNode = getRemoteNode(hostname, port);
+            this.remoteNodes.remove(remoteNode);
+            appConnector.handleRemoveConnection(hostname, port);
         }
-        RemoteNode<MessageType> remoteNode = getRemoteNode(hostname,port);
-        this.remoteNodes.remove(remoteNode);
-        appConnector.handleRemoveConnection(hostname, port);
     }
 
 
@@ -275,10 +283,12 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
 
     @Override
     public void restoreOldIncomingMessages(int snapshotId) {
-        Snapshot<StateType,MessageType> snapshot= Storage.readFile(snapshotId);
-        snapshot.messages.forEach(
-                (entity, packets)-> packets.forEach(
-                        (packet)->appConnector.handleIncomingMessage(entity.ipAddress, entity.port, packet)));
+        if (nodeReady) {
+            Snapshot<StateType, MessageType> snapshot = Storage.readFile(snapshotId);
+            snapshot.messages.forEach(
+                    (entity, packets) -> packets.forEach(
+                            (packet) -> appConnector.handleIncomingMessage(entity.ipAddress, entity.port, packet)));
+        }
     }
 
 }
