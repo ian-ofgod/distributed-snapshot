@@ -1,5 +1,6 @@
 package library;
 
+import java.io.Serializable;
 import java.util.*;
 
 /**
@@ -23,6 +24,14 @@ class Snapshot<StateType, MessageType> {
      * */
     protected StateType state;
 
+
+    /**
+     * The list of nodes connected at the beginning of the snapshot
+     * it allows to recover the exact topology we had at the moment of the
+     * snapshot.
+     * */
+    protected ArrayList<Entity> connectedNodes = new ArrayList<>();
+
     /**
      * Map to store the list of received messages after the snapshot is started.
      * It keeps track of the sender of the message, in case the application needs it.
@@ -37,11 +46,35 @@ class Snapshot<StateType, MessageType> {
      * in the current node.
      * @param id the snapshot unique identifier
      * @param state  the current state of the node at the moment of the snapshot initialization
+     * @param remoteNodes the list of connected nodes at the moment of snapshot initialization
+     * */
+    public Snapshot(int id, StateType state, ArrayList<RemoteNode<MessageType>> remoteNodes){
+        this.snapshotId = id;
+        this.state = state;
+
+        for (RemoteNode node : remoteNodes)
+        {
+            Entity connectedNode = new Entity(node.hostname, node.port);
+            connectedNodes.add(connectedNode);
+        }
+
+
+    }
+
+    /** CONSTRUCTOR needed for tests without storing connectedNodes.
+     * todo: check if we can remove it
+     * Snapshot constructor that builds a full snapshot objects. Additionally to
+     * the unique snapshot identifier, this constructor also stores the state of
+     * the current node. The snapshot created with this constructor will be stored
+     * in the current node.
+     * @param id the snapshot unique identifier
+     * @param state  the current state of the node at the moment of the snapshot initialization
      * */
     public Snapshot(int id, StateType state){
         this.snapshotId = id;
         this.state = state;
     }
+
 
     /**
      * Snapshot constructor that builds an empty snapshot objects.
@@ -55,9 +88,11 @@ class Snapshot<StateType, MessageType> {
 
     @Override
     public String toString() {
-        return "Snapshot "+snapshotId+"{" +
+        return "Snapshot{" +
+                "snapshotId=" + snapshotId +
                 ", state=" + state +
-                ", messages= {}" + messages+
+                ", messages=" + messages +
+                ", connectedNodes=" + connectedNodes +
                 '}';
     }
 
@@ -80,7 +115,7 @@ class Snapshot<StateType, MessageType> {
  * where a message is coming from, making it easier to store the received messages
  * in an HashMap with the sender Entity as a unique key.
  * */
-class Entity {
+class Entity implements Serializable { //Serializable needed to save ConnectedNodes on disk
     /**
      * ipAddress string associated to this entity
      * */

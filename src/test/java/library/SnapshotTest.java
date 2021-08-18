@@ -49,6 +49,10 @@ public class SnapshotTest {
         Entity entity2 = new Entity("192.168.0.2",456);
         Entity entity3 = new Entity("192.168.0.3",789);
 
+
+        snapshot1a.connectedNodes.add(entity1);
+        snapshot1a.connectedNodes.add(entity2);
+        snapshot1a.connectedNodes.add(entity3);
         snapshot1a.messages.put(entity1, new ArrayList<>());
         snapshot1a.messages.put(entity2, new ArrayList<>());
         snapshot1a.messages.put(entity3, new ArrayList<>());
@@ -172,10 +176,10 @@ public class SnapshotTest {
         assertEquals(snapshot2b.messages, readSnap6.messages);
         assertEquals(snapshot3b.messages, readSnap7.messages);
         assertEquals(snapshot4b.messages, readSnap8.messages);
+
+        //test for the connected nodes
+        assertEquals(snapshot1a.connectedNodes, readSnap1.connectedNodes);
     }
-
-
-
 }
 
 class MockState1 implements Serializable {
