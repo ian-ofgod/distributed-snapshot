@@ -161,6 +161,15 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     //                      COMMODITY FUNCTIONS
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+    @Override
+    public synchronized ArrayList<Entity> getNodes() {
+        ArrayList<Entity> nodes = new ArrayList<>();
+        for (RemoteNode node : remoteNodes) {
+            nodes.add(new Entity(node.hostname, node.port));
+        }
+        return nodes;
+    }
+
     /**
      * This function stores the provided snapshotId inside the provided remote entity
      * @param senderHostname the hostname of the entity in which the snapshotId will be recorded
@@ -278,9 +287,9 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
         for (Entity entity : currentSnapshotToBeRestored.connectedNodes) {
             Registry registry = null;
             RemoteInterface<MessageType> remoteInterface = null;
-            registry = LocateRegistry.getRegistry(entity.ipAddress, entity.port);
+            registry = LocateRegistry.getRegistry(entity.getIpAddress(), entity.getPort());
             remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
-            this.remoteNodes.add(new RemoteNode<>(entity.ipAddress, entity.port, remoteInterface));
+            this.remoteNodes.add(new RemoteNode<>(entity.getIpAddress(), entity.getPort(), remoteInterface));
         }
     }
 
@@ -303,7 +312,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
             }
             currentSnapshotToBeRestored.messages.forEach(
                     (entity, packets) -> packets.forEach(
-                            (packet) -> appConnector.handleIncomingMessage(entity.ipAddress, entity.port, packet)));
+                            (packet) -> appConnector.handleIncomingMessage(entity.getIpAddress(), entity.getPort(), packet)));
         }
     }
 

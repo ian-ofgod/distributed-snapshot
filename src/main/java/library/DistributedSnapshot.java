@@ -49,33 +49,27 @@ public class DistributedSnapshot<StateType, MessageType> {
         }
     }
 
-    /**
-     * This method adds a new link. To do so, it looks up the registry to the given hostname and port and saves the reference.
-     * This methods is not exposed in the rmi registry to avoid it being invoked by external entities.
-     * @param hostname the hostname of the host running the rmi registry
-     * @param port the port where the rmi registry is running
-     * @throws RemoteException communication-related exception that may occur during remote calls
-     * @throws NotBoundException the remote node that is being added has not bound its remote implementation
-     * @throws RemoteNodeAlreadyPresent the remote node that is being added is already connected
-     * @throws NotInitialized this instance hasn't been initialized, you must do it first
-     */
-    public void addConnection(String hostname, int port) throws RemoteException, NotBoundException, RemoteNodeAlreadyPresent, NotInitialized {
+    public ArrayList<Entity> joinNetwork(String hostname, int port) throws RemoteException, NotBoundException, NotInitialized {
         if (remoteImplementation.appConnector == null) throw new NotInitialized("Before connecting to (hostname " + hostname +
                 "and port " + port +
                 ") you must initialize this instance");
 
+        ArrayList<Entity> networkNodes;
         synchronized (remoteImplementation) {
-            if (!remoteImplementation.remoteNodes.contains(new RemoteNode<MessageType>(hostname, port, null))) {
-                Registry registry = LocateRegistry.getRegistry(hostname, port);
-                RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
-                remoteImplementation.remoteNodes.add(new RemoteNode<>(hostname, port, remoteInterface));
-                remoteInterface.addMeBack(remoteImplementation.hostname, remoteImplementation.port);
-            } else {
-                throw new RemoteNodeAlreadyPresent("The host you are trying to connect to (hostname " + hostname +
-                        "and port " + port +
-                        ") is already connected");
+            Registry registry = LocateRegistry.getRegistry(hostname, port);
+            RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
+            networkNodes = remoteInterface.getNodes();
+            remoteImplementation.remoteNodes.add(new RemoteNode<>(hostname, port, remoteInterface));
+            remoteInterface.addMeBack(remoteImplementation.hostname, remoteImplementation.port);
+            for (Entity entry : networkNodes) {
+                Registry nodeRegistry = LocateRegistry.getRegistry(entry.getIpAddress(), entry.getPort());
+                RemoteInterface<MessageType> nodeRemoteInterface = (RemoteInterface<MessageType>) nodeRegistry.lookup("RemoteInterface");
+                remoteImplementation.remoteNodes.add(new RemoteNode<>(entry.getIpAddress(), entry.getPort(), nodeRemoteInterface));
+                nodeRemoteInterface.addMeBack(remoteImplementation.hostname, remoteImplementation.port);
             }
+            networkNodes.add(new Entity(hostname, port));
         }
+        return networkNodes;
     }
 
     /**
@@ -226,7 +220,7 @@ public class DistributedSnapshot<StateType, MessageType> {
         int index= remoteImplementation.remoteNodes.indexOf(new RemoteNode<MessageType>(hostname,port,null));
         if(index==-1){
            throw new RemoteNodeNotFound("RemoteNode with the following hostname " + hostname +
-                   "and port" +port+
+                   " and port " +port+
                    " not found");
         }
         RemoteNode<MessageType> remoteNode = remoteImplementation.remoteNodes.get(index);

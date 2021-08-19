@@ -25,8 +25,9 @@ public final class AppLauncher {
         logger.info("Welcome to the oil-wells system!");
         logger.info("Type in: action name, hostname, port, (oilAmount)");
         logger.info("Example: initialize, localhost, 10000, 1000");
-        logger.info("Example: connect, localhost, 10001");
+        logger.info("Example: join, localhost, 10001");
         logger.info("Example: snapshot");
+        logger.info("Example: disconnect");
         while (true) {
             try {
                 Parser.parseInput(OilWell.class.getName(), oilWell);

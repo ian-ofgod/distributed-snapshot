@@ -34,10 +34,12 @@ public class DistributedSnapshotTest {
                1---2---3 --- 4
                         \___ 5
          */
+        /*
         node1.addConnection("localhost",11112); //node1 <--> node2
         node2.addConnection("localhost",11113); //node2 <--> node3
         node3.addConnection("localhost",11114); //node3 <--> node4
         node3.addConnection("localhost",11115); //node3 <--> node5
+        */
 
         node1.updateState(new State());
         node2.updateState(new State());

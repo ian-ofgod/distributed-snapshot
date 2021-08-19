@@ -27,13 +27,13 @@ public class Parser {
                     parameters[1] = Integer.parseInt(inputs[2]);
                     parameters[2] = Integer.parseInt(inputs[3]);
                 }
-                case "disconnect", "connect" -> {
+                case "join" -> {
                     methodParameterTypes = new Class<?>[]{String.class, int.class};
                     if (parameters.length != 2) throw new IllegalStateException("Unexpected number of parameters");
                     parameters[0] = inputs[1];
                     parameters[1] = Integer.parseInt(inputs[2]);
                 }
-                case "snapshot" -> {
+                case "snapshot", "disconnect" -> {
                     if (parameters.length != 0) throw new IllegalStateException("Unexpected number of parameters");
                     methodParameterTypes = new Class<?>[]{};
                 }

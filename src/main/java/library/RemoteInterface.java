@@ -8,6 +8,7 @@ import library.exceptions.UnexpectedMarkerReceived;
 import java.rmi.NotBoundException;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
+import java.util.ArrayList;
 
 /**
  * This interface is implementing the RMI Remote Interface.
@@ -59,6 +60,8 @@ interface RemoteInterface<MessageType> extends Remote {
      * @throws SnapshotInterruptException it's not possible to remove a node when a snapshot is running
      */
     void removeMe(String hostname, int port) throws RemoteException, SnapshotInterruptException;
+
+    ArrayList<Entity> getNodes() throws RemoteException;
 
     void restoreState(int snapshotId) throws RemoteException, RestoreAlreadyInProgress;
     void restoreConnections(int snapshotId) throws RemoteException, RestoreAlreadyInProgress, NotBoundException;

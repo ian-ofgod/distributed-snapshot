@@ -3,6 +3,7 @@ package oilwells;
 import library.AppConnector;
 import library.DistributedSnapshot;
 import library.exceptions.*;
+import library.Entity;
 import org.apache.logging.log4j.Logger;
 import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
@@ -76,39 +77,53 @@ public class OilWell implements AppConnector<OilCargo> {
     }
 
     /**
-     * It is called to connect to another oil well
+     * TODO
      */
-    public void connect(String hostname, int port) {
+    public void join(String hostname, int port) {
         if (oilAmount != -1) {
-            logger.info("Connecting to " + hostname + ":" + port);
-            try {
-                distributedSnapshot.addConnection(hostname, port);
-                directConnections.add(new ConnectionDetails(hostname, port));
-                logger.info("Successfully connected to " + hostname + ":" + port);
-            } catch (RemoteException | NotBoundException | RemoteNodeAlreadyPresent e) {
-                logger.warn("Cannot connect to " + hostname + ":" + port);
-            } catch (NotInitialized notInitialized) {
-                logger.info("You must first initialize your oil well!");
+            synchronized (directConnectionsLock) {
+                if (directConnections.size() == 0) {
+                    logger.info("Connecting to " + hostname + ":" + port + " to join a network");
+                    try {
+                        ArrayList<Entity> nodes = distributedSnapshot.joinNetwork(hostname, port);
+                        String connectedNodes = "";
+                        for (Entity entry : nodes) {
+                            directConnections.add(new ConnectionDetails(entry.getIpAddress(), entry.getPort()));
+                            connectedNodes += ", " + entry.getIpAddress() + ":" + entry.getPort();
+                        }
+                        logger.info("Successfully connected to: " + connectedNodes.substring(2));
+                    } catch (RemoteException | NotBoundException e) {
+                        logger.warn("Error joining network through " + hostname + ":" + port);
+                    } catch (NotInitialized notInitialized) {
+                        logger.info("You must first initialize your oil well!");
+                    }
+                } else logger.info("You are already connected to a network");
             }
         } else logger.info("You must first initialize your oil well!");
     }
 
     /**
-     * It is called to disconnect from another oil well
+     * It is called to disconnect from an existing network
      */
-    public void disconnect(String hostname, int port) {
+    public void disconnect() {
         if (oilAmount != -1) {
-            logger.info("Disconnecting from " + hostname + ":" + port);
-            try {
-                distributedSnapshot.removeConnection(hostname, port);
-                directConnections.remove(new ConnectionDetails(hostname, port));
-                logger.info("Successfully disconnected from " + hostname + ":" + port);
-            } catch (OperationForbidden | SnapshotInterruptException e) {
-                logger.warn("You can't remove " + hostname + ":" + port);
-            } catch (RemoteException e) {
-                logger.warn("Cannot disconnect from " + hostname + ":" + port);
-            } catch (NotInitialized notInitialized) {
-                logger.info("You must first initialize your oil well!");
+            logger.info("Disconnecting from the network");
+            synchronized (directConnectionsLock) {
+                try {
+                    for (ConnectionDetails details : directConnections) {
+                        try {
+                            distributedSnapshot.removeConnection(details.getHostname(), details.getPort());
+                            directConnections.remove(details);
+                            logger.info("Successfully disconnected from " + details.getHostname() + ":" + details.getPort());
+                        } catch (OperationForbidden | SnapshotInterruptException e) {
+                            logger.warn("You can't remove " + details.getHostname() + ":" + details.getPort());
+                        } catch (RemoteException e) {
+                            logger.warn("Cannot disconnect from " + details.getHostname() + ":" + details.getPort());
+                        }
+                    }
+                } catch (NotInitialized notInitialized) {
+                    logger.info("You must first initialize your oil well!");
+                }
             }
         } else logger.info("You must first initialize your oil well!");
     }
@@ -151,10 +166,7 @@ public class OilWell implements AppConnector<OilCargo> {
                                 logger.warn("You are running out of oil, cannot send oil to " + randomWell.getHostname() + ":" + randomWell.getPort());
                             }
                         }
-                    } catch (RemoteNodeNotFound | RemoteException e) {
-                        logger.warn("Error sending oil cargo. Removing connection to " + randomWell.getHostname() + ":" + randomWell.getPort());
-                        directConnections.remove(randomWell);
-                    } catch (NotBoundException | SnapshotInterruptException e) {
+                    } catch (RemoteNodeNotFound | RemoteException | NotBoundException | SnapshotInterruptException e) {
                         logger.warn("Error sending oil cargo");
                     } catch (NotInitialized notInitialized) {
                         logger.info("You must first initialize your oil well!");
