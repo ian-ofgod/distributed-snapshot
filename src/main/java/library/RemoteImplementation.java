@@ -1,6 +1,7 @@
 package library;
 
 import library.exceptions.DoubleMarkerException;
+import library.exceptions.RestoreAlreadyInProgress;
 import library.exceptions.SnapshotInterruptException;
 import library.exceptions.UnexpectedMarkerReceived;
 
@@ -32,7 +33,6 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
      * */
     protected int port;
 
-
     /**
      * Stores the current state: will fill the different Snapshot objects when created
      * */
@@ -63,12 +63,19 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
      * */
     protected int localSnapshotCounter=0;
 
+    /**
+     * Variable that indicates if the node is able to perform modifying functions (true) or if the node is undergoing a
+     * restore of a snapshot (false)
+     */
     protected boolean nodeReady=true;
 
     /**
      * Handles the propagateMarker calls (see receiveMarker method)
      * */
     private final ExecutorService executors = Executors.newCachedThreadPool();
+
+    private Snapshot<StateType, MessageType> currentSnapshotToBeRestored =  null;
+
 
     @Override
     public synchronized void receiveMarker(String senderHostname, int senderPort, String initiatorHostname, int initiatorPort, int snapshotId) throws DoubleMarkerException, UnexpectedMarkerReceived {
@@ -105,7 +112,6 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
         }
     }
 
-
     @Override
     public synchronized void receiveMessage(String senderHostname, int senderPort, MessageType message) throws RemoteException, NotBoundException, SnapshotInterruptException {
         if(nodeReady) {
@@ -127,7 +133,6 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
             }
         }
     }
-
 
     @Override
     public synchronized void addMeBack(String hostname, int port) throws RemoteException, NotBoundException {
@@ -152,6 +157,9 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
         }
     }
 
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    //                      COMMODITY FUNCTIONS
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
     /**
      * This function stores the provided snapshotId inside the provided remote entity
@@ -244,48 +252,56 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     }
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    //                      RESTORE FUNCTIONS
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
     @Override
-    public void restoreState(int snapshotId) {
-        //TODO: remove multiple usages of Storage.readFile lots of I/O
-        Snapshot<StateType,MessageType> snapshot= Storage.readFile(snapshotId);
-        //TODO: should the modification on State be synchronized on StateLock? @Luca
-        this.currentState=snapshot.state;
+    public void restoreState(int snapshotId) throws RestoreAlreadyInProgress, RemoteException {
+        if(currentSnapshotToBeRestored == null){
+           currentSnapshotToBeRestored= Storage.readFile(snapshotId);
+        }
+        else if(snapshotId != currentSnapshotToBeRestored.snapshotId) {
+            throw new RestoreAlreadyInProgress("CRITICAL ERROR: Another snapshot is being restored");
+        }
+        this.currentState=currentSnapshotToBeRestored.state; //TODO: @Luca should the modification on State be synchronized on StateLock?
     }
 
     @Override
-    public void restoreConnections(int snapshotId) {
-        Snapshot<StateType,MessageType> snapshot= Storage.readFile(snapshotId);
+    public void restoreConnections(int snapshotId) throws RestoreAlreadyInProgress, RemoteException, NotBoundException {
+        if(currentSnapshotToBeRestored == null){
+            currentSnapshotToBeRestored= Storage.readFile(snapshotId);
+        }
+        else if(snapshotId != currentSnapshotToBeRestored.snapshotId) {
+            throw new RestoreAlreadyInProgress("CRITICAL ERROR: Another snapshot is being restored");
+        }
         this.remoteNodes=new ArrayList<>();
-        snapshot.connectedNodes.forEach(
-                (entity) -> {
-                    Registry registry = null;
-                    try {
-                        registry = LocateRegistry.getRegistry(entity.ipAddress, entity.port);
-                    } catch (RemoteException e) {
-                        e.printStackTrace();
-                    }
-                    RemoteInterface<MessageType> remoteInterface = null;
-                    try {
-                        remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
-                    } catch (RemoteException | NotBoundException e) {
-                        e.printStackTrace();
-                    }
-                    this.remoteNodes.add(new RemoteNode<>(entity.ipAddress, entity.port, remoteInterface));
-                }
-        );
+        for (Entity entity : currentSnapshotToBeRestored.connectedNodes) {
+            Registry registry = null;
+            RemoteInterface<MessageType> remoteInterface = null;
+            registry = LocateRegistry.getRegistry(entity.ipAddress, entity.port);
+            remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
+            this.remoteNodes.add(new RemoteNode<>(entity.ipAddress, entity.port, remoteInterface));
+        }
     }
 
     @Override
-    public void setReady(boolean value) {
+    public void setReady(boolean value) throws RemoteException{
+        // in the case of flipping the nodeReady bit from false to true we "reset" the currentSnapshotToBeRestored to null
+        if(!nodeReady && value)
+            currentSnapshotToBeRestored=null;
         this.nodeReady=value;
     }
 
     @Override
-    public void restoreOldIncomingMessages(int snapshotId) {
+    public void restoreOldIncomingMessages(int snapshotId) throws RestoreAlreadyInProgress, RemoteException {
         if (nodeReady) {
-            Snapshot<StateType, MessageType> snapshot = Storage.readFile(snapshotId);
-            snapshot.messages.forEach(
+            if(currentSnapshotToBeRestored == null){
+                currentSnapshotToBeRestored= Storage.readFile(snapshotId);
+            }
+            else if(snapshotId != currentSnapshotToBeRestored.snapshotId) {
+                throw new RestoreAlreadyInProgress("CRITICAL ERROR: Another snapshot is being restored");
+            }
+            currentSnapshotToBeRestored.messages.forEach(
                     (entity, packets) -> packets.forEach(
                             (packet) -> appConnector.handleIncomingMessage(entity.ipAddress, entity.port, packet)));
         }

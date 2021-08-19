@@ -181,63 +181,38 @@ public class DistributedSnapshot<StateType, MessageType> {
         }
     }
 
-    public void restoreLastSnapshot(){
+    public void restoreLastSnapshot() throws RestoreAlreadyInProgress, RemoteException, NotBoundException {
         int snapshotToRestore=0; //TODO: get the correct id to restore
 
-        //start restore
+        // we set our node to the not-ready state and restore our connections and state according to our snapshot
         this.remoteImplementation.setReady(false);
-        //this will be done on the remoteNodes provided by the gateway
-        this.remoteImplementation.remoteNodes.forEach((node)-> {
-            try {
-                node.remoteInterface.setReady(false);
-            } catch (RemoteException e) {
-                e.printStackTrace();
-            }
-        });
-
-        //restore the connection
         this.remoteImplementation.restoreConnections(snapshotToRestore);
-        //at this point the remoteNodes inside this node are the ones from the snapshot
-        this.remoteImplementation.remoteNodes.forEach((node)-> {
-            try {
-                node.remoteInterface.restoreConnections(snapshotToRestore);
-            } catch (RemoteException e) {
-                e.printStackTrace();
-            }
-        });
-        //at this point the remoteNodes of all the nodes (present in the snapshot) will be the ones specified in the snapshot
-
-        //restore state
         this.remoteImplementation.restoreState(snapshotToRestore);
-        this.remoteImplementation.remoteNodes.forEach((node)-> {
-            try {
-                node.remoteInterface.restoreState(snapshotToRestore);
-            } catch (RemoteException e) {
-                e.printStackTrace();
-            }
-        });
-        //at this point all the nodes will have the correct initial state from the snapshot
 
-        //end restore
+        // we set all the nodes in our new connections list to the not-ready state and proceed to set their connection
+        // list and state according to their snapshot
+        for(RemoteNode<MessageType> remoteNode : this.remoteImplementation.remoteNodes) {
+            remoteNode.remoteInterface.setReady(false);
+            remoteNode.remoteInterface.restoreConnections(snapshotToRestore);
+            remoteNode.remoteInterface.restoreState(snapshotToRestore);
+        }
+
+        // now all the nodes can be set to the ready state
+        // TODO: what if the application is automated (like sending a message every X seconds)?
+        //  in this case the application would start as soon as the ready state is set to true, without restoring
+        //  the incoming messages
         this.remoteImplementation.setReady(true);
-        this.remoteImplementation.remoteNodes.forEach((node)-> {
-            try {
-                node.remoteInterface.setReady(true);
-            } catch (RemoteException e) {
-                e.printStackTrace();
-            }
-        });
+        for(RemoteNode<MessageType> remoteNode : this.remoteImplementation.remoteNodes) {
+            remoteNode.remoteInterface.setReady(true);
+        }
         //now all the "modifying" functions can be called again, hence we will start handling the old messages
 
         //handle old incoming messages
+        //TODO: this should be handled in parallel
         this.remoteImplementation.restoreOldIncomingMessages(snapshotToRestore);
-        this.remoteImplementation.remoteNodes.forEach((node)-> {
-            try {
-                node.remoteInterface.restoreOldIncomingMessages(snapshotToRestore);
-            } catch (RemoteException e) {
-                e.printStackTrace();
-            }
-        });
+        for(RemoteNode<MessageType> remoteNode : this.remoteImplementation.remoteNodes) {
+            remoteNode.remoteInterface.restoreOldIncomingMessages(snapshotToRestore);
+        }
     }
 
 

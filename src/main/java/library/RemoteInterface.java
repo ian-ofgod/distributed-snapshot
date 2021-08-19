@@ -1,6 +1,7 @@
 package library;
 
 import library.exceptions.DoubleMarkerException;
+import library.exceptions.RestoreAlreadyInProgress;
 import library.exceptions.SnapshotInterruptException;
 import library.exceptions.UnexpectedMarkerReceived;
 
@@ -59,9 +60,9 @@ interface RemoteInterface<MessageType> extends Remote {
      */
     void removeMe(String hostname, int port) throws RemoteException, SnapshotInterruptException;
 
-    void restoreState(int snapshotId) throws RemoteException;
-    void restoreConnections(int snapshotId) throws RemoteException;
-    void restoreOldIncomingMessages(int snapshotId) throws RemoteException;
+    void restoreState(int snapshotId) throws RemoteException, RestoreAlreadyInProgress;
+    void restoreConnections(int snapshotId) throws RemoteException, RestoreAlreadyInProgress, NotBoundException;
+    void restoreOldIncomingMessages(int snapshotId) throws RemoteException, RestoreAlreadyInProgress;
     void setReady(boolean value) throws RemoteException;
 
 }
