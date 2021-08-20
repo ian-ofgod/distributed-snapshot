@@ -33,7 +33,7 @@ public class Parser {
                     parameters[0] = inputs[1];
                     parameters[1] = Integer.parseInt(inputs[2]);
                 }
-                case "snapshot", "disconnect" -> {
+                case "snapshot", "disconnect", "restore" -> {
                     if (parameters.length != 0) throw new IllegalStateException("Unexpected number of parameters");
                     methodParameterTypes = new Class<?>[]{};
                 }

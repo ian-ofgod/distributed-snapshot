@@ -143,6 +143,19 @@ public class OilWell implements AppConnector<OilCargo> {
     }
 
     /**
+     * It is called to initiate a restore of a previously taken snapshot
+     */
+    public void restore() {
+        if (oilAmount != -1) {
+            try {
+                distributedSnapshot.restoreLastSnapshot();
+            } catch (RestoreAlreadyInProgress | RemoteException | NotBoundException | RestoreInProgress e) {
+                logger.warn("Cannot restore snapshot");
+            }
+        } else logger.info("You must first initialize your oil well!");
+    }
+
+    /**
      * It is used to start the thread that periodically sends oil to another oil well
      */
     private void startOilTransfers(int frequency, int minAmount, int maxAmount) {
