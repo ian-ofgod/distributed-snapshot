@@ -34,15 +34,15 @@ public class SnapshotTest {
         MockMessage1 message1 = new MockMessage1('q',"Hello World");
         MockMessage2 message2 = new MockMessage2('q','z');
 
-        Snapshot<MockState1,MockMessage1> snapshot1a = new Snapshot<>(1,state1);
-        Snapshot<MockState1,MockMessage2> snapshot2a = new Snapshot<>(2,state1);
-        Snapshot<MockState2,MockMessage1> snapshot3a = new Snapshot<>(3,state2);
-        Snapshot<MockState2,MockMessage2> snapshot4a = new Snapshot<>(4,state2);
+        Snapshot<MockState1,MockMessage1> snapshot1a = new Snapshot<>("hey".hashCode(),state1);
+        Snapshot<MockState1,MockMessage2> snapshot2a = new Snapshot<>("hoy".hashCode(),state1);
+        Snapshot<MockState2,MockMessage1> snapshot3a = new Snapshot<>("huy".hashCode(),state2);
+        Snapshot<MockState2,MockMessage2> snapshot4a = new Snapshot<>("hyy".hashCode(),state2);
 
-        Snapshot<MockState1,MockMessage1> snapshot1b = new Snapshot<>(5,state1);
-        Snapshot<MockState1,MockMessage2> snapshot2b = new Snapshot<>(6,state1);
-        Snapshot<MockState2,MockMessage1> snapshot3b = new Snapshot<>(7,state2);
-        Snapshot<MockState2,MockMessage2> snapshot4b = new Snapshot<>(8,state2);
+        Snapshot<MockState1,MockMessage1> snapshot1b = new Snapshot<>("hay".hashCode(),state1);
+        Snapshot<MockState1,MockMessage2> snapshot2b = new Snapshot<>("hiy".hashCode(),state1);
+        Snapshot<MockState2,MockMessage1> snapshot3b = new Snapshot<>("hhy".hashCode(),state2);
+        Snapshot<MockState2,MockMessage2> snapshot4b = new Snapshot<>("hehy".hashCode(),state2);
 
 
         Entity entity1 = new Entity("192.168.0.1",123);
@@ -136,25 +136,28 @@ public class SnapshotTest {
         runningSnapshots4.add(snapshot4b);
 
 
-        Storage.writeFile(runningSnapshots1,1); // saves snapshot1a
-        Storage.writeFile(runningSnapshots2,2); // saves snapshot2a
-        Storage.writeFile(runningSnapshots3,3); // saves snapshot3a
-        Storage.writeFile(runningSnapshots4,4); // saves snapshot4a
-        Storage.writeFile(runningSnapshots1,5); // saves snapshot1b
-        Storage.writeFile(runningSnapshots2,6); // saves snapshot2b
-        Storage.writeFile(runningSnapshots3,7); // saves snapshot3b
-        Storage.writeFile(runningSnapshots4,8); // saves snapshot4b
+        Storage.writeFile(runningSnapshots1,"hey".hashCode()); // saves snapshot1a
+        Storage.writeFile(runningSnapshots2,"hoy".hashCode()); // saves snapshot2a
+        Storage.writeFile(runningSnapshots3,"huy".hashCode()); // saves snapshot3a
+        Storage.writeFile(runningSnapshots4,"hyy".hashCode()); // saves snapshot4a
+        Storage.writeFile(runningSnapshots1,"hay".hashCode()); // saves snapshot1b
+        Storage.writeFile(runningSnapshots2,"hiy".hashCode()); // saves snapshot2b
+        Storage.writeFile(runningSnapshots3,"hhy".hashCode()); // saves snapshot3b
+        Storage.writeFile(runningSnapshots4,"hehy".hashCode()); // saves snapshot4b
 
 
-        Snapshot readSnap1 = Storage.readFile(1);
-        Snapshot readSnap2 = Storage.readFile(2);
-        Snapshot readSnap3 = Storage.readFile(3);
-        Snapshot readSnap4 = Storage.readFile(4);
-        Snapshot readSnap5 = Storage.readFile(5);
-        Snapshot readSnap6 = Storage.readFile(6);
-        Snapshot readSnap7 = Storage.readFile(7);
-        Snapshot readSnap8 = Storage.readFile(8);
+        Snapshot readSnap1 = Storage.readFile("hey".hashCode());
+        Snapshot readSnap2 = Storage.readFile("hoy".hashCode());
+        Snapshot readSnap3 = Storage.readFile("huy".hashCode());
+        Snapshot readSnap4 = Storage.readFile("hyy".hashCode());
+        Snapshot readSnap5 = Storage.readFile("hay".hashCode());
+        Snapshot readSnap6 = Storage.readFile("hiy".hashCode());
+        Snapshot readSnap7 = Storage.readFile("hhy".hashCode());
+        Snapshot readSnap8 = Storage.readFile("hehy".hashCode());
 
+        System.out.println(readSnap1);
+        System.out.println("should be");
+        System.out.println(snapshot1a);
         /* we must test state.equals() and messages.equals() separately,
         because we use Snapshot.equals() with just the snapshot ID
         to check if a snapshot is already runnning */
