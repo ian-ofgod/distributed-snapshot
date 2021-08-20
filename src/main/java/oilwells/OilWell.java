@@ -176,7 +176,15 @@ public class OilWell implements AppConnector<OilCargo> {
                                 logger.warn("You are running out of oil, cannot send oil to " + randomWell.getHostname() + ":" + randomWell.getPort());
                             }
                         }
-                    } catch (RemoteNodeNotFound | RemoteException | NotBoundException | SnapshotInterruptException e) {
+                    } catch (RemoteNodeNotFound | RemoteException e) {
+                        logger.warn("Error sending oil cargo. Disconnecting from " + randomWell.getHostname() + ":" + randomWell.getPort());
+                        try {
+                            distributedSnapshot.removeNode(randomWell.getHostname(), randomWell.getPort());
+                            directConnections.remove(randomWell);
+                        } catch (RemoteException | RestoreInProgress ex) {
+                            logger.warn("Error removing node " + randomWell.getHostname() + ":" + randomWell.getPort());
+                        }
+                    } catch (NotBoundException | SnapshotInterruptException e) {
                         logger.warn("Error sending oil cargo");
                     } catch (NotInitialized notInitialized) {
                         logger.info("You must first initialize your oil well!");
