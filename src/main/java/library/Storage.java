@@ -19,6 +19,7 @@ class Storage {
     private static final String FOLDER = "storage_folder";
 
 
+    private static int COUNTER = 0;
 
     /**
      * Constant containing the extension of the files used to store snapshots on disk
@@ -31,9 +32,14 @@ class Storage {
      * Method to create a folder for the snapshots to be saved.
      *
      * @param folderName*/
-    private static void createFolder(String folderName) {
+    private static void createFolder(String folderName, String currentIp, int currentPort) {
         try {
             Path path = Paths.get(FOLDER);
+            if (!Files.exists(path)) {
+                Files.createDirectory(path);
+            }
+
+            path = Paths.get(FOLDER + "/" + currentIp + "_" + currentPort + "/");
             if (!Files.exists(path)) {
                 Files.createDirectory(path);
             }
@@ -47,80 +53,103 @@ class Storage {
         }
     }
 
+    public static int getLastSnapshotId(String currentIp, int currentPort) {
 
-    public static int getLastSnapshotId() {
-
-        File dir = new File(FOLDER);
+        File dir = new File(FOLDER + "/" + currentIp + "_" + currentPort + "/");
         File[] directoryListing = dir.listFiles();
-        ArrayList<Integer> allSnaps = new ArrayList<>();
+        HashMap<Integer,Integer> allSnaps = new HashMap<>();
         if (directoryListing != null) {
             for (File child : directoryListing) { //for each entity
                 String filename = child.getName();
-                allSnaps.add(Integer.parseInt(filename));
+                String[] tokens = filename.split("_");
+                allSnaps.put(Integer.parseInt(tokens[0]),Integer.parseInt(tokens[1]));
             }
 
         }
-        return Collections.max(allSnaps);
+        return allSnaps.get(Collections.max(allSnaps.keySet()));
     }
 
-    //test for username
+    public static void main(String[] args) {
+        System.out.println(getLastSnapshotId("localhost",0));
+    }
 
+    public static <StateType, MessageType> Snapshot<StateType, MessageType> readFile(int snapshotId){
+        return readFile(snapshotId,"localhost",0);
+    }
 
-    public static <StateType, MessageType> Snapshot<StateType, MessageType> readFile(int snapshotId) {
+    public static <StateType, MessageType> Snapshot<StateType, MessageType> readFile(int snapshotId, String currentIp, int currentPort) {
         Snapshot<StateType, MessageType> loaded_snapshot = new Snapshot<>(snapshotId);
         loaded_snapshot.messages = new HashMap<>();
-        String folderName = buildFolderName(loaded_snapshot);
-        try {
-            File dir = new File(folderName);
-            File[] directoryListing = dir.listFiles();
-            if (directoryListing != null) {
-                for (File child : directoryListing) { //for each entity
-                    String filename = child.getName();
-                    ArrayList<MessageType> empty_messages = new ArrayList<>();
-                    if(filename.equals("state.ser")){ // I'm reading the state
-                        FileInputStream fos = new FileInputStream(folderName + "state.ser");
-                        ObjectInputStream oos = new ObjectInputStream(fos);
-                        StateType state = (StateType) oos.readObject();
-                        loaded_snapshot.state = state;
-                    } else if (filename.equals("connectedNodes.ser")) { // I'm reading the list of nodes
-                        FileInputStream fos = new FileInputStream(folderName + "connectedNodes.ser");
-                        ObjectInputStream oos = new ObjectInputStream(fos);
-                        ArrayList<Entity> connectedNodes  = (ArrayList<Entity>) oos.readObject();
-                        loaded_snapshot.connectedNodes = connectedNodes;
-                        //todo: valutare se funziona o se bisogna fare il parsing
 
-                    } else { // I'm reading a message
-                        String[] tokens = filename.split("_");
-                        String ip = tokens[0];
-                        int port = Integer.parseInt(tokens[1]);
-                        int msg_idx = Integer.parseInt(tokens[tokens.length-1].substring(0,1));
-                        Entity sender = new Entity(ip,port);
+        File dir = new File(FOLDER + "/" + currentIp + "_" + currentPort + "/");
+        File[] all_snaps = dir.listFiles();
+        for (File folder : all_snaps){
+            if(folder.getAbsolutePath().contains(String.valueOf(snapshotId))){
+                String folderName = folder.getAbsolutePath() + "/";
+                try {
+                    File dir2 = new File(folderName);
+                    File[] directoryListing = dir2.listFiles();
+                    if (directoryListing != null) {
 
-                        if (!loaded_snapshot.messages.containsKey(sender)){
-                            loaded_snapshot.messages.put(sender,empty_messages);
+                        for (File child : directoryListing) { //for each entity
+
+                            String filename = child.getName();
+                            ArrayList<MessageType> empty_messages = new ArrayList<>();
+                            if(filename.equals("state.ser")){ // I'm reading the state
+                                FileInputStream fos = new FileInputStream(folderName + "state.ser");
+                                ObjectInputStream oos = new ObjectInputStream(fos);
+                                StateType state = (StateType) oos.readObject();
+                                loaded_snapshot.state = state;
+                            } else if (filename.equals("connectedNodes.ser")) { // I'm reading the list of nodes
+                                FileInputStream fos = new FileInputStream(folderName + "connectedNodes.ser");
+                                ObjectInputStream oos = new ObjectInputStream(fos);
+                                ArrayList<Entity> connectedNodes  = (ArrayList<Entity>) oos.readObject();
+                                loaded_snapshot.connectedNodes = connectedNodes;
+
+                            } else { // I'm reading a message
+                                String[] tokens = filename.split("_");
+                                String ip = tokens[0];
+                                int port = Integer.parseInt(tokens[1]);
+                                int msg_idx = Integer.parseInt(tokens[tokens.length-1].substring(0,1));
+                                Entity sender = new Entity(ip,port);
+
+                                if (!loaded_snapshot.messages.containsKey(sender)){
+                                    loaded_snapshot.messages.put(sender,empty_messages);
+                                }
+                                FileInputStream fos = new FileInputStream(folderName + filename);
+                                ObjectInputStream oos = new ObjectInputStream(fos);
+                                MessageType message = (MessageType) oos.readObject();
+                                loaded_snapshot.messages.get(sender).add(msg_idx-1,message);
+                            }
                         }
-                        FileInputStream fos = new FileInputStream(folderName + filename);
-                        ObjectInputStream oos = new ObjectInputStream(fos);
-                        MessageType message = (MessageType) oos.readObject();
-                        loaded_snapshot.messages.get(sender).add(msg_idx-1,message);
-                    }
-                }
-            } else {
-                //TODO: controllare se serve gestire il caso in cui dir non e' davvero directory
+                    } else {
+                        //TODO: controllare se serve gestire il caso in cui dir non e' davvero directory
 
                 /*Checking dir.isDirectory() above would not be sufficient
                  to avoid race conditions with another process that deletes
                  directories.*/
+                    }
+
+
+                } catch (IOException e) {
+                    System.err.println("Could not read file");
+                    e.printStackTrace();
+                } catch (ClassNotFoundException e){
+                    System.err.println("Could not cast deserialized object to the expected type");
+                }
             }
 
 
-        } catch (IOException e) {
-            System.err.println("Could not read file");
-            e.printStackTrace();
-        } catch (ClassNotFoundException e){
-            System.err.println("Could not cast deserialized object to the expected type");
+
         }
+
         return loaded_snapshot;
+    }
+
+
+    public static <StateType, MessageType> void writeFile(ArrayList<Snapshot<StateType, MessageType>> runningSnapshots, int snapshotId) {
+        writeFile(runningSnapshots, snapshotId, "localhost", 0000);
+
     }
 
     /**
@@ -131,14 +160,14 @@ class Storage {
      * @param runningSnapshots the list of snapshots running on the current node
      * @param snapshotId the id of the snapshot that the user want to save on disk
      * */
-    public static <StateType, MessageType> void writeFile(ArrayList<Snapshot<StateType, MessageType>> runningSnapshots, int snapshotId) {
-
+    public static <StateType, MessageType> void writeFile(ArrayList<Snapshot<StateType, MessageType>> runningSnapshots, int snapshotId, String currentIp, int currentPort) {
+        COUNTER++;
         Snapshot<StateType, MessageType> toSaveSnapshot = runningSnapshots.stream().filter(snap -> snap.snapshotId==snapshotId).findFirst().orElse(null);
         StateType state = toSaveSnapshot.state;
         HashMap<Entity, ArrayList<MessageType>> messageMap = toSaveSnapshot.messages;
         ArrayList<Entity> connectedNodes = toSaveSnapshot.connectedNodes;
-        String folderName = buildFolderName(toSaveSnapshot);
-        createFolder(folderName);
+        String folderName = buildFolderName(toSaveSnapshot,currentIp,currentPort);
+        createFolder(folderName, currentIp, currentPort);
 
         try {
             FileOutputStream fos = new FileOutputStream(folderName+"state.ser");
@@ -175,8 +204,9 @@ class Storage {
      * @param <StateType> this is the type that will be saved as the state of the application
      * @param snapshot the snapshot for which the name is built, will be saved on disk
      * */
-    private static <StateType, MessageType> String buildFolderName(Snapshot<StateType, MessageType> snapshot) {
-        return FOLDER + "/" + snapshot.snapshotId + "/" ;
+    private static final <StateType, MessageType> String buildFolderName(Snapshot<StateType, MessageType> snapshot, String currentIp, int currentPort) {
+        return FOLDER + "/" + currentIp + "_" + currentPort + "/" + COUNTER +
+                "_"+ snapshot.snapshotId + "/" ;
     }
 
 

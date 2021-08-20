@@ -34,15 +34,15 @@ public class SnapshotTest {
         MockMessage1 message1 = new MockMessage1('q',"Hello World");
         MockMessage2 message2 = new MockMessage2('q','z');
 
-        Snapshot<MockState1,MockMessage1> snapshot1a = new Snapshot<>(1,state1);
-        Snapshot<MockState1,MockMessage2> snapshot2a = new Snapshot<>(2,state1);
-        Snapshot<MockState2,MockMessage1> snapshot3a = new Snapshot<>(3,state2);
-        Snapshot<MockState2,MockMessage2> snapshot4a = new Snapshot<>(4,state2);
+        Snapshot<MockState1,MockMessage1> snapshot1a = new Snapshot<>("192.168.0.1123".hashCode(),state1);
+        Snapshot<MockState1,MockMessage2> snapshot2a = new Snapshot<>("192.168.0.1124".hashCode(),state1);
+        Snapshot<MockState2,MockMessage1> snapshot3a = new Snapshot<>("192.168.0.1125".hashCode(),state2);
+        Snapshot<MockState2,MockMessage2> snapshot4a = new Snapshot<>("192.168.0.1126".hashCode(),state2);
 
-        Snapshot<MockState1,MockMessage1> snapshot1b = new Snapshot<>(5,state1);
-        Snapshot<MockState1,MockMessage2> snapshot2b = new Snapshot<>(6,state1);
-        Snapshot<MockState2,MockMessage1> snapshot3b = new Snapshot<>(7,state2);
-        Snapshot<MockState2,MockMessage2> snapshot4b = new Snapshot<>(8,state2);
+        Snapshot<MockState1,MockMessage1> snapshot1b = new Snapshot<>("192.168.0.1127".hashCode(),state1);
+        Snapshot<MockState1,MockMessage2> snapshot2b = new Snapshot<>("192.168.0.1128".hashCode(),state1);
+        Snapshot<MockState2,MockMessage1> snapshot3b = new Snapshot<>("192.168.0.1129".hashCode(),state2);
+        Snapshot<MockState2,MockMessage2> snapshot4b = new Snapshot<>("192.168.0.1130".hashCode(),state2);
 
 
         Entity entity1 = new Entity("192.168.0.1",123);
@@ -136,24 +136,24 @@ public class SnapshotTest {
         runningSnapshots4.add(snapshot4b);
 
 
-        Storage.writeFile(runningSnapshots1,1); // saves snapshot1a
-        Storage.writeFile(runningSnapshots2,2); // saves snapshot2a
-        Storage.writeFile(runningSnapshots3,3); // saves snapshot3a
-        Storage.writeFile(runningSnapshots4,4); // saves snapshot4a
-        Storage.writeFile(runningSnapshots1,5); // saves snapshot1b
-        Storage.writeFile(runningSnapshots2,6); // saves snapshot2b
-        Storage.writeFile(runningSnapshots3,7); // saves snapshot3b
-        Storage.writeFile(runningSnapshots4,8); // saves snapshot4b
+        Storage.writeFile(runningSnapshots1,"192.168.0.1123".hashCode()); // saves snapshot1a
+        Storage.writeFile(runningSnapshots2,"192.168.0.1124".hashCode()); // saves snapshot2a
+        Storage.writeFile(runningSnapshots3,"192.168.0.1125".hashCode()); // saves snapshot3a
+        Storage.writeFile(runningSnapshots4,"192.168.0.1126".hashCode()); // saves snapshot4a
+        Storage.writeFile(runningSnapshots1,"192.168.0.1127".hashCode()); // saves snapshot1b
+        Storage.writeFile(runningSnapshots2,"192.168.0.1128".hashCode()); // saves snapshot2b
+        Storage.writeFile(runningSnapshots3,"192.168.0.1129".hashCode()); // saves snapshot3b
+        Storage.writeFile(runningSnapshots4,"192.168.0.1130".hashCode()); // saves snapshot4b
 
 
-        Snapshot readSnap1 = Storage.readFile(1);
-        Snapshot readSnap2 = Storage.readFile(2);
-        Snapshot readSnap3 = Storage.readFile(3);
-        Snapshot readSnap4 = Storage.readFile(4);
-        Snapshot readSnap5 = Storage.readFile(5);
-        Snapshot readSnap6 = Storage.readFile(6);
-        Snapshot readSnap7 = Storage.readFile(7);
-        Snapshot readSnap8 = Storage.readFile(8);
+        Snapshot readSnap1 = Storage.readFile("192.168.0.1123".hashCode());
+        Snapshot readSnap2 = Storage.readFile("192.168.0.1124".hashCode());
+        Snapshot readSnap3 = Storage.readFile("192.168.0.1125".hashCode());
+        Snapshot readSnap4 = Storage.readFile("192.168.0.1126".hashCode());
+        Snapshot readSnap5 = Storage.readFile("192.168.0.1127".hashCode());
+        Snapshot readSnap6 = Storage.readFile("192.168.0.1128".hashCode());
+        Snapshot readSnap7 = Storage.readFile("192.168.0.1129".hashCode());
+        Snapshot readSnap8 = Storage.readFile("192.168.0.1130".hashCode());
 
         /* we must test state.equals() and messages.equals() separately,
         because we use Snapshot.equals() with just the snapshot ID
