@@ -112,20 +112,13 @@ public class OilWell implements AppConnector<OilCargo> {
             logger.info("Disconnecting from the network");
             synchronized (directConnectionsLock) {
                 try {
-                    for (ConnectionDetails details : directConnections) {
-                        try {
-                            distributedSnapshot.removeConnection(details.getHostname(), details.getPort());
-                            directConnections.remove(details);
-                            logger.info("Successfully disconnected from " + details.getHostname() + ":" + details.getPort());
-                        } catch (OperationForbidden | SnapshotInterruptException e) {
-                            logger.warn("You can't remove " + details.getHostname() + ":" + details.getPort());
-                        } catch (RemoteException e) {
-                            logger.warn("Cannot disconnect from " + details.getHostname() + ":" + details.getPort());
-                        }
-                    }
+                    distributedSnapshot.disconnect();
+                    directConnections.clear();
+                } catch (RemoteException | OperationForbidden | SnapshotInterruptException e) {
+                    logger.warn("Cannot disconnect from the network");
                 } catch (NotInitialized notInitialized) {
                     logger.info("You must first initialize your oil well!");
-                }
+                    }
             }
         } else logger.info("You must first initialize your oil well!");
     }

@@ -141,15 +141,13 @@ public class DistributedSnapshot<StateType, MessageType> {
 
     /**
      * This is method is used to disconnect from a remote node
-     * @param hostname the hostname of the entity that should be removed
-     * @param port the RMI registry port of the entity that should be removed
      * @throws RemoteException communication-related exception that may occur during remote calls
      * @throws SnapshotInterruptException it's not possible to remove a node when a snapshot is running
      * @throws NotInitialized this instance hasn't been initialized, you must do it first
      * @throws OperationForbidden it is not possible to remove a connection while a snapshot is running
      * */
-    public void removeConnection(String hostname, int port) throws OperationForbidden, SnapshotInterruptException, RemoteException, NotInitialized {
-        if (remoteImplementation.appConnector == null) throw new NotInitialized("You must initialize the connection before trying to remove the node " + hostname + ":" + port);
+    public void disconnect() throws OperationForbidden, SnapshotInterruptException, RemoteException, NotInitialized {
+        if (remoteImplementation.appConnector == null) throw new NotInitialized("You must initialize the library before trying to disconnect from the network");
 
         // Since no change in the network topology is allowed during a snapshot
         // this function WONT BE CALLED if any snapshot is running THIS IS AN ASSUMPTION FROM THE TEXT
@@ -157,9 +155,12 @@ public class DistributedSnapshot<StateType, MessageType> {
             if (!remoteImplementation.runningSnapshots.isEmpty()) {
                 throw new OperationForbidden("Unable to remove connection while snapshots are running");
             }
-            RemoteNode<MessageType> remoteNode = remoteImplementation.getRemoteNode(hostname, port);
-            remoteNode.remoteInterface.removeMe(remoteImplementation.hostname, remoteImplementation.port);
-            remoteImplementation.remoteNodes.remove(remoteNode);
+            ArrayList<RemoteNode<MessageType>> toRemove = new ArrayList<>();
+            for (RemoteNode<MessageType> remoteNode: remoteImplementation.remoteNodes) {
+                remoteNode.remoteInterface.removeMe(remoteImplementation.hostname, remoteImplementation.port);
+                toRemove.add(remoteNode);
+            }
+            remoteImplementation.remoteNodes.removeAll(toRemove);
         }
     }
 
