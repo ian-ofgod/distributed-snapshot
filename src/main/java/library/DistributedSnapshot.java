@@ -41,7 +41,7 @@ public class DistributedSnapshot<StateType, MessageType> {
         synchronized (remoteImplementation) {
             remoteImplementation.hostname = yourHostname;
             remoteImplementation.port = rmiRegistryPort;
-            remoteImplementation.appConnector = appConnector;
+            remoteImplementation.appConnector = appConnector; //TODO: move to the end
 
             RemoteInterface<MessageType> stub = (RemoteInterface<MessageType>) UnicastRemoteObject.exportObject(remoteImplementation, 0);
             Registry registry = LocateRegistry.createRegistry(remoteImplementation.port);
@@ -143,8 +143,7 @@ public class DistributedSnapshot<StateType, MessageType> {
      * @throws OperationForbidden it is not possible to remove a connection while a snapshot is running
      * */
     public void removeConnection(String hostname, int port) throws OperationForbidden, SnapshotInterruptException, RemoteException, NotInitialized {
-        if (remoteImplementation.appConnector == null) throw new NotInitialized("You must initialize the connection before trying to remove the node hostname +" +
-                "");
+        if (remoteImplementation.appConnector == null) throw new NotInitialized("You must initialize the connection before trying to remove the node " + hostname + ":" + port);
 
         // Since no change in the network topology is allowed during a snapshot
         // this function WONT BE CALLED if any snapshot is running THIS IS AN ASSUMPTION FROM THE TEXT
