@@ -5,10 +5,7 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 
 /**
  * This class provides static methods to handle the storage of snapshots on disk.
@@ -50,6 +47,23 @@ class Storage {
         }
     }
 
+
+    public static int getLastSnapshotId() {
+
+        File dir = new File(FOLDER);
+        File[] directoryListing = dir.listFiles();
+        ArrayList<Integer> allSnaps = new ArrayList<>();
+        if (directoryListing != null) {
+            for (File child : directoryListing) { //for each entity
+                String filename = child.getName();
+                allSnaps.add(Integer.parseInt(filename));
+            }
+
+        }
+        return Collections.max(allSnaps);
+    }
+
+    
 
     public static <StateType, MessageType> Snapshot<StateType, MessageType> readFile(int snapshotId) {
         Snapshot<StateType, MessageType> loaded_snapshot = new Snapshot<>(snapshotId);
