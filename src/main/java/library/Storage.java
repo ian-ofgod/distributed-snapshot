@@ -63,7 +63,8 @@ class Storage {
         return Collections.max(allSnaps);
     }
 
-    
+    //test for username
+
 
     public static <StateType, MessageType> Snapshot<StateType, MessageType> readFile(int snapshotId) {
         Snapshot<StateType, MessageType> loaded_snapshot = new Snapshot<>(snapshotId);
