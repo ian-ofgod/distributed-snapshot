@@ -20,7 +20,8 @@ import java.util.concurrent.Executors;
  * @param <MessageType> this is the type that will be exchanged as a message between nodes
  * @param <StateType> this is the type that will be saved as the state of the application
  * */
-//TODO: testare un paio di metodi interni qui
+    //TODO: testare un paio di metodi interni qui
+    //TODO: ok that the functions do nothing in the not-ready state
 class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<MessageType> {
 
     /**
@@ -67,7 +68,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
      * Variable that indicates if the node is able to perform modifying functions (true) or if the node is undergoing a
      * restore of a snapshot (false)
      */
-    protected boolean nodeReady=true;
+    protected boolean nodeReady=true; //TODO: probably synchronize nodeReady
 
     /**
      * Handles the propagateMarker calls (see receiveMarker method)
@@ -283,10 +284,8 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
         }
         this.remoteNodes=new ArrayList<>();
         for (Entity entity : currentSnapshotToBeRestored.connectedNodes) {
-            Registry registry = null;
-            RemoteInterface<MessageType> remoteInterface = null;
-            registry = LocateRegistry.getRegistry(entity.getIpAddress(), entity.getPort());
-            remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
+            Registry registry = LocateRegistry.getRegistry(entity.getIpAddress(), entity.getPort());
+            RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
             this.remoteNodes.add(new RemoteNode<>(entity.getIpAddress(), entity.getPort(), remoteInterface));
         }
     }
@@ -308,6 +307,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
             else if(snapshotId != currentSnapshotToBeRestored.snapshotId) {
                 throw new RestoreAlreadyInProgress("CRITICAL ERROR: Another snapshot is being restored");
             }
+            //TODO: modify the hashmap to iterate the messages in the received order
             currentSnapshotToBeRestored.messages.forEach(
                     (entity, packets) -> packets.forEach(
                             (packet) -> appConnector.handleIncomingMessage(entity.getIpAddress(), entity.getPort(), packet)));

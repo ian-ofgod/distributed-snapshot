@@ -68,4 +68,5 @@ interface RemoteInterface<MessageType> extends Remote {
     void restoreOldIncomingMessages(int snapshotId) throws RemoteException, RestoreAlreadyInProgress;
     void setReady(boolean value) throws RemoteException;
 
+    //TODO: forgetThisNode(nodeToEliminate)
 }

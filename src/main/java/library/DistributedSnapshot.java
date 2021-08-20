@@ -19,6 +19,7 @@ import java.util.Objects;
  * @param <StateType> this is the type that will be used to store the application state
  * @param <MessageType> this is the type that will be exchanged as a message between nodes
  * */
+//TODO: add throw of RestoreInProgress sendMessage
 public class DistributedSnapshot<StateType, MessageType> {
     /**
      * The implementation of the remoteInterface used on this node
@@ -192,8 +193,8 @@ public class DistributedSnapshot<StateType, MessageType> {
 
         // now all the nodes can be set to the ready state
         // TODO: what if the application is automated (like sending a message every X seconds)?
-        //  in this case the application would start as soon as the ready state is set to true, without restoring
-        //  the incoming messages
+        //       in this case the application would start as soon as the ready state is set to true,
+        //       without restoring the incoming messages
         this.remoteImplementation.setReady(true);
         for(RemoteNode<MessageType> remoteNode : this.remoteImplementation.remoteNodes) {
             remoteNode.remoteInterface.setReady(true);
@@ -208,6 +209,7 @@ public class DistributedSnapshot<StateType, MessageType> {
         }
     }
 
+    //TODO: function to make other nodes forget on node
 
     /**
      * This is method is used to get the reference of a RemoteNode
