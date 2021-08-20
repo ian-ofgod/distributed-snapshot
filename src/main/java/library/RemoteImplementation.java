@@ -79,36 +79,34 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
 
     @Override
     public synchronized void receiveMarker(String senderHostname, int senderPort, String initiatorHostname, int initiatorPort, int snapshotId) throws DoubleMarkerException, UnexpectedMarkerReceived {
-        if(nodeReady) {
-            //TODO: remove SystemPrintln
-            System.out.println(hostname + ":" + port + " | RECEIVED MARKER from: " + senderHostname + ":" + senderPort);
-            if (nodeReady) {
-                if (checkIfRemoteNodePresent(senderHostname, senderPort)) {
-                    Snapshot<StateType, MessageType> snap;
-                    synchronized (currentStateLock) {
-                        snap = new Snapshot<>(snapshotId, currentState, remoteNodes); //Creates the snapshot and saves the current state!
-                    }
+        //TODO: remove SystemPrintln
+        System.out.println(hostname + ":" + port + " | RECEIVED MARKER from: " + senderHostname + ":" + senderPort);
+        if (nodeReady) {
+            if (checkIfRemoteNodePresent(senderHostname, senderPort)) { //TODO: is this check still needed?
+                Snapshot<StateType, MessageType> snap;
+                synchronized (currentStateLock) {
+                    snap = new Snapshot<>(snapshotId, currentState, remoteNodes); //Creates the snapshot and saves the current state!
+                }
 
-                    if (!runningSnapshots.contains(snap)) {
-                        //TODO: remove SystemPrintln
-                        System.out.println(hostname + ":" + port + " | First time receiving a marker");
-                        runningSnapshots.add(snap);
-                        recordSnapshotId(senderHostname, senderPort, snapshotId);
-                        executors.submit(() -> propagateMarker(initiatorHostname, initiatorPort, snapshotId));
-                    } else {
-                        recordSnapshotId(senderHostname, senderPort, snapshotId);
-                    }
-
-                    if (receivedMarkerFromAllLinks(snapshotId)) { //we have received a marker from all the channels
-                        Storage.writeFile(runningSnapshots, snapshotId);
-                        runningSnapshots.remove(snap);
-                    }
+                if (!runningSnapshots.contains(snap)) {
+                    //TODO: remove SystemPrintln
+                    System.out.println(hostname + ":" + port + " | First time receiving a marker");
+                    runningSnapshots.add(snap);
+                    recordSnapshotId(senderHostname, senderPort, snapshotId);
+                    executors.submit(() -> propagateMarker(initiatorHostname, initiatorPort, snapshotId));
                 } else {
-                    throw new UnexpectedMarkerReceived("ERROR: received a marker from a node not present in my remote nodes list");
+                    recordSnapshotId(senderHostname, senderPort, snapshotId);
+                }
+
+                if (receivedMarkerFromAllLinks(snapshotId)) { //we have received a marker from all the channels
+                    Storage.writeFile(runningSnapshots, snapshotId);
+                    runningSnapshots.remove(snap);
                 }
             } else {
-                //TODO: what to do when the node is not ready?
+                throw new UnexpectedMarkerReceived("ERROR: received a marker from a node not present in my remote nodes list");
             }
+        } else {
+            //TODO: what to do when the node is not ready?
         }
     }
 
