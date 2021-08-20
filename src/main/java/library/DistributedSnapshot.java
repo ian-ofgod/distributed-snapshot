@@ -176,7 +176,7 @@ public class DistributedSnapshot<StateType, MessageType> {
     }
 
     public void restoreLastSnapshot() throws RestoreAlreadyInProgress, RemoteException, NotBoundException {
-        int snapshotToRestore=0; //TODO: get the correct id to restore
+        int snapshotToRestore=Storage.getLastSnapshotId();
 
         // we set our node to the not-ready state and restore our connections and state according to our snapshot
         this.remoteImplementation.setReady(false);
@@ -209,7 +209,15 @@ public class DistributedSnapshot<StateType, MessageType> {
         }
     }
 
-    //TODO: function to make other nodes forget on node
+    /**
+     * Remove the specified node from the network by telling everyone to do so
+     */
+    public void removeNode(String hostname, int port) throws RemoteException {
+        this.remoteImplementation.remoteNodes.remove(this.remoteImplementation.getRemoteNode(hostname, port));
+        for(RemoteNode<MessageType> remoteNode : this.remoteImplementation.remoteNodes){
+            remoteNode.remoteInterface.forgetThisNode(hostname,port);
+        }
+    }
 
     /**
      * This is method is used to get the reference of a RemoteNode

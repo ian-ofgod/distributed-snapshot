@@ -299,6 +299,13 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     }
 
     @Override
+    public void forgetThisNode(String hostname, int port) throws RemoteException {
+        if(getRemoteNode(hostname, port)!=null){
+            this.remoteNodes.remove(getRemoteNode(hostname, port));
+        }
+    }
+
+    @Override
     public void restoreOldIncomingMessages(int snapshotId) throws RestoreAlreadyInProgress, RemoteException {
         if (nodeReady) {
             if(currentSnapshotToBeRestored == null){
