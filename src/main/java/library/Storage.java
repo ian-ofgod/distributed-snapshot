@@ -74,69 +74,75 @@ class Storage {
     }
 
     public static <StateType, MessageType> Snapshot<StateType, MessageType> readFile(int snapshotId){
-        return readFile(snapshotId,"localhost",000);
+        return readFile(snapshotId,"localhost",0);
     }
 
     public static <StateType, MessageType> Snapshot<StateType, MessageType> readFile(int snapshotId, String currentIp, int currentPort) {
         Snapshot<StateType, MessageType> loaded_snapshot = new Snapshot<>(snapshotId);
         loaded_snapshot.messages = new HashMap<>();
-        String folderName = buildFolderName(loaded_snapshot,currentIp,currentPort);
-        System.out.println("capcap");
-        System.out.println(folderName);
-        try {
-            File dir = new File("./"+folderName);
-            File[] directoryListing = dir.listFiles();
-            System.out.println(directoryListing);
-            if (directoryListing != null) {
-                for (File child : directoryListing) { //for each entity
 
-                    String filename = child.getName();
-                    System.out.println(filename);
-                    ArrayList<MessageType> empty_messages = new ArrayList<>();
-                    if(filename.equals("state.ser")){ // I'm reading the state
-                        FileInputStream fos = new FileInputStream(folderName + "state.ser");
-                        ObjectInputStream oos = new ObjectInputStream(fos);
-                        StateType state = (StateType) oos.readObject();
-                        loaded_snapshot.state = state;
-                    } else if (filename.equals("connectedNodes.ser")) { // I'm reading the list of nodes
-                        FileInputStream fos = new FileInputStream(folderName + "connectedNodes.ser");
-                        ObjectInputStream oos = new ObjectInputStream(fos);
-                        ArrayList<Entity> connectedNodes  = (ArrayList<Entity>) oos.readObject();
-                        loaded_snapshot.connectedNodes = connectedNodes;
+        File dir = new File(FOLDER + "/" + currentIp + "_" + currentPort + "/");
+        File[] all_snaps = dir.listFiles();
+        for (File folder : all_snaps){
+            if(folder.getAbsolutePath().contains(String.valueOf(snapshotId))){
+                String folderName = folder.getAbsolutePath() + "/";
+                try {
+                    File dir2 = new File(folderName);
+                    File[] directoryListing = dir2.listFiles();
+                    if (directoryListing != null) {
 
-                    } else { // I'm reading a message
-                        String[] tokens = filename.split("_");
-                        String ip = tokens[0];
-                        int port = Integer.parseInt(tokens[1]);
-                        int msg_idx = Integer.parseInt(tokens[tokens.length-1].substring(0,1));
-                        Entity sender = new Entity(ip,port);
+                        for (File child : directoryListing) { //for each entity
 
-                        if (!loaded_snapshot.messages.containsKey(sender)){
-                            loaded_snapshot.messages.put(sender,empty_messages);
+                            String filename = child.getName();
+                            ArrayList<MessageType> empty_messages = new ArrayList<>();
+                            if(filename.equals("state.ser")){ // I'm reading the state
+                                FileInputStream fos = new FileInputStream(folderName + "state.ser");
+                                ObjectInputStream oos = new ObjectInputStream(fos);
+                                StateType state = (StateType) oos.readObject();
+                                loaded_snapshot.state = state;
+                            } else if (filename.equals("connectedNodes.ser")) { // I'm reading the list of nodes
+                                FileInputStream fos = new FileInputStream(folderName + "connectedNodes.ser");
+                                ObjectInputStream oos = new ObjectInputStream(fos);
+                                ArrayList<Entity> connectedNodes  = (ArrayList<Entity>) oos.readObject();
+                                loaded_snapshot.connectedNodes = connectedNodes;
+
+                            } else { // I'm reading a message
+                                String[] tokens = filename.split("_");
+                                String ip = tokens[0];
+                                int port = Integer.parseInt(tokens[1]);
+                                int msg_idx = Integer.parseInt(tokens[tokens.length-1].substring(0,1));
+                                Entity sender = new Entity(ip,port);
+
+                                if (!loaded_snapshot.messages.containsKey(sender)){
+                                    loaded_snapshot.messages.put(sender,empty_messages);
+                                }
+                                FileInputStream fos = new FileInputStream(folderName + filename);
+                                ObjectInputStream oos = new ObjectInputStream(fos);
+                                MessageType message = (MessageType) oos.readObject();
+                                loaded_snapshot.messages.get(sender).add(msg_idx-1,message);
+                            }
                         }
-                        FileInputStream fos = new FileInputStream(folderName + filename);
-                        ObjectInputStream oos = new ObjectInputStream(fos);
-                        MessageType message = (MessageType) oos.readObject();
-                        loaded_snapshot.messages.get(sender).add(msg_idx-1,message);
-                    }
-                }
-            } else {
-                //TODO: controllare se serve gestire il caso in cui dir non e' davvero directory
+                    } else {
+                        //TODO: controllare se serve gestire il caso in cui dir non e' davvero directory
 
                 /*Checking dir.isDirectory() above would not be sufficient
                  to avoid race conditions with another process that deletes
                  directories.*/
+                    }
+
+
+                } catch (IOException e) {
+                    System.err.println("Could not read file");
+                    e.printStackTrace();
+                } catch (ClassNotFoundException e){
+                    System.err.println("Could not cast deserialized object to the expected type");
+                }
             }
 
 
-        } catch (IOException e) {
-            System.err.println("Could not read file");
-            e.printStackTrace();
-        } catch (ClassNotFoundException e){
-            System.err.println("Could not cast deserialized object to the expected type");
+
         }
-        System.out.println("@@@@@@@@@@@@@@@@");
-        System.out.println(loaded_snapshot);
+
         return loaded_snapshot;
     }
 
@@ -161,7 +167,6 @@ class Storage {
         HashMap<Entity, ArrayList<MessageType>> messageMap = toSaveSnapshot.messages;
         ArrayList<Entity> connectedNodes = toSaveSnapshot.connectedNodes;
         String folderName = buildFolderName(toSaveSnapshot,currentIp,currentPort);
-        System.out.println(folderName);
         createFolder(folderName, currentIp, currentPort);
 
         try {
