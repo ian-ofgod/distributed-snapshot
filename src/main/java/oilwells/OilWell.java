@@ -73,6 +73,8 @@ public class OilWell implements AppConnector<OilCargo> {
             logger.warn("Cannot initialize new node");
         } catch (AlreadyInitialized e) {
             logger.info("You have already initialized your node!");
+        } catch (RestoreInProgress restoreInProgress) {
+            restoreInProgress.printStackTrace();
         }
     }
 
@@ -141,6 +143,8 @@ public class OilWell implements AppConnector<OilCargo> {
                 logger.warn("Cannot complete snapshot");
             } catch (NotInitialized e) {
                 logger.info("You must first initialize your oil well!");
+            } catch (RestoreInProgress restoreInProgress) {
+                restoreInProgress.printStackTrace();
             }
         } else logger.info("You must first initialize your oil well!");
     }
@@ -172,6 +176,8 @@ public class OilWell implements AppConnector<OilCargo> {
                         logger.info("You must first initialize your oil well!");
                     } catch (StateUpdateException e) {
                         logger.info("Error in updating state");
+                    } catch (RestoreInProgress restoreInProgress) {
+                        restoreInProgress.printStackTrace();
                     }
                 }
             }
@@ -188,7 +194,7 @@ public class OilWell implements AppConnector<OilCargo> {
             try {
                 distributedSnapshot.updateState(oilAmount);
                 logger.info("Received " + message.getOilAmount() + " oil from " + senderHostname + ":" + senderPort + ". New oilAmount = " + oilAmount);
-            } catch (StateUpdateException e) {
+            } catch (StateUpdateException | RestoreInProgress e) {
                 logger.warn("Received " + message.getOilAmount() + " oil from " + senderHostname + ":" + senderPort + ". Error updating state");
             }
         }

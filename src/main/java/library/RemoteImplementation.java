@@ -21,7 +21,6 @@ import java.util.concurrent.Executors;
  * @param <StateType> this is the type that will be saved as the state of the application
  * */
     //TODO: testare un paio di metodi interni qui
-    //TODO: ok that the functions do nothing in the not-ready state
 class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<MessageType> {
 
     /**
@@ -106,8 +105,6 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
             } else {
                 throw new UnexpectedMarkerReceived("ERROR: received a marker from a node not present in my remote nodes list");
             }
-        } else {
-            //TODO: what to do when the node is not ready?
         }
     }
 
@@ -265,28 +262,30 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
 
     @Override
     public void restoreState(int snapshotId) throws RestoreAlreadyInProgress, RemoteException {
-        if(currentSnapshotToBeRestored == null){
-           currentSnapshotToBeRestored= Storage.readFile(snapshotId);
+        if(!nodeReady) {
+            if (currentSnapshotToBeRestored == null) {
+                currentSnapshotToBeRestored = Storage.readFile(snapshotId);
+            } else if (snapshotId != currentSnapshotToBeRestored.snapshotId) {
+                throw new RestoreAlreadyInProgress("CRITICAL ERROR: Another snapshot is being restored");
+            }
+            this.currentState = currentSnapshotToBeRestored.state; //TODO: @Luca should the modification on State be synchronized on StateLock?
         }
-        else if(snapshotId != currentSnapshotToBeRestored.snapshotId) {
-            throw new RestoreAlreadyInProgress("CRITICAL ERROR: Another snapshot is being restored");
-        }
-        this.currentState=currentSnapshotToBeRestored.state; //TODO: @Luca should the modification on State be synchronized on StateLock?
     }
 
     @Override
     public void restoreConnections(int snapshotId) throws RestoreAlreadyInProgress, RemoteException, NotBoundException {
-        if(currentSnapshotToBeRestored == null){
-            currentSnapshotToBeRestored= Storage.readFile(snapshotId);
-        }
-        else if(snapshotId != currentSnapshotToBeRestored.snapshotId) {
-            throw new RestoreAlreadyInProgress("CRITICAL ERROR: Another snapshot is being restored");
-        }
-        this.remoteNodes=new ArrayList<>();
-        for (Entity entity : currentSnapshotToBeRestored.connectedNodes) {
-            Registry registry = LocateRegistry.getRegistry(entity.getIpAddress(), entity.getPort());
-            RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
-            this.remoteNodes.add(new RemoteNode<>(entity.getIpAddress(), entity.getPort(), remoteInterface));
+        if(!nodeReady) {
+            if (currentSnapshotToBeRestored == null) {
+                currentSnapshotToBeRestored = Storage.readFile(snapshotId);
+            } else if (snapshotId != currentSnapshotToBeRestored.snapshotId) {
+                throw new RestoreAlreadyInProgress("CRITICAL ERROR: Another snapshot is being restored");
+            }
+            this.remoteNodes = new ArrayList<>();
+            for (Entity entity : currentSnapshotToBeRestored.connectedNodes) {
+                Registry registry = LocateRegistry.getRegistry(entity.getIpAddress(), entity.getPort());
+                RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
+                this.remoteNodes.add(new RemoteNode<>(entity.getIpAddress(), entity.getPort(), remoteInterface));
+            }
         }
     }
 
@@ -300,8 +299,10 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
 
     @Override
     public void forgetThisNode(String hostname, int port) throws RemoteException {
-        if(getRemoteNode(hostname, port)!=null){
-            this.remoteNodes.remove(getRemoteNode(hostname, port));
+        if(nodeReady) {
+            if (getRemoteNode(hostname, port) != null) {
+                this.remoteNodes.remove(getRemoteNode(hostname, port));
+            }
         }
     }
 

@@ -12,7 +12,7 @@ import java.util.ArrayList;
 
 public class DistributedSnapshotTest {
     @Test
-    public void simpleExample() throws NotBoundException, RemoteNodeAlreadyPresent, RemoteException, RemoteNodeNotFound, SnapshotInterruptException, NotInitialized, StateUpdateException, AlreadyBoundException, AlreadyInitialized {
+    public void simpleExample() throws NotBoundException, RemoteNodeAlreadyPresent, RemoteException, RemoteNodeNotFound, SnapshotInterruptException, NotInitialized, StateUpdateException, AlreadyBoundException, AlreadyInitialized, RestoreInProgress {
         BasicApp<Message> basicApp1= new BasicApp<>();
         BasicApp<Message> basicApp2= new BasicApp<>();
         BasicApp<Message> basicApp3= new BasicApp<>();

@@ -19,7 +19,6 @@ import java.util.Objects;
  * @param <StateType> this is the type that will be used to store the application state
  * @param <MessageType> this is the type that will be exchanged as a message between nodes
  * */
-//TODO: add throw of RestoreInProgress sendMessage
 public class DistributedSnapshot<StateType, MessageType> {
     /**
      * The implementation of the remoteInterface used on this node
@@ -84,11 +83,13 @@ public class DistributedSnapshot<StateType, MessageType> {
      * @throws NotInitialized this instance hasn't been initialized, you must do it first
      * @throws SnapshotInterruptException it's not possible to remove a node when a snapshot is running
      */
-    public void sendMessage(String hostname, int port, MessageType message) throws RemoteNodeNotFound, RemoteException, NotBoundException, NotInitialized, SnapshotInterruptException {
+    public void sendMessage(String hostname, int port, MessageType message) throws RemoteNodeNotFound, RemoteException, NotBoundException, NotInitialized, SnapshotInterruptException, RestoreInProgress {
         if (remoteImplementation.appConnector == null) throw new NotInitialized("You must initialize the instance and connect to hostname: " + hostname +
                 "and port " + port +
                 "before sending a message");
-
+        if(!remoteImplementation.nodeReady){
+            throw new RestoreInProgress("A restore is in progress, please wait until node is ready");
+        }
         synchronized (remoteImplementation) {
             getRemoteInterface(hostname, port).receiveMessage(remoteImplementation.hostname, remoteImplementation.port, message);
         }
@@ -98,7 +99,10 @@ public class DistributedSnapshot<StateType, MessageType> {
      * @param state the object to save
      * @throws StateUpdateException something went wrong making a deep copy
      * */
-    public void updateState(StateType state) throws StateUpdateException {
+    public void updateState(StateType state) throws StateUpdateException, RestoreInProgress {
+        if(!remoteImplementation.nodeReady){
+            throw new RestoreInProgress("A restore is in progress, please wait until node is ready");
+        }
         synchronized (remoteImplementation.currentStateLock) {
             try {
                 this.remoteImplementation.currentState=deepClone(state);
@@ -115,8 +119,9 @@ public class DistributedSnapshot<StateType, MessageType> {
      * @throws UnexpectedMarkerReceived the sender node is not present in the remote nodes list
      * @throws NotInitialized this instance hasn't been initialized, you must do it first
      * */
-    public void initiateSnapshot() throws RemoteException, DoubleMarkerException, UnexpectedMarkerReceived, NotInitialized {
+    public void initiateSnapshot() throws RemoteException, DoubleMarkerException, UnexpectedMarkerReceived, NotInitialized, RestoreInProgress {
         if (remoteImplementation.appConnector == null) throw new NotInitialized("You must initialize the instance before starting a snapshot");
+        if(!remoteImplementation.nodeReady) throw new RestoreInProgress("A restore is in progress, please wait until node is ready");
 
         int snapshotId;
         synchronized (remoteImplementation) {
@@ -175,7 +180,9 @@ public class DistributedSnapshot<StateType, MessageType> {
         }
     }
 
-    public void restoreLastSnapshot() throws RestoreAlreadyInProgress, RemoteException, NotBoundException {
+    public void restoreLastSnapshot() throws RestoreAlreadyInProgress, RemoteException, NotBoundException, RestoreInProgress {
+        if(!remoteImplementation.nodeReady) throw new RestoreInProgress("A restore is in progress, please wait until node is ready");
+
         int snapshotToRestore=Storage.getLastSnapshotId();
 
         // we set our node to the not-ready state and restore our connections and state according to our snapshot
@@ -212,7 +219,8 @@ public class DistributedSnapshot<StateType, MessageType> {
     /**
      * Remove the specified node from the network by telling everyone to do so
      */
-    public void removeNode(String hostname, int port) throws RemoteException {
+    public void removeNode(String hostname, int port) throws RemoteException, RestoreInProgress {
+        if(!remoteImplementation.nodeReady) throw new RestoreInProgress("A restore is in progress, please wait until node is ready");
         this.remoteImplementation.remoteNodes.remove(this.remoteImplementation.getRemoteNode(hostname, port));
         for(RemoteNode<MessageType> remoteNode : this.remoteImplementation.remoteNodes){
             remoteNode.remoteInterface.forgetThisNode(hostname,port);
