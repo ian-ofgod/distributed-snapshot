@@ -136,14 +136,14 @@ public class SnapshotTest {
         runningSnapshots4.add(snapshot4b);
 
 
-        Storage.writeFile(runningSnapshots1,"192.168.0.1123".hashCode()); // saves snapshot1a
-        Storage.writeFile(runningSnapshots2,"192.168.0.1124".hashCode()); // saves snapshot2a
-        Storage.writeFile(runningSnapshots3,"192.168.0.1125".hashCode()); // saves snapshot3a
-        Storage.writeFile(runningSnapshots4,"192.168.0.1126".hashCode()); // saves snapshot4a
-        Storage.writeFile(runningSnapshots1,"192.168.0.1127".hashCode()); // saves snapshot1b
-        Storage.writeFile(runningSnapshots2,"192.168.0.1128".hashCode()); // saves snapshot2b
-        Storage.writeFile(runningSnapshots3,"192.168.0.1129".hashCode()); // saves snapshot3b
-        Storage.writeFile(runningSnapshots4,"192.168.0.1130".hashCode()); // saves snapshot4b
+        Storage.writeFile(runningSnapshots1,"192.168.0.1123".hashCode(), "localhost", 0000); // saves snapshot1a
+        Storage.writeFile(runningSnapshots2,"192.168.0.1124".hashCode(), "localhost", 0000); // saves snapshot2a
+        Storage.writeFile(runningSnapshots3,"192.168.0.1125".hashCode(), "localhost", 0000); // saves snapshot3a
+        Storage.writeFile(runningSnapshots4,"192.168.0.1126".hashCode(), "localhost", 0000); // saves snapshot4a
+        Storage.writeFile(runningSnapshots1,"192.168.0.1127".hashCode(), "localhost", 0000); // saves snapshot1b
+        Storage.writeFile(runningSnapshots2,"192.168.0.1128".hashCode(), "localhost", 0000); // saves snapshot2b
+        Storage.writeFile(runningSnapshots3,"192.168.0.1129".hashCode(), "localhost", 0000); // saves snapshot3b
+        Storage.writeFile(runningSnapshots4,"192.168.0.1130".hashCode(), "localhost", 0000); // saves snapshot4b
 
 
         Snapshot readSnap1 = Storage.readFile("192.168.0.1123".hashCode());

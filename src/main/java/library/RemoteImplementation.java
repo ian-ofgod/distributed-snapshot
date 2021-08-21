@@ -99,7 +99,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
                 }
 
                 if (receivedMarkerFromAllLinks(snapshotId)) { //we have received a marker from all the channels
-                    Storage.writeFile(runningSnapshots, snapshotId);
+                    Storage.writeFile(runningSnapshots, snapshotId, this.hostname, this.port);
                     runningSnapshots.remove(snap);
                 }
             } else {

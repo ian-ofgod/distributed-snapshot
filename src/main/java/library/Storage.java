@@ -146,12 +146,6 @@ class Storage {
         return loaded_snapshot;
     }
 
-
-    public static <StateType, MessageType> void writeFile(ArrayList<Snapshot<StateType, MessageType>> runningSnapshots, int snapshotId) {
-        writeFile(runningSnapshots, snapshotId, "localhost", 0000);
-
-    }
-
     /**
      * Method to save a snapshot portion on disk. It saves one folder per snapshot;
      * the source Entity (ip/port) is written in messages filename. It will be parsed.
