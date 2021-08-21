@@ -53,70 +53,38 @@ public class SnapshotTest {
         snapshot1a.connectedNodes.add(entity1);
         snapshot1a.connectedNodes.add(entity2);
         snapshot1a.connectedNodes.add(entity3);
-        snapshot1a.messages.put(entity1, new ArrayList<>());
-        snapshot1a.messages.put(entity2, new ArrayList<>());
-        snapshot1a.messages.put(entity3, new ArrayList<>());
 
-        snapshot2a.messages.put(entity1, new ArrayList<>());
-        snapshot2a.messages.put(entity2, new ArrayList<>());
-        snapshot2a.messages.put(entity3, new ArrayList<>());
+        snapshot1a.messages.add(new Envelope(entity1,message1));
+        snapshot1a.messages.add(new Envelope(entity2,message1));
+        snapshot1a.messages.add(new Envelope(entity3,message1));
 
-        snapshot3a.messages.put(entity1, new ArrayList<>());
-        snapshot3a.messages.put(entity2, new ArrayList<>());
-        snapshot3a.messages.put(entity3, new ArrayList<>());
+        snapshot2a.messages.add(new Envelope(entity1,message2));
+        snapshot2a.messages.add(new Envelope(entity2,message2));
+        snapshot2a.messages.add(new Envelope(entity3,message2));
 
-        snapshot4a.messages.put(entity1, new ArrayList<>());
-        snapshot4a.messages.put(entity2, new ArrayList<>());
-        snapshot4a.messages.put(entity3, new ArrayList<>());
+        snapshot3a.messages.add(new Envelope(entity1,message1));
+        snapshot3a.messages.add(new Envelope(entity2,message1));
+        snapshot3a.messages.add(new Envelope(entity3,message1));
 
-        snapshot1b.messages.put(entity1, new ArrayList<>());
-        snapshot1b.messages.put(entity2, new ArrayList<>());
-        snapshot1b.messages.put(entity3, new ArrayList<>());
+        snapshot4a.messages.add(new Envelope(entity1,message2));
+        snapshot4a.messages.add(new Envelope(entity2,message2));
+        snapshot4a.messages.add(new Envelope(entity3,message2));
 
-        snapshot2b.messages.put(entity1, new ArrayList<>());
-        snapshot2b.messages.put(entity2, new ArrayList<>());
-        snapshot2b.messages.put(entity3, new ArrayList<>());
+        snapshot1b.messages.add(new Envelope(entity1,message1));
+        snapshot1b.messages.add(new Envelope(entity2,message1));
+        snapshot1b.messages.add(new Envelope(entity3,message1));
 
-        snapshot3b.messages.put(entity1, new ArrayList<>());
-        snapshot3b.messages.put(entity2, new ArrayList<>());
-        snapshot3b.messages.put(entity3, new ArrayList<>());
+        snapshot2b.messages.add(new Envelope(entity1,message2));
+        snapshot2b.messages.add(new Envelope(entity2,message2));
+        snapshot2b.messages.add(new Envelope(entity3,message2));
 
-        snapshot4b.messages.put(entity1, new ArrayList<>());
-        snapshot4b.messages.put(entity2, new ArrayList<>());
-        snapshot4b.messages.put(entity3, new ArrayList<>());
+        snapshot3b.messages.add(new Envelope(entity1,message1));
+        snapshot3b.messages.add(new Envelope(entity2,message1));
+        snapshot3b.messages.add(new Envelope(entity3,message1));
 
-
-        snapshot1a.messages.get(entity1).add(message1);
-        snapshot1a.messages.get(entity2).add(message1);
-        snapshot1a.messages.get(entity3).add(message1);
-
-        snapshot2a.messages.get(entity1).add(message2);
-        snapshot2a.messages.get(entity2).add(message2);
-        snapshot2a.messages.get(entity3).add(message2);
-
-        snapshot3a.messages.get(entity1).add(message1);
-        snapshot3a.messages.get(entity2).add(message1);
-        snapshot3a.messages.get(entity3).add(message1);
-
-        snapshot4a.messages.get(entity1).add(message2);
-        snapshot4a.messages.get(entity2).add(message2);
-        snapshot4a.messages.get(entity3).add(message2);
-
-        snapshot1b.messages.get(entity1).add(message1);
-        snapshot1b.messages.get(entity2).add(message1);
-        snapshot1b.messages.get(entity3).add(message1);
-
-        snapshot2b.messages.get(entity1).add(message2);
-        snapshot2b.messages.get(entity2).add(message2);
-        snapshot2b.messages.get(entity3).add(message2);
-
-        snapshot3b.messages.get(entity1).add(message1);
-        snapshot3b.messages.get(entity2).add(message1);
-        snapshot3b.messages.get(entity3).add(message1);
-
-        snapshot4b.messages.get(entity1).add(message2);
-        snapshot4b.messages.get(entity2).add(message2);
-        snapshot4b.messages.get(entity3).add(message2);
+        snapshot4b.messages.add(new Envelope(entity1,message2));
+        snapshot4b.messages.add(new Envelope(entity2,message2));
+        snapshot4b.messages.add(new Envelope(entity3,message2));
 
 
         ArrayList<Snapshot<MockState1,MockMessage1>> runningSnapshots1 = new ArrayList<>();

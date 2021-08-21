@@ -79,7 +79,7 @@ class Storage {
 
     public static <StateType, MessageType> Snapshot<StateType, MessageType> readFile(int snapshotId, String currentIp, int currentPort) {
         Snapshot<StateType, MessageType> loaded_snapshot = new Snapshot<>(snapshotId);
-        loaded_snapshot.messages = new HashMap<>();
+        loaded_snapshot.messages = new ArrayList<>();
 
         File dir = new File(FOLDER + "/" + currentIp + "_" + currentPort + "/");
         File[] all_snaps = dir.listFiles();
@@ -94,7 +94,6 @@ class Storage {
                         for (File child : directoryListing) { //for each entity
 
                             String filename = child.getName();
-                            ArrayList<MessageType> empty_messages = new ArrayList<>();
                             if(filename.equals("state.ser")){ // I'm reading the state
                                 FileInputStream fos = new FileInputStream(folderName + "state.ser");
                                 ObjectInputStream oos = new ObjectInputStream(fos);
@@ -113,12 +112,11 @@ class Storage {
                                 int msg_idx = Integer.parseInt(tokens[tokens.length-1].substring(0,1));
                                 Entity sender = new Entity(ip,port);
 
-                                if (!loaded_snapshot.messages.containsKey(sender)){
-                                    loaded_snapshot.messages.put(sender,empty_messages);
-                                }
                                 FileInputStream fos = new FileInputStream(folderName + filename);
                                 ObjectInputStream oos = new ObjectInputStream(fos);
                                 MessageType message = (MessageType) oos.readObject();
+
+
                                 loaded_snapshot.messages.get(sender).add(msg_idx-1,message);
                             }
                         }
@@ -164,7 +162,7 @@ class Storage {
         COUNTER++;
         Snapshot<StateType, MessageType> toSaveSnapshot = runningSnapshots.stream().filter(snap -> snap.snapshotId==snapshotId).findFirst().orElse(null);
         StateType state = toSaveSnapshot.state;
-        HashMap<Entity, ArrayList<MessageType>> messageMap = toSaveSnapshot.messages;
+        ArrayList<Envelope> messageMap = toSaveSnapshot.messages;
         ArrayList<Entity> connectedNodes = toSaveSnapshot.connectedNodes;
         String folderName = buildFolderName(toSaveSnapshot,currentIp,currentPort);
         createFolder(folderName, currentIp, currentPort);

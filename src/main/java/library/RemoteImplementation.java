@@ -118,8 +118,8 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
                 if (!runningSnapshots.isEmpty()) { // Snapshot running
                     runningSnapshots.forEach((snap) -> {
                         if (!checkIfReceivedMarker(senderHostname, senderPort, snap.snapshotId)) {
-                            snap.messages.computeIfAbsent(new Entity(senderHostname, senderPort), k -> new ArrayList<>());
-                            snap.messages.get(new Entity(senderHostname, senderPort)).add(message);
+
+                            snap.messages.add(new Envelope(new Entity(senderHostname, senderPort),message));
                         }
                     });
                 }

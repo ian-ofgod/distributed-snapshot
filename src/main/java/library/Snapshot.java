@@ -36,7 +36,7 @@ class Snapshot<StateType, MessageType> {
      * It keeps track of the sender of the message, in case the application needs it.
      * The sender of the message is stored in a specific class Entity.
      * */
-    protected HashMap<Entity, ArrayList<MessageType>> messages = new HashMap<>();
+    protected ArrayList<Envelope> messages = new ArrayList<>();
 
     /**
      * Snapshot constructor that builds a full snapshot objects. Additionally to
@@ -107,5 +107,39 @@ class Snapshot<StateType, MessageType> {
     public int hashCode() {
         return Objects.hash(snapshotId);
     }
+
+
 }
+
+class Envelope<MessageType>{
+    protected Entity sender;
+    protected MessageType message;
+
+    public Envelope(Entity sender, MessageType message) {
+        this.sender = sender;
+        this.message = message;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Envelope<MessageType> envelope = (Envelope<MessageType>) o;
+        return sender.equals(envelope.sender) && message.equals(envelope.message);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(sender, message);
+    }
+
+    @Override
+    public String toString() {
+        return "Envelope{" +
+                "sender=" + sender +
+                ", message=" + message +
+                '}';
+    }
+}
+
 
