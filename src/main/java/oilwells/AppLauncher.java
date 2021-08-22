@@ -27,6 +27,7 @@ public final class AppLauncher {
         logger.info("Example: initialize, localhost, 10000, 1000");
         logger.info("Example: join, localhost, 10001");
         logger.info("Example: snapshot");
+        logger.info("Example: restore");
         logger.info("Example: disconnect");
         while (true) {
             try {
