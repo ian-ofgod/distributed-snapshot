@@ -75,10 +75,11 @@ class Storage {
 
     public static <StateType, MessageType> Snapshot<StateType, MessageType> readFile(int snapshotId, String currentIp, int currentPort) {
         Snapshot<StateType, MessageType> loaded_snapshot = new Snapshot<>(snapshotId);
-        loaded_snapshot.messages = new HashMap<>();
+        loaded_snapshot.messages = new ArrayList<>();
 
         File dir = new File(FOLDER + "/" + currentIp + "_" + currentPort + "/");
         File[] all_snaps = dir.listFiles();
+        assert all_snaps != null;
         for (File folder : all_snaps){
             if(folder.getAbsolutePath().contains(String.valueOf(snapshotId))){
                 String folderName = folder.getAbsolutePath() + "/";
@@ -90,18 +91,14 @@ class Storage {
                         for (File child : directoryListing) { //for each entity
 
                             String filename = child.getName();
-                            ArrayList<MessageType> empty_messages = new ArrayList<>();
                             if(filename.equals("state.ser")){ // I'm reading the state
                                 FileInputStream fos = new FileInputStream(folderName + "state.ser");
                                 ObjectInputStream oos = new ObjectInputStream(fos);
-                                StateType state = (StateType) oos.readObject();
-                                loaded_snapshot.state = state;
+                                loaded_snapshot.state = (StateType) oos.readObject();
                             } else if (filename.equals("connectedNodes.ser")) { // I'm reading the list of nodes
                                 FileInputStream fos = new FileInputStream(folderName + "connectedNodes.ser");
                                 ObjectInputStream oos = new ObjectInputStream(fos);
-                                ArrayList<Entity> connectedNodes  = (ArrayList<Entity>) oos.readObject();
-                                loaded_snapshot.connectedNodes = connectedNodes;
-
+                                loaded_snapshot.connectedNodes = (ArrayList<Entity>) oos.readObject();
                             } else { // I'm reading a message
                                 String[] tokens = filename.split("_");
                                 String ip = tokens[0];
@@ -109,13 +106,12 @@ class Storage {
                                 int msg_idx = Integer.parseInt(tokens[tokens.length-1].substring(0,1));
                                 Entity sender = new Entity(ip,port);
 
-                                if (!loaded_snapshot.messages.containsKey(sender)){
-                                    loaded_snapshot.messages.put(sender,empty_messages);
-                                }
                                 FileInputStream fos = new FileInputStream(folderName + filename);
                                 ObjectInputStream oos = new ObjectInputStream(fos);
                                 MessageType message = (MessageType) oos.readObject();
-                                loaded_snapshot.messages.get(sender).add(msg_idx-1,message);
+
+
+                                loaded_snapshot.messages.add(new Envelope<>(sender, message));
                             }
                         }
                     } else {
@@ -153,8 +149,9 @@ class Storage {
     public static <StateType, MessageType> void writeFile(ArrayList<Snapshot<StateType, MessageType>> runningSnapshots, int snapshotId, String currentIp, int currentPort) {
         COUNTER++;
         Snapshot<StateType, MessageType> toSaveSnapshot = runningSnapshots.stream().filter(snap -> snap.snapshotId==snapshotId).findFirst().orElse(null);
+        assert toSaveSnapshot != null;
         StateType state = toSaveSnapshot.state;
-        HashMap<Entity, ArrayList<MessageType>> messageMap = toSaveSnapshot.messages;
+        ArrayList<Envelope<MessageType>> envelopes = toSaveSnapshot.messages;
         ArrayList<Entity> connectedNodes = toSaveSnapshot.connectedNodes;
         String folderName = buildFolderName(toSaveSnapshot,currentIp,currentPort);
         createFolder(folderName, currentIp, currentPort);
@@ -163,17 +160,12 @@ class Storage {
             FileOutputStream fos = new FileOutputStream(folderName+"state.ser");
             ObjectOutputStream oos = new ObjectOutputStream(fos);
             oos.writeObject(state);
-            Iterator entity = messageMap.keySet().iterator();
-            while (entity.hasNext()) {
-                Entity current_entity = (Entity) entity.next();
-                String entity_identifier = current_entity.toString().replace(":","_");
-                ArrayList<MessageType> current_messages = (ArrayList<MessageType>) messageMap.get(current_entity);
-                for (int i =0; i < current_messages.size(); i++ ){
-                    fos = new FileOutputStream(folderName+entity_identifier+"_message_"+(i+1)+".ser");
-                    oos = new ObjectOutputStream(fos);
-                    MessageType message = current_messages.get(i);
-                    oos.writeObject(message);
-                }
+            int i=0; // global id for messages
+            for (Envelope<MessageType> envelope : envelopes) {
+                String entity_identifier = envelope.sender.toString().replace(":", "_");
+                fos = new FileOutputStream(folderName + entity_identifier + "_message_" + (++i) + ".ser");
+                oos = new ObjectOutputStream(fos);
+                oos.writeObject(envelope.message);
                 //TODO: controllare se non rimuovere it genera effettivamente una ConcurrentModificationException, nel cui caso bisogna clonare prima
                 //it.remove(); // avoids a ConcurrentModificationException
             }
@@ -194,7 +186,7 @@ class Storage {
      * @param <StateType> this is the type that will be saved as the state of the application
      * @param snapshot the snapshot for which the name is built, will be saved on disk
      * */
-    private static final <StateType, MessageType> String buildFolderName(Snapshot<StateType, MessageType> snapshot, String currentIp, int currentPort) {
+    private static <StateType, MessageType> String buildFolderName(Snapshot<StateType, MessageType> snapshot, String currentIp, int currentPort) {
         return FOLDER + "/" + currentIp + "_" + currentPort + "/" + COUNTER +
                 "_"+ snapshot.snapshotId + "/" ;
     }
