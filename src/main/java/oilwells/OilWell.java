@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit;
  * It implements the public methods that the user can call from the command line interface. It uses a thread to periodically
  * send oil to a randomly chosen well.
  */
-public class OilWell implements AppConnector<OilCargo> {
+public class OilWell implements AppConnector<OilCargo, Integer> {
     /**
      * The amount of oil contained on the well
      */
@@ -196,6 +196,21 @@ public class OilWell implements AppConnector<OilCargo> {
                 }
             }
         }, 0, frequency, TimeUnit.MILLISECONDS);
+    }
+
+    @Override
+    public void handleRestoredState(Integer state) {
+        synchronized (oilAmountLock) {
+            oilAmount = state;
+        }
+    }
+
+    @Override
+    public void handleRestoredConnections(ArrayList<Entity> connections) {
+        directConnections.clear();
+        for (Entity entry : connections) {
+            directConnections.add(new ConnectionDetails(entry.getIpAddress(), entry.getPort()));
+        }
     }
 
     /**

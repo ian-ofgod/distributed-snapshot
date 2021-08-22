@@ -35,7 +35,7 @@ public class DistributedSnapshot<StateType, MessageType> {
      * @throws AlreadyBoundException the rmi registry has already bound a remote interface, try with another registry
      * @throws AlreadyInitialized this instance has been already initialized
      */
-    public void init(String yourHostname, int rmiRegistryPort, AppConnector<MessageType> appConnector) throws RemoteException, AlreadyBoundException, AlreadyInitialized {
+    public void init(String yourHostname, int rmiRegistryPort, AppConnector<MessageType, StateType> appConnector) throws RemoteException, AlreadyBoundException, AlreadyInitialized {
         if (remoteImplementation.appConnector != null) throw new AlreadyInitialized("You are trying to initialize an instance that is already initialized");
 
         synchronized (remoteImplementation) {

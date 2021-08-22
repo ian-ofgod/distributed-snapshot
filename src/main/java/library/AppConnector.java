@@ -1,13 +1,13 @@
 package library;
 
-import library.exceptions.StateUpdateException;
+import java.util.ArrayList;
 
 /**
  * This interface must be implemented by the application in order to use the library.
  * It is composed of the methods that will be triggered by the library when an new event occurs.
  * @param <MessageType> this is the type that will be exchanged as a message between nodes
  */
-public interface AppConnector<MessageType> {
+public interface AppConnector<MessageType, StateType> {
     /**
      * This is the method for the application to handle a new incoming message from another node on the network.
      * @param senderHostname the hostname of the sender
@@ -33,4 +33,8 @@ public interface AppConnector<MessageType> {
      * @param removeConnectionPort the port assigned to the RMI registry of the node requesting the removal of the connection
      */
     void handleRemoveConnection(String removeConnectionHostname, int removeConnectionPort);
+
+    void handleRestoredState(StateType state);
+
+    void handleRestoredConnections(ArrayList<Entity> connections);
 }

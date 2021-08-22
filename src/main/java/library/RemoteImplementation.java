@@ -51,7 +51,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     /**
      * Provided implementation of the class AppConnector
      * */
-    protected AppConnector<MessageType> appConnector;
+    protected AppConnector<MessageType, StateType> appConnector;
 
     /**
      * List of the ids of running snapshots
@@ -269,6 +269,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
                 throw new RestoreAlreadyInProgress("CRITICAL ERROR: Another snapshot is being restored");
             }
             this.currentState = currentSnapshotToBeRestored.state; //TODO: @Luca should the modification on State be synchronized on StateLock?
+            appConnector.handleRestoredState(this.currentState);
         }
     }
 
@@ -286,6 +287,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
                 RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
                 this.remoteNodes.add(new RemoteNode<>(entity.getIpAddress(), entity.getPort(), remoteInterface));
             }
+            appConnector.handleRestoredConnections(currentSnapshotToBeRestored.connectedNodes);
         }
     }
 
