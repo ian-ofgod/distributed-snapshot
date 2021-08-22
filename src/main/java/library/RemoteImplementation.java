@@ -135,8 +135,10 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
         if(nodeReady) {
             Registry registry = LocateRegistry.getRegistry(hostname, port);
             RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
-            remoteNodes.add(new RemoteNode<>(hostname, port, remoteInterface));
-            appConnector.handleNewConnection(hostname, port);
+            if(getRemoteNode(hostname, port)==null) {
+                remoteNodes.add(new RemoteNode<>(hostname, port, remoteInterface));
+                appConnector.handleNewConnection(hostname, port);
+            }
         }
     }
 

@@ -65,13 +65,18 @@ public class DistributedSnapshot<StateType, MessageType> {
             Registry registry = LocateRegistry.getRegistry(hostname, port);
             RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
             networkNodes = remoteInterface.getNodes();
-            remoteImplementation.remoteNodes.add(new RemoteNode<>(hostname, port, remoteInterface));
+            System.out.println(networkNodes); //DEBUG
+            this.remoteImplementation.remoteNodes=new ArrayList<>(); //reset current node connections
+            this.remoteImplementation.remoteNodes.add(new RemoteNode<>(hostname, port, remoteInterface));
+            System.out.println(this.remoteImplementation.remoteNodes); //DEBUG
             remoteInterface.addMeBack(remoteImplementation.hostname, remoteImplementation.port);
             for (Entity entry : networkNodes) {
-                Registry nodeRegistry = LocateRegistry.getRegistry(entry.getIpAddress(), entry.getPort());
-                RemoteInterface<MessageType> nodeRemoteInterface = (RemoteInterface<MessageType>) nodeRegistry.lookup("RemoteInterface");
-                remoteImplementation.remoteNodes.add(new RemoteNode<>(entry.getIpAddress(), entry.getPort(), nodeRemoteInterface));
-                nodeRemoteInterface.addMeBack(remoteImplementation.hostname, remoteImplementation.port);
+                if(!Objects.equals(entry.getIpAddress(), this.remoteImplementation.hostname) || entry.getPort()!=this.remoteImplementation.port) {
+                    Registry nodeRegistry = LocateRegistry.getRegistry(entry.getIpAddress(), entry.getPort());
+                    RemoteInterface<MessageType> nodeRemoteInterface = (RemoteInterface<MessageType>) nodeRegistry.lookup("RemoteInterface");
+                    remoteImplementation.remoteNodes.add(new RemoteNode<>(entry.getIpAddress(), entry.getPort(), nodeRemoteInterface));
+                    nodeRemoteInterface.addMeBack(remoteImplementation.hostname, remoteImplementation.port);
+                }
             }
             networkNodes.add(new Entity(hostname, port));
         }
