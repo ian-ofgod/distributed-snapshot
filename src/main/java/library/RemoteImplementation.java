@@ -264,7 +264,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     public void restoreState(int snapshotId) throws RestoreAlreadyInProgress, RemoteException {
         if(!nodeReady) {
             if (currentSnapshotToBeRestored == null) {
-                currentSnapshotToBeRestored = Storage.readFile(snapshotId);
+                currentSnapshotToBeRestored = Storage.readFile(snapshotId, this.hostname, this.port);
             } else if (snapshotId != currentSnapshotToBeRestored.snapshotId) {
                 throw new RestoreAlreadyInProgress("CRITICAL ERROR: Another snapshot is being restored");
             }
@@ -276,7 +276,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     public void restoreConnections(int snapshotId) throws RestoreAlreadyInProgress, RemoteException, NotBoundException {
         if(!nodeReady) {
             if (currentSnapshotToBeRestored == null) {
-                currentSnapshotToBeRestored = Storage.readFile(snapshotId);
+                currentSnapshotToBeRestored = Storage.readFile(snapshotId, this.hostname, this.port);
             } else if (snapshotId != currentSnapshotToBeRestored.snapshotId) {
                 throw new RestoreAlreadyInProgress("CRITICAL ERROR: Another snapshot is being restored");
             }
@@ -310,7 +310,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     public void restoreOldIncomingMessages(int snapshotId) throws RestoreAlreadyInProgress, RemoteException {
         if (nodeReady) {
             if(currentSnapshotToBeRestored == null){
-                currentSnapshotToBeRestored= Storage.readFile(snapshotId);
+                currentSnapshotToBeRestored= Storage.readFile(snapshotId, this.hostname, this.port);
             }
             else if(snapshotId != currentSnapshotToBeRestored.snapshotId) {
                 throw new RestoreAlreadyInProgress("CRITICAL ERROR: Another snapshot is being restored");

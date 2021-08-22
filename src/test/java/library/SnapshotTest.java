@@ -146,14 +146,14 @@ public class SnapshotTest {
         Storage.writeFile(runningSnapshots4,"192.168.0.1130".hashCode(), "localhost", 0000); // saves snapshot4b
 
 
-        Snapshot readSnap1 = Storage.readFile("192.168.0.1123".hashCode());
-        Snapshot readSnap2 = Storage.readFile("192.168.0.1124".hashCode());
-        Snapshot readSnap3 = Storage.readFile("192.168.0.1125".hashCode());
-        Snapshot readSnap4 = Storage.readFile("192.168.0.1126".hashCode());
-        Snapshot readSnap5 = Storage.readFile("192.168.0.1127".hashCode());
-        Snapshot readSnap6 = Storage.readFile("192.168.0.1128".hashCode());
-        Snapshot readSnap7 = Storage.readFile("192.168.0.1129".hashCode());
-        Snapshot readSnap8 = Storage.readFile("192.168.0.1130".hashCode());
+        Snapshot readSnap1 = Storage.readFile("192.168.0.1123".hashCode(), "localhost",0);
+        Snapshot readSnap2 = Storage.readFile("192.168.0.1124".hashCode(), "localhost",0);
+        Snapshot readSnap3 = Storage.readFile("192.168.0.1125".hashCode(), "localhost",0);
+        Snapshot readSnap4 = Storage.readFile("192.168.0.1126".hashCode(), "localhost",0);
+        Snapshot readSnap5 = Storage.readFile("192.168.0.1127".hashCode(), "localhost",0);
+        Snapshot readSnap6 = Storage.readFile("192.168.0.1128".hashCode(), "localhost",0);
+        Snapshot readSnap7 = Storage.readFile("192.168.0.1129".hashCode(), "localhost",0);
+        Snapshot readSnap8 = Storage.readFile("192.168.0.1130".hashCode(), "localhost",0);
 
         /* we must test state.equals() and messages.equals() separately,
         because we use Snapshot.equals() with just the snapshot ID
