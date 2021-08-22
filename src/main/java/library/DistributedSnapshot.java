@@ -11,6 +11,8 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * This is the main class of the distributed snapshot library. A DistributedSnapshot object must be created
@@ -41,11 +43,15 @@ public class DistributedSnapshot<StateType, MessageType> {
         synchronized (remoteImplementation) {
             remoteImplementation.hostname = yourHostname;
             remoteImplementation.port = rmiRegistryPort;
-            remoteImplementation.appConnector = appConnector; //TODO: move to the end
 
             RemoteInterface<MessageType> stub = (RemoteInterface<MessageType>) UnicastRemoteObject.exportObject(remoteImplementation, 0);
             Registry registry = LocateRegistry.createRegistry(remoteImplementation.port);
             registry.bind("RemoteInterface", stub);
+
+            //assignment done here and note above so that if a RemoteException is thrown
+            // the appConnector will still result as unassigned
+            remoteImplementation.appConnector = appConnector;
+
         }
     }
 
@@ -210,10 +216,21 @@ public class DistributedSnapshot<StateType, MessageType> {
         //now all the "modifying" functions can be called again, hence we will start handling the old messages
 
         //handle old incoming messages
-        //TODO: this should be handled in parallel
         this.remoteImplementation.restoreOldIncomingMessages(snapshotToRestore);
+        ExecutorService executors = Executors.newCachedThreadPool();
         for(RemoteNode<MessageType> remoteNode : this.remoteImplementation.remoteNodes) {
-            remoteNode.remoteInterface.restoreOldIncomingMessages(snapshotToRestore);
+           executors.submit(()-> {
+               //TODO: handle exception in ExecutorService
+               try {
+                   remoteNode.remoteInterface.restoreOldIncomingMessages(snapshotToRestore);
+               } catch (RemoteException e) {
+                  // throw new RestoreException("Unable to restore incoming messages for remoteNode: "+remoteNode.hostname+":"+remoteNode.port);
+                   e.printStackTrace();
+               } catch (RestoreAlreadyInProgress e) {
+                  // throw new RestoreAlreadyInProgress(e.getMessage());
+                   e.printStackTrace();
+               }
+           });
         }
     }
 
