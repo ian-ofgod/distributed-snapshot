@@ -119,7 +119,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
                     runningSnapshots.forEach((snap) -> {
                         if (!checkIfReceivedMarker(senderHostname, senderPort, snap.snapshotId)) {
 
-                            snap.messages.add(new Envelope(new Entity(senderHostname, senderPort),message));
+                            snap.messages.add(new Envelope<>(new Entity(senderHostname, senderPort), message));
                         }
                     });
                 }
@@ -163,7 +163,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     @Override
     public synchronized ArrayList<Entity> getNodes() {
         ArrayList<Entity> nodes = new ArrayList<>();
-        for (RemoteNode node : remoteNodes) {
+        for (RemoteNode<MessageType> node : remoteNodes) {
             nodes.add(new Entity(node.hostname, node.port));
         }
         return nodes;
@@ -307,10 +307,10 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
             else if(snapshotId != currentSnapshotToBeRestored.snapshotId) {
                 throw new RestoreAlreadyInProgress("CRITICAL ERROR: Another snapshot is being restored");
             }
-            //TODO: modify the hashmap to iterate the messages in the received order
-            currentSnapshotToBeRestored.messages.forEach(
-                    (entity, packets) -> packets.forEach(
-                            (packet) -> appConnector.handleIncomingMessage(entity.getIpAddress(), entity.getPort(), packet)));
+            for (Envelope<MessageType> envelope : currentSnapshotToBeRestored.messages) {
+                this.appConnector.handleIncomingMessage(envelope.sender.getIpAddress(),envelope.sender.getPort(),envelope.message);
+            }
+
         }
     }
 

@@ -36,7 +36,7 @@ class Snapshot<StateType, MessageType> {
      * It keeps track of the sender of the message, in case the application needs it.
      * The sender of the message is stored in a specific class Entity.
      * */
-    protected ArrayList<Envelope> messages = new ArrayList<>();
+    protected ArrayList<Envelope<MessageType>> messages = new ArrayList<>();
 
     /**
      * Snapshot constructor that builds a full snapshot objects. Additionally to
@@ -51,7 +51,7 @@ class Snapshot<StateType, MessageType> {
         this.snapshotId = id;
         this.state = state;
 
-        for (RemoteNode node : remoteNodes)
+        for (RemoteNode<MessageType> node : remoteNodes)
         {
             Entity connectedNode = new Entity(node.hostname, node.port);
             connectedNodes.add(connectedNode);
