@@ -312,7 +312,9 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
                 } else if (snapshotId != currentSnapshotToBeRestored.snapshotId) {
                     throw new RestoreAlreadyInProgress("CRITICAL ERROR: Another snapshot is being restored");
                 }
-                this.currentState = currentSnapshotToBeRestored.state; //TODO: @Luca should the modification on State be synchronized on StateLock?
+                synchronized (currentStateLock) {
+                    this.currentState = currentSnapshotToBeRestored.state;
+                }
                 appConnector.handleRestoredState(this.currentState);
             }
         } finally {
