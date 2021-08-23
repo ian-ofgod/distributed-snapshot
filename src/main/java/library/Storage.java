@@ -1,11 +1,14 @@
 package library;
 
+import org.apache.commons.io.FileUtils;
 
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 
 /**
  * This class provides static methods to handle the storage of snapshots on disk.
@@ -179,6 +182,8 @@ class Storage {
         }
     }
 
+
+
     /**
      * Method to build the file name of the current snapshot before saving on disk.
      * @param <MessageType> this is the type that will be exchanged as a message between nodes
@@ -188,6 +193,15 @@ class Storage {
     private static <StateType, MessageType> String buildFolderName(Snapshot<StateType, MessageType> snapshot, String currentIp, int currentPort) {
         return FOLDER + "/" + currentIp + "_" + currentPort + "/" + COUNTER +
                 "_"+ snapshot.snapshotId + "/" ;
+    }
+
+
+    public static void D(){
+        try {
+            FileUtils.deleteDirectory(new File(FOLDER));
+        } catch (IOException e) {
+            System.out.println("Unable to delete folder");
+        }
     }
 
 

@@ -1,16 +1,18 @@
 package library;
 
+
 import org.junit.jupiter.api.Test;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Objects;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 public class SnapshotTest {
 
-    //@Test
+    @Test
     public void testEquals() {
         int id = 1;
         MockState1 state1 = new MockState1("bla",1);
@@ -148,7 +150,13 @@ public class SnapshotTest {
         //test for the connected nodes
         assertEquals(snapshot1a.connectedNodes, readSnap1.connectedNodes);
     }
+
+
+
+
 }
+
+
 
 class MockState1 implements Serializable {
 
