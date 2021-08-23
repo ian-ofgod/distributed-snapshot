@@ -44,7 +44,6 @@ public class Debug {
                         app3.snapshotLibrary.sendMessage(app1.hostname, app1.port, new Message("Message from 3 -> 1"));
                         app3.snapshotLibrary.sendMessage(app5.hostname, app5.port, new Message("Message1 from 3 -> 5"));
                         app3.snapshotLibrary.sendMessage(app5.hostname, app5.port, new Message("Message2 from 3 -> 5"));
-                        Thread.sleep(400);
                     }catch(Exception e){
                         e.printStackTrace();
                     }
