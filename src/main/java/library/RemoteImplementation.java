@@ -68,7 +68,12 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
      * Variable that indicates if the node is able to perform modifying functions (true) or if the node is undergoing a
      * restore of a snapshot (false)
      */
-    protected boolean nodeReady=true; //TODO: probably synchronize nodeReady
+    protected boolean nodeReady = true;
+
+    /**
+     * Lock object for nodeReady variable
+     * */
+    protected final Object nodeReadyLock = new Object();
 
     /**
      * Handles the propagateMarker calls (see receiveMarker method)
@@ -205,7 +210,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
      * @param initiatorPort the port of the entity that initiated the snapshot
      * */
     //    private synchronized void propagateMarker(String initiatorHostname, int initiatorPort, int snapshotId) {
-    private  void propagateMarker(String initiatorHostname, int initiatorPort, int snapshotId) {
+    private void propagateMarker(String initiatorHostname, int initiatorPort, int snapshotId) {
         System.out.println("INIZIO propagazione PER NODO ["+this.hostname+":"+this.port+"]");
         for (RemoteNode<MessageType> remoteNode : this.remoteNodes) {
             try {
