@@ -70,10 +70,6 @@ class Storage {
         return allSnaps.get(Collections.max(allSnaps.keySet()));
     }
 
-    public static void main(String[] args) {
-        System.out.println(getLastSnapshotId("localhost",0));
-    }
-
     public static <StateType, MessageType> Snapshot<StateType, MessageType> readFile(int snapshotId, String currentIp, int currentPort) {
         Snapshot<StateType, MessageType> loaded_snapshot = new Snapshot<>(snapshotId);
         loaded_snapshot.messages = new ArrayList<>();
