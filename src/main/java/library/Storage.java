@@ -196,7 +196,7 @@ class Storage {
     }
 
 
-    public static void D(){
+    public static void cleanStorageFolder(){
         try {
             FileUtils.deleteDirectory(new File(FOLDER));
         } catch (IOException e) {
