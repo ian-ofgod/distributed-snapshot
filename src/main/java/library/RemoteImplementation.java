@@ -373,6 +373,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
 
     @Override
     public void restoreOldIncomingMessages(int snapshotId) throws RestoreAlreadyInProgress, RemoteException {
+        this.nodeReadyLock.readLock().lock();
         try {
             if (nodeReady) {
                 if (currentSnapshotToBeRestored == null) {
