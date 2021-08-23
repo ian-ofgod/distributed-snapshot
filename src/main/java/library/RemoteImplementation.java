@@ -21,6 +21,7 @@ import java.util.concurrent.Executors;
  * @param <StateType> this is the type that will be saved as the state of the application
  * */
     //TODO: testare un paio di metodi interni qui
+    //TODO: review synchronization
 class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<MessageType> {
 
     /**
@@ -80,7 +81,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     @Override
     public synchronized void receiveMarker(String senderHostname, int senderPort, String initiatorHostname, int initiatorPort, int snapshotId) throws DoubleMarkerException, UnexpectedMarkerReceived {
         //TODO: remove SystemPrintln
-        System.out.println(hostname + ":" + port + " | RECEIVED MARKER from: " + senderHostname + ":" + senderPort);
+        System.out.println("["+hostname + ":" + port + "] MARKER from -> " + senderHostname + ":" + senderPort);
         if (nodeReady) {
             if (checkIfRemoteNodePresent(senderHostname, senderPort)) { //TODO: is this check still needed?
                 Snapshot<StateType, MessageType> snap;
@@ -89,20 +90,24 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
                 }
 
                 if (!runningSnapshots.contains(snap)) {
-                    //TODO: remove SystemPrintln
-                    System.out.println(hostname + ":" + port + " | First time receiving a marker");
+                    //This is the first time we receive a marker,
+                    // so we HAVE TO propagate the marker to the other nodes
                     runningSnapshots.add(snap);
                     recordSnapshotId(senderHostname, senderPort, snapshotId);
                     executors.submit(() -> propagateMarker(initiatorHostname, initiatorPort, snapshotId));
                 } else {
+                    // we have already received a marker for this snapshotId,
+                    // so we don't have to propagate the marker to other nodes
                     recordSnapshotId(senderHostname, senderPort, snapshotId);
                 }
 
                 if (receivedMarkerFromAllLinks(snapshotId)) { //we have received a marker from all the channels
+                    System.out.println("["+hostname+":"+port+"] ===> SAVING SNAPSHOT ############ ");
                     Storage.writeFile(runningSnapshots, snapshotId, this.hostname, this.port);
                     runningSnapshots.remove(snap);
                 }
             } else {
+                System.out.println("Remote node not present!");
                 throw new UnexpectedMarkerReceived("ERROR: received a marker from a node not present in my remote nodes list");
             }
         }
@@ -181,29 +186,34 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
             if(remoteNode.snapshotIdsReceived.contains(snapshotId)){
                 throw new DoubleMarkerException(hostname +":"+port + " | ERROR: received multiple marker (same id) for the same link");
             }else {
-                //TODO: remove SystemPrintln
-                System.out.println(hostname +":"+port + " | Added markerId for the remote node who called");
                 remoteNode.snapshotIdsReceived.add(snapshotId);
             }
+        }else{
+            System.out.println("RemoteNode not found!");
         }
     }
 
     /**
-     * This methods sends a specific marker to all the connected RemoteNodes via RMI.
+     * This method sends a specific marker to all the connected RemoteNodes via RMI.
      * Together with the specific marker, also an identifier of the snapshot initiator
      * is propagated
      * @param snapshotId the unique snapshot identifier (i.e. marker) that is being propagated
      * @param initiatorHostname the IP address of the entity that initiated the snapshot
      * @param initiatorPort the port of the entity that initiated the snapshot
      * */
-    private synchronized void propagateMarker(String initiatorHostname, int initiatorPort, int snapshotId) {
-        for (RemoteNode<MessageType> remoteNode : remoteNodes) {
+    //    private synchronized void propagateMarker(String initiatorHostname, int initiatorPort, int snapshotId) {
+    private  void propagateMarker(String initiatorHostname, int initiatorPort, int snapshotId) {
+        System.out.println("INIZIO propagazione PER NODO ["+this.hostname+":"+this.port+"]");
+        for (RemoteNode<MessageType> remoteNode : this.remoteNodes) {
             try {
+                System.out.println("["+this.hostname + ":" + this.port + "] Sending MARKER to: " + remoteNode.hostname + ":" + remoteNode.port);
                 remoteNode.remoteInterface.receiveMarker(this.hostname, this.port, initiatorHostname, initiatorPort, snapshotId);
-            } catch (RemoteException | DoubleMarkerException | UnexpectedMarkerReceived e) {
+            } //catch (RemoteException | DoubleMarkerException | UnexpectedMarkerReceived e) {
+            catch (Exception e){
                 System.err.println("Error in propagating marker!");
             }
         }
+        System.out.println("FINE propagazione PER NODO ["+this.hostname+":"+this.port+"]");
     }
 
     /**

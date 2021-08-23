@@ -32,7 +32,7 @@ class Storage {
      * Method to create a folder for the snapshots to be saved.
      *
      * @param folderName*/
-    private static void createFolder(String folderName, String currentIp, int currentPort) {
+    private  static void createFolder(String folderName, String currentIp, int currentPort) {
         try {
             Path path = Paths.get(FOLDER);
             if (!Files.exists(path)) {
@@ -50,6 +50,7 @@ class Storage {
             }
         } catch (IOException e) {
             System.err.println("Could not create folder");
+            e.printStackTrace();
         }
     }
 
@@ -146,7 +147,8 @@ class Storage {
      * @param runningSnapshots the list of snapshots running on the current node
      * @param snapshotId the id of the snapshot that the user want to save on disk
      * */
-    public static <StateType, MessageType> void writeFile(ArrayList<Snapshot<StateType, MessageType>> runningSnapshots, int snapshotId, String currentIp, int currentPort) {
+    public synchronized static <StateType, MessageType> void writeFile(ArrayList<Snapshot<StateType, MessageType>> runningSnapshots, int snapshotId, String currentIp, int currentPort) {
+        System.out.println("[STORAGE] SAVING TO DISK THE SNAPSHOT FOR ["+currentIp+":"+currentPort+"]" );
         COUNTER++;
         Snapshot<StateType, MessageType> toSaveSnapshot = runningSnapshots.stream().filter(snap -> snap.snapshotId==snapshotId).findFirst().orElse(null);
         assert toSaveSnapshot != null;
@@ -177,6 +179,7 @@ class Storage {
             fos.close();
         } catch (IOException e) {
             System.err.println("Could not write file ");
+            e.printStackTrace();
         }
     }
 

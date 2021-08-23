@@ -13,12 +13,12 @@ import java.util.ArrayList;
 public class DistributedSnapshotTest {
     @Test
     public void simpleExample() throws NotBoundException, RemoteNodeAlreadyPresent, RemoteException, RemoteNodeNotFound, SnapshotInterruptException, NotInitialized, StateUpdateException, AlreadyBoundException, AlreadyInitialized, RestoreInProgress, InterruptedException, UnexpectedMarkerReceived, DoubleMarkerException {
-        App<Message, State> app1 = new App<>("localhost",11111);
-        App<Message, State> app2 = new App<>("localhost",11112);
-        App<Message, State> app3 = new App<>("localhost",11113);
-        App<Message, State> app4 = new App<>("localhost",11114);
-        App<Message, State> app5 = new App<>("localhost",11115);
-        
+        App<Message, State> app1 = new App<>("localhost", 11111);
+        App<Message, State> app2 = new App<>("localhost", 11112);
+        App<Message, State> app3 = new App<>("localhost", 11113);
+        App<Message, State> app4 = new App<>("localhost", 11114);
+        App<Message, State> app5 = new App<>("localhost", 11115);
+
         app1.init(app1);
         app2.init(app2);
         app3.init(app3);
@@ -26,10 +26,10 @@ public class DistributedSnapshotTest {
         app5.init(app5);
 
         // node1 is the gateway in this situation
-        app2.connections=app2.snapshotLibrary.joinNetwork(app1.hostname, app1.port);
-        app3.connections=app3.snapshotLibrary.joinNetwork(app1.hostname, app1.port);
-        app4.connections=app4.snapshotLibrary.joinNetwork(app1.hostname, app1.port);
-        app5.connections=app5.snapshotLibrary.joinNetwork(app1.hostname, app1.port);
+        app2.connections = app2.snapshotLibrary.joinNetwork(app1.hostname, app1.port);
+        app3.connections = app3.snapshotLibrary.joinNetwork(app1.hostname, app1.port);
+        app4.connections = app4.snapshotLibrary.joinNetwork(app1.hostname, app1.port);
+        app5.connections = app5.snapshotLibrary.joinNetwork(app1.hostname, app1.port);
 
         app1.snapshotLibrary.updateState(new State());
         app2.snapshotLibrary.updateState(new State());
@@ -39,31 +39,28 @@ public class DistributedSnapshotTest {
 
         app1.snapshotLibrary.sendMessage(app2.hostname, app2.port, new Message("Message from 1 -> 2"));
         app2.snapshotLibrary.sendMessage(app1.hostname, app1.port, new Message("Message from 2 -> 1"));
-        app3.snapshotLibrary.sendMessage(app4.hostname, app4.port, new Message("Message from 3 -> 4"));
+        app3.snapshotLibrary.sendMessage(app1.hostname, app1.port, new Message("Message from 3 -> 1"));
         app3.snapshotLibrary.sendMessage(app5.hostname, app5.port, new Message("Message1 from 3 -> 5"));
         app3.snapshotLibrary.sendMessage(app5.hostname, app5.port, new Message("Message2 from 3 -> 5"));
 
+        System.out.println("\nAPP1:");
+        app1.connections.forEach(System.out::println);
         app1.state.messages.forEach(message -> System.out.println("inside 1: "+ message.message));
+        System.out.println("APP2:");
+        app2.connections.forEach(System.out::println);
         app2.state.messages.forEach(message -> System.out.println("inside 2: "+ message.message));
+        System.out.println("APP3:");
+        app3.connections.forEach(System.out::println);
         app3.state.messages.forEach(message -> System.out.println("inside 3: "+ message.message));
+        System.out.println("APP4:");
+        app4.connections.forEach(System.out::println);
         app4.state.messages.forEach(message -> System.out.println("inside 4: "+ message.message));
+        System.out.println("APP5:");
+        app5.connections.forEach(System.out::println);
         app5.state.messages.forEach(message -> System.out.println("inside 5: "+ message.message));
 
 
-        System.out.println("\nAPP1:");
-        app1.connections.forEach(System.out::println);
-        System.out.println("APP2:");
-        app2.connections.forEach(System.out::println);
-        System.out.println("APP3:");
-        app3.connections.forEach(System.out::println);
-        System.out.println("APP4:");
-        app4.connections.forEach(System.out::println);
-        System.out.println("APP5:");
-        app5.connections.forEach(System.out::println);
-
-        //TODO: still only one snapshot saved to disk
-        app1.snapshotLibrary.initiateSnapshot();
-
+        app3.snapshotLibrary.initiateSnapshot();
         assertTrue(true);
     }
 
