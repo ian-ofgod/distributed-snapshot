@@ -9,61 +9,73 @@ import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
+import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class DistributedSnapshotTest {
+
     @Test
-    public void simpleExample() throws NotBoundException, RemoteNodeAlreadyPresent, RemoteException, RemoteNodeNotFound, SnapshotInterruptException, NotInitialized, StateUpdateException, AlreadyBoundException, AlreadyInitialized, RestoreInProgress, InterruptedException, UnexpectedMarkerReceived, DoubleMarkerException {
-        App<Message, State> app1 = new App<>("localhost", 11111);
-        App<Message, State> app2 = new App<>("localhost", 11112);
-        App<Message, State> app3 = new App<>("localhost", 11113);
-        App<Message, State> app4 = new App<>("localhost", 11114);
-        App<Message, State> app5 = new App<>("localhost", 11115);
+    public void simpleExample() throws InterruptedException, UnexpectedMarkerReceived, RestoreInProgress, DoubleMarkerException, NotInitialized, RemoteException {
 
-        app1.init(app1);
-        app2.init(app2);
-        app3.init(app3);
-        app4.init(app4);
-        app5.init(app5);
+        ArrayList<App<Message,State>> apps = new ArrayList<>();
+        apps.add(new App<>("localhost", 11111));
+        apps.add(new App<>("localhost", 11112));
+        apps.add(new App<>("localhost", 11113));
+        apps.add(new App<>("localhost", 11114));
+        apps.add(new App<>("localhost", 11115));
 
-        // node1 is the gateway in this situation
-        app2.connections = app2.snapshotLibrary.joinNetwork(app1.hostname, app1.port);
-        app3.connections = app3.snapshotLibrary.joinNetwork(app1.hostname, app1.port);
-        app4.connections = app4.snapshotLibrary.joinNetwork(app1.hostname, app1.port);
-        app5.connections = app5.snapshotLibrary.joinNetwork(app1.hostname, app1.port);
+        // app[i] initialize & app[i] set initial state
+        apps.forEach((app)-> {
+            try {
+                app.init(app);
+                app.snapshotLibrary.updateState(new State());
+            } catch (AlreadyBoundException | RemoteException | AlreadyInitialized | RestoreInProgress | StateUpdateException e) {
+                e.printStackTrace();
+            }
+        });
 
-        app1.snapshotLibrary.updateState(new State());
-        app2.snapshotLibrary.updateState(new State());
-        app3.snapshotLibrary.updateState(new State());
-        app4.snapshotLibrary.updateState(new State());
-        app5.snapshotLibrary.updateState(new State());
+        // app[i] join network
+        apps.forEach((app)-> {
+            try {
+                app.snapshotLibrary.joinNetwork(apps.get(0).hostname,apps.get(0).port);
+            } catch (RemoteException | NotBoundException | NotInitialized e) {
+                e.printStackTrace();
+            }
+        });
 
-        app1.snapshotLibrary.sendMessage(app2.hostname, app2.port, new Message("Message from 1 -> 2"));
-        app2.snapshotLibrary.sendMessage(app1.hostname, app1.port, new Message("Message from 2 -> 1"));
-        app3.snapshotLibrary.sendMessage(app1.hostname, app1.port, new Message("Message from 3 -> 1"));
-        app3.snapshotLibrary.sendMessage(app5.hostname, app5.port, new Message("Message1 from 3 -> 5"));
-        app3.snapshotLibrary.sendMessage(app5.hostname, app5.port, new Message("Message2 from 3 -> 5"));
+        // make all the apps send messages to each other randomly
+        ExecutorService send= Executors.newCachedThreadPool();
+        send.submit(()-> sendLoop(apps, 0));
+        send.submit(()-> sendLoop(apps, 1));
+        send.submit(()-> sendLoop(apps, 2));
+        send.submit(()-> sendLoop(apps, 3));
+        send.submit(()-> sendLoop(apps, 4));
 
-        System.out.println("\nAPP1:");
-        app1.connections.forEach(System.out::println);
-        app1.state.messages.forEach(message -> System.out.println("inside 1: "+ message.message));
-        System.out.println("APP2:");
-        app2.connections.forEach(System.out::println);
-        app2.state.messages.forEach(message -> System.out.println("inside 2: "+ message.message));
-        System.out.println("APP3:");
-        app3.connections.forEach(System.out::println);
-        app3.state.messages.forEach(message -> System.out.println("inside 3: "+ message.message));
-        System.out.println("APP4:");
-        app4.connections.forEach(System.out::println);
-        app4.state.messages.forEach(message -> System.out.println("inside 4: "+ message.message));
-        System.out.println("APP5:");
-        app5.connections.forEach(System.out::println);
-        app5.state.messages.forEach(message -> System.out.println("inside 5: "+ message.message));
+        //start a snapshot from one of the nodes
+        apps.get(2).snapshotLibrary.initiateSnapshot();
 
+        //needed to allow all the nodes to save the snapshot and all threads to finish propagating the marker
+        Thread.sleep(2000);
 
-        app3.snapshotLibrary.initiateSnapshot();
         assertTrue(true);
     }
 
+    private void sendLoop(ArrayList<App<Message,State>> apps, int index)  {
+        App<Message,State> current=apps.get(index);
+        while(true){
+            int random_index= new Random().nextInt(apps.size());
+            if(random_index!=index) {
+                try {
+                    current.snapshotLibrary.sendMessage(apps.get(random_index).hostname, apps.get(random_index).port,
+                            new Message("MSG from ["+current.hostname+":"+current.port+"]"));
+                    Thread.sleep(400);
+                } catch (RemoteNodeNotFound | RemoteException | NotBoundException | NotInitialized | SnapshotInterruptException | RestoreInProgress | InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
 }
 
 class App<MessageType, StateType> implements AppConnector<MessageType, StateType>{
