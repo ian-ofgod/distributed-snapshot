@@ -12,6 +12,8 @@ import java.rmi.registry.Registry;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * This is the implementation of the RemoteInterface. The RemoteInterface is the stub
@@ -73,7 +75,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     /**
      * Lock object for nodeReady variable
      * */
-    protected final Object nodeReadyLock = new Object();
+    protected final ReadWriteLock nodeReadyLock = new ReentrantReadWriteLock();
 
     /**
      * Handles the propagateMarker calls (see receiveMarker method)
@@ -88,83 +90,103 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     public synchronized void receiveMarker(String senderHostname, int senderPort, String initiatorHostname, int initiatorPort, int snapshotId) throws DoubleMarkerException, UnexpectedMarkerReceived {
         //TODO: remove SystemPrintln
         System.out.println("["+hostname + ":" + port + "] MARKER from -> " + senderHostname + ":" + senderPort);
-        if (nodeReady) {
-            if (checkIfRemoteNodePresent(senderHostname, senderPort)) { //TODO: is this check still needed?
-                Snapshot<StateType, MessageType> snap;
-                synchronized (currentStateLock) {
-                    snap = new Snapshot<>(snapshotId, currentState, remoteNodes); //Creates the snapshot and saves the current state!
-                }
+        this.nodeReadyLock.readLock().lock();
+        try {
+            if (nodeReady) {
+                if (checkIfRemoteNodePresent(senderHostname, senderPort)) { //TODO: is this check still needed?
+                    Snapshot<StateType, MessageType> snap;
+                    synchronized (currentStateLock) {
+                        snap = new Snapshot<>(snapshotId, currentState, remoteNodes); //Creates the snapshot and saves the current state!
+                    }
 
-                if (!runningSnapshots.contains(snap)) {
-                    //This is the first time we receive a marker,
-                    // so we HAVE TO propagate the marker to the other nodes
-                    runningSnapshots.add(snap);
-                    recordSnapshotId(senderHostname, senderPort, snapshotId);
-                    executors.submit(() -> propagateMarker(initiatorHostname, initiatorPort, snapshotId));
+                    if (!runningSnapshots.contains(snap)) {
+                        //This is the first time we receive a marker,
+                        // so we HAVE TO propagate the marker to the other nodes
+                        runningSnapshots.add(snap);
+                        recordSnapshotId(senderHostname, senderPort, snapshotId);
+                        executors.submit(() -> propagateMarker(initiatorHostname, initiatorPort, snapshotId));
+                    } else {
+                        // we have already received a marker for this snapshotId,
+                        // so we don't have to propagate the marker to other nodes
+                        recordSnapshotId(senderHostname, senderPort, snapshotId);
+                    }
+
+                    if (receivedMarkerFromAllLinks(snapshotId)) { //we have received a marker from all the channels
+                        System.out.println("[" + hostname + ":" + port + "] ===> SAVING SNAPSHOT ############ ");
+                        Storage.writeFile(runningSnapshots, snapshotId, this.hostname, this.port);
+                        runningSnapshots.remove(snap);
+                    }
                 } else {
-                    // we have already received a marker for this snapshotId,
-                    // so we don't have to propagate the marker to other nodes
-                    recordSnapshotId(senderHostname, senderPort, snapshotId);
+                    System.out.println("Remote node not present!");
+                    throw new UnexpectedMarkerReceived("ERROR: received a marker from a node not present in my remote nodes list");
                 }
-
-                if (receivedMarkerFromAllLinks(snapshotId)) { //we have received a marker from all the channels
-                    System.out.println("["+hostname+":"+port+"] ===> SAVING SNAPSHOT ############ ");
-                    Storage.writeFile(runningSnapshots, snapshotId, this.hostname, this.port);
-                    runningSnapshots.remove(snap);
-                }
-            } else {
-                System.out.println("Remote node not present!");
-                throw new UnexpectedMarkerReceived("ERROR: received a marker from a node not present in my remote nodes list");
             }
+        } finally {
+            this.nodeReadyLock.readLock().unlock();
         }
     }
 
     @Override
     public synchronized void receiveMessage(String senderHostname, int senderPort, MessageType message) throws RemoteException, NotBoundException, SnapshotInterruptException {
-        if(nodeReady) {
-            if (checkIfRemoteNodePresent(senderHostname, senderPort)) {
-                if (!runningSnapshots.isEmpty()) { // Snapshot running
-                    runningSnapshots.forEach((snap) -> {
-                        if (!checkIfReceivedMarker(senderHostname, senderPort, snap.snapshotId)) {
+        this.nodeReadyLock.readLock().lock();
+        try {
+            if (nodeReady) {
+                if (checkIfRemoteNodePresent(senderHostname, senderPort)) {
+                    if (!runningSnapshots.isEmpty()) { // Snapshot running
+                        runningSnapshots.forEach((snap) -> {
+                            if (!checkIfReceivedMarker(senderHostname, senderPort, snap.snapshotId)) {
 
-                            snap.messages.add(new Envelope<>(new Entity(senderHostname, senderPort), message));
-                        }
-                    });
+                                snap.messages.add(new Envelope<>(new Entity(senderHostname, senderPort), message));
+                            }
+                        });
+                    }
+                    //TODO: need to check if it's ok
+                    executorsMsg.submit(() -> appConnector.handleIncomingMessage(senderHostname, senderPort, message));
+                } else {
+                    // We issue the command to the remote node to remove us!
+                    //TODO: given the mesh topology should we keep this case? Or we should do the opposite (add the node)?
+                    Registry registry = LocateRegistry.getRegistry(senderHostname, senderPort);
+                    RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
+                    remoteInterface.removeMe(this.hostname, this.port);
                 }
-                //TODO: need to check if it's ok
-                executorsMsg.submit(()->appConnector.handleIncomingMessage(senderHostname, senderPort, message));
-            } else {
-                // We issue the command to the remote node to remove us!
-                //TODO: given the mesh topology should we keep this case? Or we should do the opposite (add the node)?
-                Registry registry = LocateRegistry.getRegistry(senderHostname, senderPort);
-                RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
-                remoteInterface.removeMe(this.hostname, this.port);
             }
+        } finally {
+            this.nodeReadyLock.readLock().unlock();
         }
     }
 
     @Override
     public synchronized void addMeBack(String hostname, int port) throws RemoteException, NotBoundException {
-        if(nodeReady) {
-            Registry registry = LocateRegistry.getRegistry(hostname, port);
-            RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
-            if(getRemoteNode(hostname, port)==null) {
-                remoteNodes.add(new RemoteNode<>(hostname, port, remoteInterface));
-                appConnector.handleNewConnection(hostname, port);
+        this.nodeReadyLock.readLock().lock();
+        try {
+            if (nodeReady) {
+                Registry registry = LocateRegistry.getRegistry(hostname, port);
+                RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
+                if (getRemoteNode(hostname, port) == null) {
+                    remoteNodes.add(new RemoteNode<>(hostname, port, remoteInterface));
+                    appConnector.handleNewConnection(hostname, port);
+                }
             }
+        } finally {
+            this.nodeReadyLock.readLock().unlock();
         }
     }
 
 
     @Override
     public synchronized void removeMe(String hostname, int port) throws RemoteException, SnapshotInterruptException {
-        if(nodeReady) {
-            if (!this.runningSnapshots.isEmpty()) {
-                throw new SnapshotInterruptException(hostname + ":" + port + " | ERROR: REMOVING DURING SNAPSHOT, ASSUMPTION NOT RESPECTED");
+        this.nodeReadyLock.readLock().lock();
+        try {
+            if (nodeReady) {
+                if (!this.runningSnapshots.isEmpty()) {
+                    throw new SnapshotInterruptException(hostname + ":" + port + " | ERROR: REMOVING DURING SNAPSHOT, ASSUMPTION NOT RESPECTED");
+                }
+                RemoteNode<MessageType> remoteNode = getRemoteNode(hostname, port);
+                this.remoteNodes.remove(remoteNode);
+                appConnector.handleRemoveConnection(hostname, port);
             }
-            RemoteNode<MessageType> remoteNode = getRemoteNode(hostname, port);
-            this.remoteNodes.remove(remoteNode);
-            appConnector.handleRemoveConnection(hostname, port);
+        } finally {
+            this.nodeReadyLock.readLock().unlock();
         }
     }
 
@@ -282,65 +304,88 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
 
     @Override
     public void restoreState(int snapshotId) throws RestoreAlreadyInProgress, RemoteException {
-        if(!nodeReady) {
-            if (currentSnapshotToBeRestored == null) {
-                currentSnapshotToBeRestored = Storage.readFile(snapshotId, this.hostname, this.port);
-            } else if (snapshotId != currentSnapshotToBeRestored.snapshotId) {
-                throw new RestoreAlreadyInProgress("CRITICAL ERROR: Another snapshot is being restored");
+        this.nodeReadyLock.readLock().lock();
+        try {
+            if (!nodeReady) {
+                if (currentSnapshotToBeRestored == null) {
+                    currentSnapshotToBeRestored = Storage.readFile(snapshotId, this.hostname, this.port);
+                } else if (snapshotId != currentSnapshotToBeRestored.snapshotId) {
+                    throw new RestoreAlreadyInProgress("CRITICAL ERROR: Another snapshot is being restored");
+                }
+                this.currentState = currentSnapshotToBeRestored.state; //TODO: @Luca should the modification on State be synchronized on StateLock?
+                appConnector.handleRestoredState(this.currentState);
             }
-            this.currentState = currentSnapshotToBeRestored.state; //TODO: @Luca should the modification on State be synchronized on StateLock?
-            appConnector.handleRestoredState(this.currentState);
+        } finally {
+            this.nodeReadyLock.readLock().unlock();
         }
     }
 
     @Override
     public void restoreConnections(int snapshotId) throws RestoreAlreadyInProgress, RemoteException, NotBoundException {
-        if(!nodeReady) {
-            if (currentSnapshotToBeRestored == null) {
-                currentSnapshotToBeRestored = Storage.readFile(snapshotId, this.hostname, this.port);
-            } else if (snapshotId != currentSnapshotToBeRestored.snapshotId) {
-                throw new RestoreAlreadyInProgress("CRITICAL ERROR: Another snapshot is being restored");
+        this.nodeReadyLock.readLock().lock();
+        try {
+            if (!nodeReady) {
+                if (currentSnapshotToBeRestored == null) {
+                    currentSnapshotToBeRestored = Storage.readFile(snapshotId, this.hostname, this.port);
+                } else if (snapshotId != currentSnapshotToBeRestored.snapshotId) {
+                    throw new RestoreAlreadyInProgress("CRITICAL ERROR: Another snapshot is being restored");
+                }
+                this.remoteNodes = new ArrayList<>();
+                for (Entity entity : currentSnapshotToBeRestored.connectedNodes) {
+                    Registry registry = LocateRegistry.getRegistry(entity.getIpAddress(), entity.getPort());
+                    RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
+                    this.remoteNodes.add(new RemoteNode<>(entity.getIpAddress(), entity.getPort(), remoteInterface));
+                }
+                appConnector.handleRestoredConnections(currentSnapshotToBeRestored.connectedNodes);
             }
-            this.remoteNodes = new ArrayList<>();
-            for (Entity entity : currentSnapshotToBeRestored.connectedNodes) {
-                Registry registry = LocateRegistry.getRegistry(entity.getIpAddress(), entity.getPort());
-                RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
-                this.remoteNodes.add(new RemoteNode<>(entity.getIpAddress(), entity.getPort(), remoteInterface));
-            }
-            appConnector.handleRestoredConnections(currentSnapshotToBeRestored.connectedNodes);
+        } finally {
+            this.nodeReadyLock.readLock().unlock();
         }
     }
 
     @Override
     public void setReady(boolean value) throws RemoteException{
-        // in the case of flipping the nodeReady bit from false to true we "reset" the currentSnapshotToBeRestored to null
-        if(!nodeReady && value)
-            currentSnapshotToBeRestored=null;
-        this.nodeReady=value;
+        this.nodeReadyLock.writeLock().lock();
+        try {
+            // in the case of flipping the nodeReady bit from false to true we "reset" the currentSnapshotToBeRestored to null
+            if(!nodeReady && value)
+                currentSnapshotToBeRestored=null;
+            this.nodeReady=value;
+        } finally {
+            this.nodeReadyLock.writeLock().unlock();
+        }
     }
 
     @Override
     public void forgetThisNode(String hostname, int port) throws RemoteException {
-        if(nodeReady) {
-            if (getRemoteNode(hostname, port) != null) {
-                this.remoteNodes.remove(getRemoteNode(hostname, port));
+        this.nodeReadyLock.readLock().lock();
+        try {
+            if (nodeReady) {
+                if (getRemoteNode(hostname, port) != null) {
+                    this.remoteNodes.remove(getRemoteNode(hostname, port));
+                }
             }
+        } finally {
+            this.nodeReadyLock.readLock().unlock();
         }
     }
 
     @Override
     public void restoreOldIncomingMessages(int snapshotId) throws RestoreAlreadyInProgress, RemoteException {
-        if (nodeReady) {
-            if(currentSnapshotToBeRestored == null){
-                currentSnapshotToBeRestored= Storage.readFile(snapshotId, this.hostname, this.port);
-            }
-            else if(snapshotId != currentSnapshotToBeRestored.snapshotId) {
-                throw new RestoreAlreadyInProgress("CRITICAL ERROR: Another snapshot is being restored");
-            }
-            for (Envelope<MessageType> envelope : currentSnapshotToBeRestored.messages) {
-                this.appConnector.handleIncomingMessage(envelope.sender.getIpAddress(),envelope.sender.getPort(),envelope.message);
-            }
+        try {
+            if (nodeReady) {
+                if (currentSnapshotToBeRestored == null) {
+                    currentSnapshotToBeRestored = Storage.readFile(snapshotId, this.hostname, this.port);
+                } else if (snapshotId != currentSnapshotToBeRestored.snapshotId) {
+                    throw new RestoreAlreadyInProgress("CRITICAL ERROR: Another snapshot is being restored");
+                }
+                for (Envelope<MessageType> envelope : currentSnapshotToBeRestored.messages) {
+                    this.appConnector.handleIncomingMessage(envelope.sender.getIpAddress(), envelope.sender.getPort(), envelope.message);
+                }
 
+            }
+        } finally {
+            this.nodeReadyLock.readLock().unlock();
         }
     }
 

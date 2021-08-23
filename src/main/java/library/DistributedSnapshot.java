@@ -70,10 +70,7 @@ public class DistributedSnapshot<StateType, MessageType> {
         distributedSnapshotLock.writeLock().lock();
         try {
             if (remoteImplementation.appConnector == null)
-                throw new NotInitialized("Before connecting to (hostname " + hostname +
-                        "and port " + port +
-                        ") you must initialize this instance");
-
+                throw new NotInitialized("Before connecting to (hostname " + hostname + "and port " + port + ") you must initialize this instance");
             if (!Objects.equals(hostname, this.remoteImplementation.hostname) || port != this.remoteImplementation.port) {
                 ArrayList<Entity> networkNodes;
                 Registry registry = LocateRegistry.getRegistry(hostname, port);
@@ -112,16 +109,18 @@ public class DistributedSnapshot<StateType, MessageType> {
      */
     public void sendMessage(String hostname, int port, MessageType message) throws RemoteNodeNotFound, RemoteException, NotBoundException, NotInitialized, SnapshotInterruptException, RestoreInProgress {
         distributedSnapshotLock.readLock().lock();
+        remoteImplementation.nodeReadyLock.readLock().lock();
         try {
             if (remoteImplementation.appConnector == null) throw new NotInitialized("You must initialize the instance and connect to hostname: " + hostname +
                     "and port " + port +
                     "before sending a message");
-            if(!remoteImplementation.nodeReady){
+            if (!remoteImplementation.nodeReady) {
                 throw new RestoreInProgress("A restore is in progress, please wait until node is ready");
             }
             getRemoteInterface(hostname, port).receiveMessage(remoteImplementation.hostname, remoteImplementation.port, message);
         } finally {
             distributedSnapshotLock.readLock().unlock();
+            remoteImplementation.nodeReadyLock.readLock().unlock();
         }
     }
 
@@ -130,15 +129,20 @@ public class DistributedSnapshot<StateType, MessageType> {
      * @throws StateUpdateException something went wrong making a deep copy
      * */
     public void updateState(StateType state) throws StateUpdateException, RestoreInProgress {
-        if (!remoteImplementation.nodeReady) {
-            throw new RestoreInProgress("A restore is in progress, please wait until node is ready");
-        }
-        synchronized (remoteImplementation.currentStateLock) {
-            try {
-                this.remoteImplementation.currentState=deepClone(state);
-            } catch (IOException | ClassNotFoundException e) {
-                throw new StateUpdateException("Problem in updating the state");
+        remoteImplementation.nodeReadyLock.readLock().lock();
+        try {
+            if (!remoteImplementation.nodeReady) {
+                throw new RestoreInProgress("A restore is in progress, please wait until node is ready");
             }
+            synchronized (remoteImplementation.currentStateLock) {
+                try {
+                    this.remoteImplementation.currentState = deepClone(state);
+                } catch (IOException | ClassNotFoundException e) {
+                    throw new StateUpdateException("Problem in updating the state");
+                }
+            }
+        } finally {
+            remoteImplementation.nodeReadyLock.readLock().unlock();
         }
     }
 
@@ -151,6 +155,7 @@ public class DistributedSnapshot<StateType, MessageType> {
      * */
     public void initiateSnapshot() throws RemoteException, DoubleMarkerException, UnexpectedMarkerReceived, NotInitialized, RestoreInProgress, InterruptedException {
         distributedSnapshotLock.writeLock().lock();
+        remoteImplementation.nodeReadyLock.readLock().lock();
         try {
             if (remoteImplementation.appConnector == null)
                 throw new NotInitialized("You must initialize the instance before starting a snapshot");
@@ -171,6 +176,7 @@ public class DistributedSnapshot<StateType, MessageType> {
             }
         } finally {
             distributedSnapshotLock.writeLock().unlock();
+            remoteImplementation.nodeReadyLock.readLock().unlock();
         }
     }
 
@@ -188,9 +194,9 @@ public class DistributedSnapshot<StateType, MessageType> {
                 throw new NotInitialized("You must initialize the library before trying to disconnect from the network");
 
             // Since no change in the network topology is allowed during a snapshot
-            // this function WONT BE CALLED if any snapshot is running THIS IS AN ASSUMPTION FROM THE TEXT
+            // this function WON'T BE CALLED if any snapshot is running THIS IS AN ASSUMPTION FROM THE TEXT
             if (!remoteImplementation.runningSnapshots.isEmpty()) {
-                throw new OperationForbidden("Unable to remove connection while snapshots are running");
+                throw new OperationForbidden("Unable to disconnect from the network while snapshots are running");
             }
             ArrayList<RemoteNode<MessageType>> toRemove = new ArrayList<>();
             for (RemoteNode<MessageType> remoteNode : remoteImplementation.remoteNodes) {
@@ -221,49 +227,57 @@ public class DistributedSnapshot<StateType, MessageType> {
     }
 
     public void restoreLastSnapshot() throws RestoreAlreadyInProgress, RemoteException, NotBoundException, RestoreInProgress {
-        if (!remoteImplementation.nodeReady) throw new RestoreInProgress("A restore is in progress, please wait until node is ready");
+        distributedSnapshotLock.writeLock().lock();
+        remoteImplementation.nodeReadyLock.writeLock().lock();
+        try {
+            if (!remoteImplementation.nodeReady)
+                throw new RestoreInProgress("A restore is in progress, please wait until node is ready");
 
-        int snapshotToRestore=Storage.getLastSnapshotId(remoteImplementation.hostname, remoteImplementation.port);
+            int snapshotToRestore = Storage.getLastSnapshotId(remoteImplementation.hostname, remoteImplementation.port);
 
-        // we set our node to the not-ready state and restore our connections and state according to our snapshot
-        this.remoteImplementation.setReady(false);
-        this.remoteImplementation.restoreConnections(snapshotToRestore);
-        this.remoteImplementation.restoreState(snapshotToRestore);
+            // we set our node to the not-ready state and restore our connections and state according to our snapshot
+            this.remoteImplementation.nodeReady = false;
+            this.remoteImplementation.restoreConnections(snapshotToRestore);
+            this.remoteImplementation.restoreState(snapshotToRestore);
 
-        // we set all the nodes in our new connections list to the not-ready state and proceed to set their connection
-        // list and state according to their snapshot
-        for(RemoteNode<MessageType> remoteNode : this.remoteImplementation.remoteNodes) {
-            remoteNode.remoteInterface.setReady(false);
-            remoteNode.remoteInterface.restoreConnections(snapshotToRestore);
-            remoteNode.remoteInterface.restoreState(snapshotToRestore);
-        }
+            // we set all the nodes in our new connections list to the not-ready state and proceed to set their connection
+            // list and state according to their snapshot
+            for (RemoteNode<MessageType> remoteNode : this.remoteImplementation.remoteNodes) {
+                remoteNode.remoteInterface.setReady(false);
+                remoteNode.remoteInterface.restoreConnections(snapshotToRestore);
+                remoteNode.remoteInterface.restoreState(snapshotToRestore);
+            }
 
-        // now all the nodes can be set to the ready state
-        // TODO: what if the application is automated (like sending a message every X seconds)?
-        //       in this case the application would start as soon as the ready state is set to true,
-        //       without restoring the incoming messages
-        this.remoteImplementation.setReady(true);
-        for(RemoteNode<MessageType> remoteNode : this.remoteImplementation.remoteNodes) {
-            remoteNode.remoteInterface.setReady(true);
-        }
-        //now all the "modifying" functions can be called again, hence we will start handling the old messages
+            // now all the nodes can be set to the ready state
+            // TODO: what if the application is automated (like sending a message every X seconds)?
+            //       in this case the application would start as soon as the ready state is set to true,
+            //       without restoring the incoming messages
+            this.remoteImplementation.nodeReady = true;
+            for (RemoteNode<MessageType> remoteNode : this.remoteImplementation.remoteNodes) {
+                remoteNode.remoteInterface.setReady(true);
+            }
+            //now all the "modifying" functions can be called again, hence we will start handling the old messages
 
-        //handle old incoming messages
-        this.remoteImplementation.restoreOldIncomingMessages(snapshotToRestore);
-        ExecutorService executors = Executors.newCachedThreadPool();
-        for(RemoteNode<MessageType> remoteNode : this.remoteImplementation.remoteNodes) {
-           executors.submit(()-> {
-               //TODO: handle exception in ExecutorService
-               try {
-                   remoteNode.remoteInterface.restoreOldIncomingMessages(snapshotToRestore);
-               } catch (RemoteException e) {
-                  // throw new RestoreException("Unable to restore incoming messages for remoteNode: "+remoteNode.hostname+":"+remoteNode.port);
-                   e.printStackTrace();
-               } catch (RestoreAlreadyInProgress e) {
-                  // throw new RestoreAlreadyInProgress(e.getMessage());
-                   e.printStackTrace();
-               }
-           });
+            //handle old incoming messages
+            this.remoteImplementation.restoreOldIncomingMessages(snapshotToRestore);
+            ExecutorService executors = Executors.newCachedThreadPool();
+            for (RemoteNode<MessageType> remoteNode : this.remoteImplementation.remoteNodes) {
+                executors.submit(() -> {
+                    //TODO: handle exception in ExecutorService
+                    try {
+                        remoteNode.remoteInterface.restoreOldIncomingMessages(snapshotToRestore);
+                    } catch (RemoteException e) {
+                        // throw new RestoreException("Unable to restore incoming messages for remoteNode: "+remoteNode.hostname+":"+remoteNode.port);
+                        e.printStackTrace();
+                    } catch (RestoreAlreadyInProgress e) {
+                        // throw new RestoreAlreadyInProgress(e.getMessage());
+                        e.printStackTrace();
+                    }
+                });
+            }
+        } finally {
+            distributedSnapshotLock.writeLock().unlock();
+            remoteImplementation.nodeReadyLock.writeLock().unlock();
         }
     }
 
@@ -271,10 +285,18 @@ public class DistributedSnapshot<StateType, MessageType> {
      * Remove the specified node from the network by telling everyone to do so
      */
     public void removeNode(String hostname, int port) throws RemoteException, RestoreInProgress {
-        if(!remoteImplementation.nodeReady) throw new RestoreInProgress("A restore is in progress, please wait until node is ready");
-        this.remoteImplementation.remoteNodes.remove(this.remoteImplementation.getRemoteNode(hostname, port));
-        for(RemoteNode<MessageType> remoteNode : this.remoteImplementation.remoteNodes){
-            remoteNode.remoteInterface.forgetThisNode(hostname,port);
+        distributedSnapshotLock.writeLock().lock();
+        remoteImplementation.nodeReadyLock.writeLock().lock();
+        try {
+            if (!remoteImplementation.nodeReady)
+                throw new RestoreInProgress("A restore is in progress, please wait until node is ready");
+            this.remoteImplementation.remoteNodes.remove(this.remoteImplementation.getRemoteNode(hostname, port));
+            for (RemoteNode<MessageType> remoteNode : this.remoteImplementation.remoteNodes) {
+                remoteNode.remoteInterface.forgetThisNode(hostname, port);
+            }
+        } finally {
+            distributedSnapshotLock.writeLock().unlock();
+            remoteImplementation.nodeReadyLock.writeLock().unlock();
         }
     }
 
