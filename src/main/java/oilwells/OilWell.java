@@ -193,7 +193,7 @@ public class OilWell implements AppConnector<OilCargo, Integer> {
                     } catch (StateUpdateException e) {
                         logger.info("Error in updating state");
                     } catch (RestoreInProgress restoreInProgress) {
-                        restoreInProgress.printStackTrace(); //TODO: change
+                        logger.info("Cannot send oil while a restore is in progress");
                     }
                 }
             }

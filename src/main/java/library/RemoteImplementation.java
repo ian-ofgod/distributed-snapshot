@@ -23,7 +23,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * @param <StateType> this is the type that will be saved as the state of the application
  * */
     //TODO: testare un paio di metodi interni qui
-    //TODO: review synchronization
 class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<MessageType> {
 
     /**
