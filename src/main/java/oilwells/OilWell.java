@@ -79,7 +79,7 @@ public class OilWell implements AppConnector<OilCargo, Integer> {
     }
 
     /**
-     * TODO
+     * It is called to join an existing network of nodes
      */
     public void join(String hostname, int port) {
         if (oilAmount != -1) {
