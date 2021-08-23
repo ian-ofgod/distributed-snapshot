@@ -14,10 +14,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class DistributedSnapshotTest {
-
     @Test
     public void simpleExample() throws InterruptedException, UnexpectedMarkerReceived, RestoreInProgress, DoubleMarkerException, NotInitialized, RemoteException {
-
         ArrayList<App<Message,State>> apps = new ArrayList<>();
         apps.add(new App<>("localhost", 11111));
         apps.add(new App<>("localhost", 11112));
@@ -63,17 +61,18 @@ public class DistributedSnapshotTest {
 
     private void sendLoop(ArrayList<App<Message,State>> apps, int index)  {
         App<Message,State> current=apps.get(index);
+        int random_index = new Random().nextInt(apps.size());
         while(true){
-            int random_index= new Random().nextInt(apps.size());
             if(random_index!=index) {
                 try {
                     current.snapshotLibrary.sendMessage(apps.get(random_index).hostname, apps.get(random_index).port,
                             new Message("MSG from ["+current.hostname+":"+current.port+"]"));
-                    Thread.sleep(400);
+                    Thread.sleep(300);
                 } catch (RemoteNodeNotFound | RemoteException | NotBoundException | NotInitialized | SnapshotInterruptException | RestoreInProgress | InterruptedException e) {
                     e.printStackTrace();
                 }
             }
+            random_index= new Random().nextInt(apps.size());
         }
     }
 }
@@ -96,7 +95,7 @@ class App<MessageType, StateType> implements AppConnector<MessageType, StateType
 
     @Override
     public void handleIncomingMessage(String senderHostname, int senderPort, MessageType o) {
-        state.messages.add((Message) o);
+        //state.messages.add((Message) o);
     }
 
     @Override

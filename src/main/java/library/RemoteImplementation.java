@@ -125,9 +125,11 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
                         }
                     });
                 }
-                appConnector.handleIncomingMessage(senderHostname, senderPort, message);
+                //TODO: need to check if it's ok
+                executors.submit(()->appConnector.handleIncomingMessage(senderHostname, senderPort, message));
             } else {
                 // We issue the command to the remote node to remove us!
+                //TODO: given the mesh topology should we keep this case? Or we should do the opposite (add the node)?
                 Registry registry = LocateRegistry.getRegistry(senderHostname, senderPort);
                 RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
                 remoteInterface.removeMe(this.hostname, this.port);
