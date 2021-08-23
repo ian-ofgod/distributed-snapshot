@@ -9,6 +9,7 @@ import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
+import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -59,6 +60,68 @@ public class DistributedSnapshotTest {
         assertTrue(true);
     }
 
+    @Test
+    public void simpleSnapshotRestore() throws UnexpectedMarkerReceived, RestoreInProgress, DoubleMarkerException, NotInitialized, RemoteException, InterruptedException, RestoreAlreadyInProgress, NotBoundException {
+        ArrayList<App<Message,State>> apps = new ArrayList<>();
+        apps.add(new App<>("localhost", 11119));
+        apps.add(new App<>("localhost", 11118));
+        apps.add(new App<>("localhost", 11117));
+
+        // app[i] initialize & app[i] set initial state
+        apps.forEach((app)-> {
+            try {
+                app.init(app);
+                app.state=new State(app.port);
+                app.snapshotLibrary.updateState(app.state);
+            } catch (AlreadyBoundException | RemoteException | AlreadyInitialized | RestoreInProgress | StateUpdateException e) {
+                e.printStackTrace();
+            }
+        });
+
+        // app[i] join network
+        apps.forEach((app)-> {
+            try {
+                app.snapshotLibrary.joinNetwork(apps.get(0).hostname,apps.get(0).port);
+            } catch (RemoteException | NotBoundException | NotInitialized e) {
+                e.printStackTrace();
+            }
+        });
+
+        apps.get(1).snapshotLibrary.initiateSnapshot();
+        Thread.sleep(2000);
+
+        //at this point we have finished a snapshot
+        //we will now modify the state of all the applications and then proceed to restore from snapshot
+        apps.forEach((app)-> {
+            try {
+                app.state=new State(-1);
+                app.snapshotLibrary.updateState(app.state);
+            } catch (RestoreInProgress | StateUpdateException e) {
+                e.printStackTrace();
+            }
+        });
+        apps.forEach((app)-> {
+            assertEquals(app.state, new State(-1),
+                    "["+app.hostname+":"+app.port+"] State.appId="+app.state.appId);
+            assertEquals(app.snapshotLibrary.remoteImplementation.currentState, new State(-1),
+                    "["+app.hostname+":"+app.port+"] remoteImplementation.currentState.appId="+app.state.appId);
+        });
+
+        //we restore the snapshot that we made
+        apps.get(0).snapshotLibrary.restoreLastSnapshot();
+        Thread.sleep(2000);
+
+        //at this point we should be able to see the same state of the previous setup
+        //TODO: check also for same connections
+        apps.forEach((app)-> {
+            assertEquals(app.state, new State(app.port),
+                    "["+app.hostname+":"+app.port+"] State.appId="+app.state.appId);
+            assertEquals(app.snapshotLibrary.remoteImplementation.currentState, new State(app.port),
+                    "["+app.hostname+":"+app.port+"] remoteImplementation.currentState.appId="+app.state.appId);
+        });
+
+    }
+
     private void sendLoop(ArrayList<App<Message,State>> apps, int index)  {
         App<Message,State> current=apps.get(index);
         int random_index = new Random().nextInt(apps.size());
@@ -96,7 +159,7 @@ class App<MessageType, StateType> implements AppConnector<MessageType, StateType
 
     @Override
     public void handleIncomingMessage(String senderHostname, int senderPort, MessageType o) {
-        //state.messages.add((Message) o);
+        state.messages.add((Message) o);
     }
 
     @Override
@@ -112,7 +175,7 @@ class App<MessageType, StateType> implements AppConnector<MessageType, StateType
 
     @Override
     public void handleRestoredState(StateType state) {
-
+        this.state= (State) state;
     }
 
     @Override
@@ -130,4 +193,24 @@ class Message implements Serializable {
 
 class State implements Serializable {
     ArrayList<Message> messages = new ArrayList<>();
+    int appId=-1;
+
+    State(){}
+
+    State(int appId){
+        this.appId= appId;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        State state = (State) o;
+        return appId == state.appId;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(appId);
+    }
 }

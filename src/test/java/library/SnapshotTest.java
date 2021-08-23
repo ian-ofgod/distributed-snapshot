@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class SnapshotTest {
 
-    @Test
+    //@Test
     public void testEquals() {
         int id = 1;
         MockState1 state1 = new MockState1("bla",1);
@@ -26,7 +26,7 @@ public class SnapshotTest {
 
     }
 
-    @Test
+    //@Test
     void writeFileTest() {
 
         MockState1 state1 = new MockState1("bla",1);
