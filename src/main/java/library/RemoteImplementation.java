@@ -74,6 +74,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
      * Handles the propagateMarker calls (see receiveMarker method)
      * */
     private final ExecutorService executors = Executors.newCachedThreadPool();
+    private final ExecutorService executorsMsg = Executors.newCachedThreadPool();
 
     private Snapshot<StateType, MessageType> currentSnapshotToBeRestored =  null;
 
@@ -126,7 +127,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
                     });
                 }
                 //TODO: need to check if it's ok
-                executors.submit(()->appConnector.handleIncomingMessage(senderHostname, senderPort, message));
+                executorsMsg.submit(()->appConnector.handleIncomingMessage(senderHostname, senderPort, message));
             } else {
                 // We issue the command to the remote node to remove us!
                 //TODO: given the mesh topology should we keep this case? Or we should do the opposite (add the node)?

@@ -21,6 +21,7 @@ import java.util.concurrent.Executors;
  * @param <StateType> this is the type that will be used to store the application state
  * @param <MessageType> this is the type that will be exchanged as a message between nodes
  * */
+//TODO: reason on synchronized methods
 public class DistributedSnapshot<StateType, MessageType> {
     /**
      * The implementation of the remoteInterface used on this node
@@ -96,6 +97,7 @@ public class DistributedSnapshot<StateType, MessageType> {
      * @throws NotInitialized this instance hasn't been initialized, you must do it first
      * @throws SnapshotInterruptException it's not possible to remove a node when a snapshot is running
      */
+    //TODO: add synchronized to the whole method?
     public void sendMessage(String hostname, int port, MessageType message) throws RemoteNodeNotFound, RemoteException, NotBoundException, NotInitialized, SnapshotInterruptException, RestoreInProgress {
         if (remoteImplementation.appConnector == null) throw new NotInitialized("You must initialize the instance and connect to hostname: " + hostname +
                 "and port " + port +
@@ -103,9 +105,10 @@ public class DistributedSnapshot<StateType, MessageType> {
         if(!remoteImplementation.nodeReady){
             throw new RestoreInProgress("A restore is in progress, please wait until node is ready");
         }
-       synchronized (remoteImplementation) {
+        //TODO: by removing this synchronized all problems went away
+       //synchronized (remoteImplementation) {
             getRemoteInterface(hostname, port).receiveMessage(remoteImplementation.hostname, remoteImplementation.port, message);
-        }
+        //}
     }
 
     /** This method is used to update the state. It makes a deep copy to store inside the remoteImplementation

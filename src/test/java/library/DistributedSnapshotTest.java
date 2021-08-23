@@ -67,8 +67,9 @@ public class DistributedSnapshotTest {
                 try {
                     current.snapshotLibrary.sendMessage(apps.get(random_index).hostname, apps.get(random_index).port,
                             new Message("MSG from ["+current.hostname+":"+current.port+"]"));
-                    Thread.sleep(300);
-                } catch (RemoteNodeNotFound | RemoteException | NotBoundException | NotInitialized | SnapshotInterruptException | RestoreInProgress | InterruptedException e) {
+                    Thread.sleep(10);
+                } catch (RemoteNodeNotFound | RemoteException | NotBoundException |
+                        NotInitialized | SnapshotInterruptException | RestoreInProgress | InterruptedException e) {
                     e.printStackTrace();
                 }
             }
