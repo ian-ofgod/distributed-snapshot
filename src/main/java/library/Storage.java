@@ -197,12 +197,15 @@ class Storage {
 
 
     public static void cleanStorageFolder(){
-        try {
-            FileUtils.deleteDirectory(new File(FOLDER));
-        } catch (IOException e) {
-            System.out.println("Unable to delete folder");
+        if (new File(FOLDER).isDirectory()) {
+            try {
+                FileUtils.deleteDirectory(new File(FOLDER));
+            } catch (IOException e) {
+                System.out.println("Unable to delete folder");
+            }
         }
     }
+    
 
 
 }

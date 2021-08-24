@@ -28,7 +28,7 @@ public class SnapshotTest {
 
     }
 
-    //@Test
+    @Test
     void writeFileTest() {
 
         MockState1 state1 = new MockState1("bla",1);
