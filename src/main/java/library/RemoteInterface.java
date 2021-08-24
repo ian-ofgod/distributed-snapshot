@@ -1,9 +1,6 @@
 package library;
 
-import library.exceptions.DoubleMarkerException;
-import library.exceptions.RestoreAlreadyInProgress;
-import library.exceptions.SnapshotInterruptException;
-import library.exceptions.UnexpectedMarkerReceived;
+import library.exceptions.*;
 
 import java.rmi.NotBoundException;
 import java.rmi.Remote;
@@ -64,7 +61,7 @@ interface RemoteInterface<MessageType> extends Remote {
     ArrayList<Entity> getNodes() throws RemoteException;
 
     void restoreState(int snapshotId) throws RemoteException, RestoreAlreadyInProgress;
-    void restoreConnections(int snapshotId) throws RemoteException, RestoreAlreadyInProgress, NotBoundException;
+    void restoreConnections(int snapshotId) throws RemoteException, RestoreAlreadyInProgress, NotBoundException, RestoreNotPossible;
     void restoreOldIncomingMessages(int snapshotId) throws RemoteException, RestoreAlreadyInProgress;
     void setReady(boolean value) throws RemoteException;
 

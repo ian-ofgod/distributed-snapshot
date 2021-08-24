@@ -226,7 +226,7 @@ public class DistributedSnapshot<StateType, MessageType> {
         }
     }
 
-    public void restoreLastSnapshot() throws RestoreAlreadyInProgress, RemoteException, NotBoundException, RestoreInProgress {
+    public void restoreLastSnapshot() throws RestoreAlreadyInProgress, RemoteException, NotBoundException, RestoreInProgress, RestoreNotPossible {
         distributedSnapshotLock.writeLock().lock();
         remoteImplementation.nodeReadyLock.writeLock().lock();
         try {
@@ -237,11 +237,19 @@ public class DistributedSnapshot<StateType, MessageType> {
 
             // we set our node to the not-ready state and restore our connections and state according to our snapshot
             this.remoteImplementation.nodeReady = false;
-            this.remoteImplementation.restoreConnections(snapshotToRestore);
+            try {
+                this.remoteImplementation.restoreConnections(snapshotToRestore);
+            }catch (RestoreNotPossible e){
+                //if a restore is not possible we should restore the state of the node to ready=true
+                // by re-throwing the exception we let the user handle this case
+                this.remoteImplementation.nodeReady=true;
+                throw e;
+            }
             this.remoteImplementation.restoreState(snapshotToRestore);
 
             // we set all the nodes in our new connections list to the not-ready state and proceed to set their connection
             // list and state according to their snapshot
+            // those calls should not be parallelized: if the
             for (RemoteNode<MessageType> remoteNode : this.remoteImplementation.remoteNodes) {
                 remoteNode.remoteInterface.setReady(false);
                 remoteNode.remoteInterface.restoreConnections(snapshotToRestore);

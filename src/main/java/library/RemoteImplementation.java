@@ -1,9 +1,6 @@
 package library;
 
-import library.exceptions.DoubleMarkerException;
-import library.exceptions.RestoreAlreadyInProgress;
-import library.exceptions.SnapshotInterruptException;
-import library.exceptions.UnexpectedMarkerReceived;
+import library.exceptions.*;
 
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
@@ -322,7 +319,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     }
 
     @Override
-    public void restoreConnections(int snapshotId) throws RestoreAlreadyInProgress, RemoteException, NotBoundException {
+    public void restoreConnections(int snapshotId) throws RestoreAlreadyInProgress, RemoteException, NotBoundException, RestoreNotPossible {
         this.nodeReadyLock.readLock().lock();
         try {
             if (!nodeReady) {
@@ -332,11 +329,17 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
                     throw new RestoreAlreadyInProgress("CRITICAL ERROR: Another snapshot is being restored");
                 }
                 this.remoteNodes = new ArrayList<>();
+                ArrayList<RemoteNode<MessageType>> tempList= new ArrayList<>();
                 for (Entity entity : currentSnapshotToBeRestored.connectedNodes) {
-                    Registry registry = LocateRegistry.getRegistry(entity.getIpAddress(), entity.getPort());
-                    RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
-                    this.remoteNodes.add(new RemoteNode<>(entity.getIpAddress(), entity.getPort(), remoteInterface));
+                    try {
+                        Registry registry = LocateRegistry.getRegistry(entity.getIpAddress(), entity.getPort());
+                        RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
+                        tempList.add(new RemoteNode<>(entity.getIpAddress(), entity.getPort(), remoteInterface));
+                    }catch(RemoteException | NotBoundException e){
+                        throw new RestoreNotPossible("["+entity.getIpAddress()+":"+entity.getPort()+"] NOT AVAILABLE");
+                    }
                 }
+                this.remoteNodes=tempList;
                 appConnector.handleRestoredConnections(currentSnapshotToBeRestored.connectedNodes);
             }
         } finally {

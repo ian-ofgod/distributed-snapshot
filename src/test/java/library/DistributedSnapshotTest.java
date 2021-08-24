@@ -62,7 +62,7 @@ public class DistributedSnapshotTest {
     }
 
     @Test
-    public void simpleSnapshotRestore() throws UnexpectedMarkerReceived, RestoreInProgress, DoubleMarkerException, NotInitialized, RemoteException, InterruptedException, RestoreAlreadyInProgress, NotBoundException {
+    public void simpleSnapshotRestore() throws UnexpectedMarkerReceived, RestoreInProgress, DoubleMarkerException, NotInitialized, RemoteException, InterruptedException, RestoreAlreadyInProgress, NotBoundException, RestoreNotPossible {
         ArrayList<App<Message,State>> apps = new ArrayList<>();
         apps.add(new App<>("localhost", 11119));
         apps.add(new App<>("localhost", 11118));
@@ -126,7 +126,7 @@ public class DistributedSnapshotTest {
     }
 
     @Test
-    public void restoreSnapshotWithRemovedNode() throws UnexpectedMarkerReceived, RestoreInProgress, DoubleMarkerException, NotInitialized, RemoteException, InterruptedException, RestoreAlreadyInProgress, NotBoundException, OperationForbidden, SnapshotInterruptException {
+    public void restoreSnapshotWithRemovedNode() throws UnexpectedMarkerReceived, RestoreInProgress, DoubleMarkerException, NotInitialized, RemoteException, InterruptedException, RestoreAlreadyInProgress, NotBoundException, OperationForbidden, SnapshotInterruptException, RestoreNotPossible {
         ArrayList<App<Message, State>> apps = new ArrayList<>();
         apps.add(new App<>("localhost", 11131));
         apps.add(new App<>("localhost", 11132));

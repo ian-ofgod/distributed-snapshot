@@ -151,7 +151,7 @@ public class OilWell implements AppConnector<OilCargo, Integer> {
         if (oilAmount != -1) {
             try {
                 distributedSnapshot.restoreLastSnapshot();
-            } catch (RestoreAlreadyInProgress | RemoteException | NotBoundException | RestoreInProgress e) {
+            } catch (RestoreAlreadyInProgress | RemoteException | NotBoundException | RestoreInProgress | RestoreNotPossible e) {
                 logger.warn("Cannot restore snapshot");
             }
         } else logger.info("You must first initialize your oil well!");
