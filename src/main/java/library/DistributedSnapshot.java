@@ -117,7 +117,12 @@ public class DistributedSnapshot<StateType, MessageType> {
             if (!remoteImplementation.nodeReady) {
                 throw new RestoreInProgress("A restore is in progress, please wait until node is ready");
             }
-            getRemoteInterface(hostname, port).receiveMessage(remoteImplementation.hostname, remoteImplementation.port, message);
+            //send the message only if we are not sending the message to this node
+            if(!(hostname.equals(this.remoteImplementation.hostname) && port==this.remoteImplementation.port)){
+                getRemoteInterface(hostname, port).receiveMessage(remoteImplementation.hostname, remoteImplementation.port, message);
+            }else{
+                this.remoteImplementation.appConnector.handleIncomingMessage(hostname, port, message);
+            }
         } finally {
             distributedSnapshotLock.readLock().unlock();
             remoteImplementation.nodeReadyLock.readLock().unlock();
