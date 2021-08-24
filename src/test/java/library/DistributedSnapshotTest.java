@@ -1,6 +1,7 @@
 package library;
 
 import library.exceptions.*;
+import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -57,7 +58,7 @@ public class DistributedSnapshotTest {
         //needed to allow all the nodes to save the snapshot and all threads to finish propagating the marker
         Thread.sleep(2000);
 
-        assertTrue(true);
+        Storage.cleanStorageFolder();
     }
 
     @Test
@@ -120,7 +121,81 @@ public class DistributedSnapshotTest {
                     "["+app.hostname+":"+app.port+"] remoteImplementation.currentState.appId="+app.state.appId);
         });
 
+        Storage.cleanStorageFolder();
+
     }
+
+    @Test
+    public void restoreSnapshotWithRemovedNode() throws UnexpectedMarkerReceived, RestoreInProgress, DoubleMarkerException, NotInitialized, RemoteException, InterruptedException, RestoreAlreadyInProgress, NotBoundException, OperationForbidden, SnapshotInterruptException {
+        ArrayList<App<Message, State>> apps = new ArrayList<>();
+        apps.add(new App<>("localhost", 11131));
+        apps.add(new App<>("localhost", 11132));
+        apps.add(new App<>("localhost", 11133));
+        apps.add(new App<>("localhost", 11134));
+
+
+        // app[i] initialize & app[i] set initial state
+        apps.forEach((app) -> {
+            try {
+                app.init(app);
+                app.state = new State(app.port);
+                app.snapshotLibrary.updateState(app.state);
+            } catch (AlreadyBoundException | RemoteException | AlreadyInitialized | RestoreInProgress | StateUpdateException e) {
+                e.printStackTrace();
+            }
+        });
+
+        // app[i] join network
+        apps.forEach((app) -> {
+            try {
+                app.snapshotLibrary.joinNetwork(apps.get(0).hostname, apps.get(0).port);
+            } catch (RemoteException | NotBoundException | NotInitialized e) {
+                e.printStackTrace();
+            }
+        });
+
+        // make all the apps send messages to each other randomly
+        ExecutorService send= Executors.newCachedThreadPool();
+        send.submit(()-> sendLoop(apps, 0));
+        send.submit(()-> sendLoop(apps, 1));
+        send.submit(()-> sendLoop(apps, 2));
+        send.submit(()-> sendLoop(apps, 3));
+
+        apps.get(0).snapshotLibrary.initiateSnapshot();
+        Thread.sleep(500);
+
+        //we disconnect one app from the network
+        apps.get(2).snapshotLibrary.disconnect();
+
+        //check that all the apps have removed that node from the network
+        apps.forEach((app)->{
+            if(!app.equals(apps.get(2))){
+                assertNull(app.snapshotLibrary.remoteImplementation.getRemoteNode(apps.get(2).hostname, apps.get(2).port));
+                assertNull(app.getEntity(apps.get(2).hostname, apps.get(2).port));
+            }
+        });
+        for (RemoteNode<Message> remoteNode : apps.get(3).snapshotLibrary.remoteImplementation.remoteNodes) {
+            System.out.println("Before: "+remoteNode.hostname+":"+remoteNode.port);
+        }
+
+        //we restore the snapshot that we made
+        apps.get(1).snapshotLibrary.restoreLastSnapshot();
+        Thread.sleep(500);
+
+        // after the snapshot is restored we should be able to see again the connection to apps.get(2)
+        apps.forEach((app)->{
+            if(!app.equals(apps.get(2))){
+                assertNotNull(app.snapshotLibrary.remoteImplementation.getRemoteNode(apps.get(2).hostname, apps.get(2).port));
+                assertNotNull(app.getEntity(apps.get(2).hostname, apps.get(2).port));
+            }
+        });
+        for (RemoteNode<Message> remoteNode : apps.get(3).snapshotLibrary.remoteImplementation.remoteNodes) {
+            System.out.println("After: "+remoteNode.hostname+":"+remoteNode.port);
+        }
+
+        Storage.cleanStorageFolder();
+    }
+
 
     private void sendLoop(ArrayList<App<Message,State>> apps, int index)  {
         App<Message,State> current=apps.get(index);
@@ -130,13 +205,19 @@ public class DistributedSnapshotTest {
                 try {
                     current.snapshotLibrary.sendMessage(apps.get(random_index).hostname, apps.get(random_index).port,
                             new Message("MSG from ["+current.hostname+":"+current.port+"]"));
-                    Thread.sleep(10);
-                } catch (RemoteNodeNotFound | RemoteException | NotBoundException |
-                        NotInitialized | SnapshotInterruptException | RestoreInProgress | InterruptedException e) {
+                    Thread.sleep(42); // "Answer to the Ultimate Question of Life, the Universe, and Everything"
+                } catch (RemoteException | NotBoundException |
+                        NotInitialized | SnapshotInterruptException | InterruptedException e) {
                     e.printStackTrace();
+                }catch (RestoreInProgress e){
+                    System.out.println("WAITING END OF RESTORE");
+                }catch (RemoteNodeNotFound e){
+                    System.out.println("TRYING TO SEND A MESSAGE TO REMOVED NODE");
+
+                }finally {
+                    random_index= new Random().nextInt(apps.size());
                 }
             }
-            random_index= new Random().nextInt(apps.size());
         }
     }
 }
@@ -157,20 +238,32 @@ class App<MessageType, StateType> implements AppConnector<MessageType, StateType
         snapshotLibrary.init(hostname, port, appConnector);
     }
 
+    Entity getEntity(String hostname, int port){
+        for (Entity entity : connections) {
+            if(entity.getIpAddress().equals(hostname)&& entity.getPort()==port)
+                return entity;
+        }
+        return null;
+    }
+
     @Override
     public void handleIncomingMessage(String senderHostname, int senderPort, MessageType o) {
         state.messages.add((Message) o);
+        try {
+            snapshotLibrary.updateState(state);
+        } catch (StateUpdateException | RestoreInProgress e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
     public void handleNewConnection(String newConnectionHostname, int newConnectionPort) {
         connections.add(new Entity(newConnectionHostname, newConnectionPort));
-        System.out.println("["+hostname+":"+port+"] adding new connection to "+newConnectionHostname+":"+newConnectionPort);
     }
 
     @Override
     public void handleRemoveConnection(String removeConnectionHostname, int removeConnectionPort) {
-
+        connections.remove(new Entity(removeConnectionHostname,removeConnectionPort));
     }
 
     @Override
@@ -180,7 +273,7 @@ class App<MessageType, StateType> implements AppConnector<MessageType, StateType
 
     @Override
     public void handleRestoredConnections(ArrayList<Entity> connections) {
-
+        this.connections=new ArrayList<>(connections);
     }
 }
 
