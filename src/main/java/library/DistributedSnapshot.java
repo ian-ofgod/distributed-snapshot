@@ -218,7 +218,7 @@ public class DistributedSnapshot<StateType, MessageType> {
             UnicastRemoteObject.unexportObject(remoteImplementation, true);
             LocateRegistry.getRegistry(remoteImplementation.port).unbind("RemoteInterface");
             //SHOULD STOP HERE!!
-            System.exit(0);
+            //System.exit(0);
         } catch (Exception e) {
             //TODO: rimuovere printStackTrace
             //TODO: evitare generic exceptions
