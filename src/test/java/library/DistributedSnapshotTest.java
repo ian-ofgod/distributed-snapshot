@@ -255,10 +255,10 @@ public class DistributedSnapshotTest {
     @Test
     public void restoreWithMultipleSnapshotAvailable() throws RemoteException, NotInitialized, RestoreInProgress, DoubleMarkerException, InterruptedException, UnexpectedMarkerReceived, RestoreNotPossible, NotBoundException, RestoreAlreadyInProgress {
         ArrayList<App<Message, State>> apps = new ArrayList<>();
-        apps.add(new App<>("localhost", 11151));
-        apps.add(new App<>("localhost", 11152));
-        apps.add(new App<>("localhost", 11153));
-        apps.add(new App<>("localhost", 11154));
+        apps.add(new App<>("localhost", 11251));
+        apps.add(new App<>("localhost", 11252));
+        apps.add(new App<>("localhost", 11253));
+        apps.add(new App<>("localhost", 11254));
 
         // app[i] initialize & app[i] set initial state
         apps.forEach((app) -> {
@@ -290,7 +290,6 @@ public class DistributedSnapshotTest {
         apps.get(0).snapshotLibrary.initiateSnapshot(); // localhost:11151
         Thread.sleep(1000);
 
-        printAppsState(apps); //state to be seen in the snapshot
 
         send.submit(()-> sendLoop(apps, 0));
         send.submit(()-> sendLoop(apps, 1));
@@ -300,6 +299,9 @@ public class DistributedSnapshotTest {
 
         apps.get(0).snapshotLibrary.initiateSnapshot(); // localhost:11151
         Thread.sleep(1000);
+
+
+        printAppsState(apps); //state to be seen in the snapshot
 
         send.submit(()-> sendLoop(apps, 0)); //new messages not belonging to the snap
         send.submit(()-> sendLoop(apps, 1));
