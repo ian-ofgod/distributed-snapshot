@@ -252,6 +252,73 @@ public class DistributedSnapshotTest {
         Storage.cleanStorageFolder();
     }
 
+    @Test
+    public void restoreWithMultipleSnapshotAvailable() throws RemoteException, NotInitialized, RestoreInProgress, DoubleMarkerException, InterruptedException, UnexpectedMarkerReceived, RestoreNotPossible, NotBoundException, RestoreAlreadyInProgress {
+        ArrayList<App<Message, State>> apps = new ArrayList<>();
+        apps.add(new App<>("localhost", 11151));
+        apps.add(new App<>("localhost", 11152));
+        apps.add(new App<>("localhost", 11153));
+        apps.add(new App<>("localhost", 11154));
+
+        // app[i] initialize & app[i] set initial state
+        apps.forEach((app) -> {
+            try {
+                app.init(app);
+                app.state = new State(app.port);
+                app.snapshotLibrary.updateState(app.state);
+            } catch (AlreadyBoundException | RemoteException | AlreadyInitialized | RestoreInProgress | StateUpdateException e) {
+                e.printStackTrace();
+            }
+        });
+
+        // app[i] join network
+        apps.forEach((app) -> {
+            try {
+                app.snapshotLibrary.joinNetwork(apps.get(0).hostname, apps.get(0).port);
+            } catch (RemoteException | NotBoundException | NotInitialized e) {
+                e.printStackTrace();
+            }
+        });
+
+        // make all the apps send messages to each other randomly
+        ExecutorService send= Executors.newCachedThreadPool();
+        send.submit(()-> sendLoop(apps, 0));
+        send.submit(()-> sendLoop(apps, 1));
+        send.submit(()-> sendLoop(apps, 2));
+        send.submit(()-> sendLoop(apps, 3));
+
+        apps.get(0).snapshotLibrary.initiateSnapshot(); // localhost:11151
+        Thread.sleep(1000);
+
+        printAppsState(apps); //state to be seen in the snapshot
+
+        send.submit(()-> sendLoop(apps, 0));
+        send.submit(()-> sendLoop(apps, 1));
+        send.submit(()-> sendLoop(apps, 2));
+        send.submit(()-> sendLoop(apps, 3));
+
+
+        apps.get(0).snapshotLibrary.initiateSnapshot(); // localhost:11151
+        Thread.sleep(1000);
+
+        send.submit(()-> sendLoop(apps, 0)); //new messages not belonging to the snap
+        send.submit(()-> sendLoop(apps, 1));
+        send.submit(()-> sendLoop(apps, 2));
+        send.submit(()-> sendLoop(apps, 3));
+
+        //we restore the snapshot that we made
+        apps.get(0).snapshotLibrary.restoreLastSnapshot();
+        Thread.sleep(2000);
+
+        printAppsState(apps);
+
+        //todo: assert
+
+        Storage.cleanStorageFolder();
+
+    }
+
+
     private void printAppsState(ArrayList<App<Message,State>> apps){
         System.out.println("----------------------------------");
         System.out.println("STATUS:");
