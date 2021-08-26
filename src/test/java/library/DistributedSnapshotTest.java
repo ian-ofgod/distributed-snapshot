@@ -162,7 +162,7 @@ public class DistributedSnapshotTest {
         send.submit(()-> sendLoop(apps, 3));
 
         apps.get(0).snapshotLibrary.initiateSnapshot();
-        Thread.sleep(500);
+        Thread.sleep(1000);
 
         //we disconnect one app from the network
         apps.get(2).snapshotLibrary.disconnect();
@@ -237,6 +237,17 @@ public class DistributedSnapshotTest {
         Thread.sleep(1000);
         printAppsState(apps);
 
+        apps.forEach((app)->{
+            for(int i=0; i<10; i++){
+                try {
+                    app.snapshotLibrary.sendMessage(apps.get(0).hostname, apps.get(0).port, new Message(app.hostname+":"+app.port));
+                } catch (RemoteNodeNotFound | RemoteException | NotBoundException | NotInitialized | SnapshotInterruptException | RestoreInProgress e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        printAppsState(apps);
+
         //we disconnect one app from the network
         apps.get(2).snapshotLibrary.disconnect(); // localhost:11143
         App<Message, State> toBeEliminated = apps.get(2);
@@ -247,9 +258,10 @@ public class DistributedSnapshotTest {
         //we check that the restore is not possible
         assertThrows(RestoreNotPossible.class, () -> apps.get(1).snapshotLibrary.restoreLastSnapshot());
         Thread.sleep(1000);
-        printAppsState(apps);
 
         Storage.cleanStorageFolder();
+        printAppsState(apps);
+
     }
 
     @Test
@@ -341,12 +353,11 @@ public class DistributedSnapshotTest {
                                 new Message("MSG from [" + current.hostname + ":" + current.port + "]"));
                         Thread.sleep(42); // "Answer to the Ultimate Question of Life, the Universe, and Everything"
                     } catch (RemoteException | NotBoundException | NotInitialized | SnapshotInterruptException | InterruptedException e) {
-                        e.printStackTrace();
+                        System.out.println("ANOTHER TYPE OF ERROR");
                     } catch (RestoreInProgress e) {
                         System.out.println("WAITING END OF RESTORE");
                     } catch (RemoteNodeNotFound e) {
                         System.out.println("TRYING TO SEND A MESSAGE TO REMOVED NODE");
-
                     } finally {
                         random_index = new Random().nextInt(apps.size());
                     }
