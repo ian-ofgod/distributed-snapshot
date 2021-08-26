@@ -10,12 +10,15 @@ target/
 # Mac
 .DS_Store
 
-#LaTex
+# LaTex
 /doc/doc.aux
 /doc/doc.log
 /doc/doc.out
 /doc/doc.synctex.gz
 /doc/doc.toc
 
-#Jar xecution
+# Jar xecution
 storage_folder
+
+# .py env
+/functional_testing/env.py

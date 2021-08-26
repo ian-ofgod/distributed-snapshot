@@ -1,11 +1,7 @@
 import subprocess
 from subprocess import PIPE, STDOUT
 
-# set those variables accordingly to your system
-# to generate the jar in the target folder: run maven->clean+package
-java_path = r'C:\Users\iandi\.jdks\openjdk-16.0.2\bin\java.exe'
-jar_path = r'C:\Users\iandi\IdeaProjects\distributed-snapshot\target\distributed-snapshot-1.0-SNAPSHOT-jar-with-dependencies.jar'
-
+from env import *
 
 app1 = subprocess.Popen([java_path, r'-jar', jar_path], stdout=PIPE, stdin=PIPE, stderr=STDOUT, bufsize=0)
 app2 = subprocess.Popen([java_path, r'-jar', jar_path], stdout=PIPE, stdin=PIPE, stderr=STDOUT, bufsize=0)
