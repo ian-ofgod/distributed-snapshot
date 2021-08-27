@@ -3,31 +3,14 @@ package library;
 
 import org.junit.jupiter.api.Test;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 public class SnapshotTest {
-
-    @Test
-    public void testEquals() {
-        int id = 1;
-        MockState1 state1 = new MockState1("bla",1);
-        MockState2 state2 = new MockState2('c',2.0);
-
-
-        Snapshot snapshot1 = new Snapshot(id,state1);
-        Snapshot snapshot2 = new Snapshot(id,state2);
-        Snapshot snapshot3 = new Snapshot(id+1,state2);
-
-        assertEquals(snapshot1,snapshot2);
-        assertNotEquals(snapshot2,snapshot3);
-
-    }
-
     @Test
     void writeFileTest() {
 
@@ -56,37 +39,37 @@ public class SnapshotTest {
         snapshot1a.connectedNodes.add(entity2);
         snapshot1a.connectedNodes.add(entity3);
 
-        snapshot1a.messages.add(new Envelope(entity1,message1));
-        snapshot1a.messages.add(new Envelope(entity2,message1));
-        snapshot1a.messages.add(new Envelope(entity3,message1));
+        snapshot1a.messages.add(new Envelope<>(entity1, message1));
+        snapshot1a.messages.add(new Envelope<>(entity2, message1));
+        snapshot1a.messages.add(new Envelope<>(entity3, message1));
 
-        snapshot2a.messages.add(new Envelope(entity1,message2));
-        snapshot2a.messages.add(new Envelope(entity2,message2));
-        snapshot2a.messages.add(new Envelope(entity3,message2));
+        snapshot2a.messages.add(new Envelope<>(entity1,message2));
+        snapshot2a.messages.add(new Envelope<>(entity2,message2));
+        snapshot2a.messages.add(new Envelope<>(entity3,message2));
 
-        snapshot3a.messages.add(new Envelope(entity1,message1));
-        snapshot3a.messages.add(new Envelope(entity2,message1));
-        snapshot3a.messages.add(new Envelope(entity3,message1));
+        snapshot3a.messages.add(new Envelope<>(entity1,message1));
+        snapshot3a.messages.add(new Envelope<>(entity2,message1));
+        snapshot3a.messages.add(new Envelope<>(entity3,message1));
 
-        snapshot4a.messages.add(new Envelope(entity1,message2));
-        snapshot4a.messages.add(new Envelope(entity2,message2));
-        snapshot4a.messages.add(new Envelope(entity3,message2));
+        snapshot4a.messages.add(new Envelope<>(entity1,message2));
+        snapshot4a.messages.add(new Envelope<>(entity2,message2));
+        snapshot4a.messages.add(new Envelope<>(entity3,message2));
 
-        snapshot1b.messages.add(new Envelope(entity1,message1));
-        snapshot1b.messages.add(new Envelope(entity2,message1));
-        snapshot1b.messages.add(new Envelope(entity3,message1));
+        snapshot1b.messages.add(new Envelope<>(entity1,message1));
+        snapshot1b.messages.add(new Envelope<>(entity2,message1));
+        snapshot1b.messages.add(new Envelope<>(entity3,message1));
 
-        snapshot2b.messages.add(new Envelope(entity1,message2));
-        snapshot2b.messages.add(new Envelope(entity2,message2));
-        snapshot2b.messages.add(new Envelope(entity3,message2));
+        snapshot2b.messages.add(new Envelope<>(entity1,message2));
+        snapshot2b.messages.add(new Envelope<>(entity2,message2));
+        snapshot2b.messages.add(new Envelope<>(entity3,message2));
 
-        snapshot3b.messages.add(new Envelope(entity1,message1));
-        snapshot3b.messages.add(new Envelope(entity2,message1));
-        snapshot3b.messages.add(new Envelope(entity3,message1));
+        snapshot3b.messages.add(new Envelope<>(entity1,message1));
+        snapshot3b.messages.add(new Envelope<>(entity2,message1));
+        snapshot3b.messages.add(new Envelope<>(entity3,message1));
 
-        snapshot4b.messages.add(new Envelope(entity1,message2));
-        snapshot4b.messages.add(new Envelope(entity2,message2));
-        snapshot4b.messages.add(new Envelope(entity3,message2));
+        snapshot4b.messages.add(new Envelope<>(entity1,message2));
+        snapshot4b.messages.add(new Envelope<>(entity2,message2));
+        snapshot4b.messages.add(new Envelope<>(entity3,message2));
 
 
         ArrayList<Snapshot<MockState1,MockMessage1>> runningSnapshots1 = new ArrayList<>();
@@ -106,24 +89,24 @@ public class SnapshotTest {
         runningSnapshots4.add(snapshot4b);
 
 
-        Storage.writeFile(runningSnapshots1,"192.168.0.1123".hashCode(), "localhost", 0000); // saves snapshot1a
-        Storage.writeFile(runningSnapshots2,"192.168.0.1124".hashCode(), "localhost", 0000); // saves snapshot2a
-        Storage.writeFile(runningSnapshots3,"192.168.0.1125".hashCode(), "localhost", 0000); // saves snapshot3a
-        Storage.writeFile(runningSnapshots4,"192.168.0.1126".hashCode(), "localhost", 0000); // saves snapshot4a
-        Storage.writeFile(runningSnapshots1,"192.168.0.1127".hashCode(), "localhost", 0000); // saves snapshot1b
-        Storage.writeFile(runningSnapshots2,"192.168.0.1128".hashCode(), "localhost", 0000); // saves snapshot2b
-        Storage.writeFile(runningSnapshots3,"192.168.0.1129".hashCode(), "localhost", 0000); // saves snapshot3b
-        Storage.writeFile(runningSnapshots4,"192.168.0.1130".hashCode(), "localhost", 0000); // saves snapshot4b
+        Storage.writeFile(runningSnapshots1,"192.168.0.1123".hashCode(), "localhost", 0); // saves snapshot1a
+        Storage.writeFile(runningSnapshots2,"192.168.0.1124".hashCode(), "localhost", 0); // saves snapshot2a
+        Storage.writeFile(runningSnapshots3,"192.168.0.1125".hashCode(), "localhost", 0); // saves snapshot3a
+        Storage.writeFile(runningSnapshots4,"192.168.0.1126".hashCode(), "localhost", 0); // saves snapshot4a
+        Storage.writeFile(runningSnapshots1,"192.168.0.1127".hashCode(), "localhost", 0); // saves snapshot1b
+        Storage.writeFile(runningSnapshots2,"192.168.0.1128".hashCode(), "localhost", 0); // saves snapshot2b
+        Storage.writeFile(runningSnapshots3,"192.168.0.1129".hashCode(), "localhost", 0); // saves snapshot3b
+        Storage.writeFile(runningSnapshots4,"192.168.0.1130".hashCode(), "localhost", 0); // saves snapshot4b
 
 
-        Snapshot readSnap1 = Storage.readFile("192.168.0.1123".hashCode(), "localhost",0);
-        Snapshot readSnap2 = Storage.readFile("192.168.0.1124".hashCode(), "localhost",0);
-        Snapshot readSnap3 = Storage.readFile("192.168.0.1125".hashCode(), "localhost",0);
-        Snapshot readSnap4 = Storage.readFile("192.168.0.1126".hashCode(), "localhost",0);
-        Snapshot readSnap5 = Storage.readFile("192.168.0.1127".hashCode(), "localhost",0);
-        Snapshot readSnap6 = Storage.readFile("192.168.0.1128".hashCode(), "localhost",0);
-        Snapshot readSnap7 = Storage.readFile("192.168.0.1129".hashCode(), "localhost",0);
-        Snapshot readSnap8 = Storage.readFile("192.168.0.1130".hashCode(), "localhost",0);
+        Snapshot<MockState1,MockMessage1> readSnap1 = Storage.readFile("192.168.0.1123".hashCode(), "localhost",0);
+        Snapshot<MockState1,MockMessage2> readSnap2 = Storage.readFile("192.168.0.1124".hashCode(), "localhost",0);
+        Snapshot<MockState2,MockMessage1> readSnap3 = Storage.readFile("192.168.0.1125".hashCode(), "localhost",0);
+        Snapshot<MockState2,MockMessage2> readSnap4 = Storage.readFile("192.168.0.1126".hashCode(), "localhost",0);
+        Snapshot<MockState1,MockMessage1> readSnap5 = Storage.readFile("192.168.0.1127".hashCode(), "localhost",0);
+        Snapshot<MockState1,MockMessage2> readSnap6 = Storage.readFile("192.168.0.1128".hashCode(), "localhost",0);
+        Snapshot<MockState2,MockMessage1> readSnap7 = Storage.readFile("192.168.0.1129".hashCode(), "localhost",0);
+        Snapshot<MockState2,MockMessage2> readSnap8 = Storage.readFile("192.168.0.1130".hashCode(), "localhost",0);
 
         /* we must test state.equals() and messages.equals() separately,
         because we use Snapshot.equals() with just the snapshot ID
@@ -160,6 +143,7 @@ public class SnapshotTest {
 
 class MockState1 implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 6529685098267757690L;
 
     String randomString;
@@ -186,6 +170,7 @@ class MockState1 implements Serializable {
 
 class MockState2 implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 6529685098267757690L;
 
     char randomChar;
@@ -212,6 +197,7 @@ class MockState2 implements Serializable {
 
 class MockMessage1 implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 6529685098267757690L;
 
     char randomChar;
@@ -243,6 +229,7 @@ class MockMessage1 implements Serializable {
 
 class MockMessage2 implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 6529685098267757690L;
 
     char randomChar1;
