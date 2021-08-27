@@ -195,6 +195,8 @@ public class DistributedSnapshotTest {
 
         //we disconnect one app from the network
         apps.get(2).snapshotLibrary.disconnect();
+        Thread.sleep(500);
+
 
         //check that all the apps have removed that node from the network
         apps.forEach((app)->{
@@ -262,15 +264,13 @@ public class DistributedSnapshotTest {
         send.submit(()-> sendLoop(apps, 3));
 
         apps.get(0).snapshotLibrary.initiateSnapshot(); // localhost:11141
-        Thread.sleep(500);
+        Thread.sleep(200);
         printAppsState(apps);
 
 
         //we disconnect one app from the network
         apps.get(2).snapshotLibrary.disconnect(); // localhost:11143
-        App<Message, State> toBeEliminated = apps.get(2);
-        apps.remove(2);
-        toBeEliminated.snapshotLibrary.stop();
+        apps.get(2).snapshotLibrary.stop();
 
 
         //we check that the restore is not possible
@@ -355,12 +355,12 @@ public class DistributedSnapshotTest {
 
         while(true){
             send_to=apps.get(new Random().nextInt(apps.size())); // get a random app to send the message to
-            if(current!=null && send_to!=null) { // the thread that runs sendLoop on a removed node will be doing nothing
+            if(current!=null && send_to!=null && current.snapshotLibrary.remoteImplementation.remoteNodes.size()!=0) { // the thread that runs sendLoop on a removed node will be doing nothing
                     try {
                         current.snapshotLibrary.sendMessage(send_to.hostname, send_to.port,
                                 new Message("MSG from [" + current.hostname + ":" + current.port + "]"));
-                        Thread.sleep(42); // "Answer to the Ultimate Question of Life, the Universe, and Everything"
-                     } catch (RemoteException | NotBoundException | NotInitialized | SnapshotInterruptException e) {
+                        Thread.sleep(42);
+                    } catch (RemoteException | NotBoundException | NotInitialized | SnapshotInterruptException e) {
                         System.out.println("ANOTHER TYPE OF ERROR");
                     } catch (RestoreInProgress e) {
                         System.out.println("WAITING END OF RESTORE");
