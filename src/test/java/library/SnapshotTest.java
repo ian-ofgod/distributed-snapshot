@@ -3,6 +3,7 @@ package library;
 
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -12,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class SnapshotTest {
     @Test
-    void writeFileTest() {
+    void writeFileTest() throws IOException, ClassNotFoundException {
 
         MockState1 state1 = new MockState1("bla",1);
         MockState2 state2 = new MockState2('c',2.0);
@@ -110,7 +111,7 @@ public class SnapshotTest {
 
         /* we must test state.equals() and messages.equals() separately,
         because we use Snapshot.equals() with just the snapshot ID
-        to check if a snapshot is already runnning */
+        to check if a snapshot is already running */
 
         assertEquals(snapshot1a.state, readSnap1.state);
         assertEquals(snapshot2a.state, readSnap2.state);

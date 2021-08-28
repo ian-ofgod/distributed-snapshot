@@ -4,6 +4,7 @@ import library.exceptions.*;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
@@ -16,7 +17,7 @@ import java.util.concurrent.Executors;
 
 public class DistributedSnapshotTest {
     @Test
-    public void simpleExample() throws InterruptedException {
+    public void simpleExample() throws InterruptedException, IOException {
         ArrayList<App<Message,State>> apps = new ArrayList<>();
         apps.add(new App<>("localhost", 11111));
         apps.add(new App<>("localhost", 11112));
@@ -58,7 +59,7 @@ public class DistributedSnapshotTest {
         executorService.submit(()-> {
             try {
                 apps.get(2).snapshotLibrary.initiateSnapshot();
-            } catch (RemoteException | DoubleMarkerException | UnexpectedMarkerReceived | NotInitialized | RestoreInProgress e) {
+            } catch (IOException | DoubleMarkerException | UnexpectedMarkerReceived | NotInitialized | RestoreInProgress e) {   
                 e.printStackTrace();
             }
         });
@@ -66,15 +67,22 @@ public class DistributedSnapshotTest {
         Thread.sleep(100);  // let them exchange some messages
         printAppsState(apps); // print the number of messages received
 
+        executorService.shutdownNow();
+        if (!executorService.awaitTermination(100, TimeUnit.MICROSECONDS)) {
+            System.out.println("Still waiting...");
+            System.exit(0);
+        }
+        System.out.println("Exiting normally...");
+
         Storage.cleanStorageFolder();
     }
 
     @Test
-    public void simpleSnapshotRestore() throws RestoreInProgress, RemoteException, InterruptedException, RestoreAlreadyInProgress, NotBoundException, RestoreNotPossible {
+    public void simpleSnapshotRestore() throws RestoreInProgress, IOException, InterruptedException, RestoreAlreadyInProgress, NotBoundException, RestoreNotPossible, ClassNotFoundException, UnexpectedMarkerReceived, DoubleMarkerException, NotInitialized {
         ArrayList<App<Message,State>> apps = new ArrayList<>();
         apps.add(new App<>("localhost", 11121));
         apps.add(new App<>("localhost", 11122));
-        apps.add(new App<>("localhost", 11123));
+        //apps.add(new App<>("localhost", 11123));
 
         // app[i] initialize & app[i] set initial state
         apps.forEach((app)-> {
@@ -100,20 +108,12 @@ public class DistributedSnapshotTest {
         ExecutorService executorService= Executors.newCachedThreadPool();
         executorService.submit(()-> sendLoop(apps, 0));
         executorService.submit(()-> sendLoop(apps, 1));
-        executorService.submit(()-> sendLoop(apps, 2));
+        //executorService.submit(()-> sendLoop(apps, 2));
 
 
         // let localhost:11118 start the snapshot
-        executorService.submit(()-> {
-            try {
-                apps.get(1).snapshotLibrary.initiateSnapshot();
-            } catch (RemoteException | DoubleMarkerException | UnexpectedMarkerReceived | NotInitialized | RestoreInProgress e) {
-                e.printStackTrace();
-            }
-        });
-
-        // let the snapshot finish
-        Thread.sleep(500);
+        apps.get(1).snapshotLibrary.initiateSnapshot();
+        Thread.sleep(500); // let the snapshot finish
 
         //at this point we have finished a snapshot
         //we will now modify the state of all the applications and then proceed to restore from snapshot
@@ -134,6 +134,7 @@ public class DistributedSnapshotTest {
         });
 
         //we restore the snapshot that we made
+        apps.forEach((app)->System.out.println());
         apps.get(0).snapshotLibrary.restoreLastSnapshot();
         Thread.sleep(200);
 
@@ -147,12 +148,19 @@ public class DistributedSnapshotTest {
                     "["+app.hostname+":"+app.port+"] remoteImplementation.currentState.appId="+app.state.appId);
         });
 
+        executorService.shutdownNow();
+        if (!executorService.awaitTermination(100, TimeUnit.MICROSECONDS)) {
+            System.out.println("Still waiting...");
+            System.exit(0);
+        }
+        System.out.println("Exiting normally...");
+
         Storage.cleanStorageFolder();
 
     }
 
     @Test
-    public void restoreSnapshotWithRemovedNode() throws UnexpectedMarkerReceived, RestoreInProgress, DoubleMarkerException, NotInitialized, RemoteException, InterruptedException, RestoreAlreadyInProgress, NotBoundException, OperationForbidden, SnapshotInterruptException, RestoreNotPossible {
+    public void restoreSnapshotWithRemovedNode() throws UnexpectedMarkerReceived, RestoreInProgress, DoubleMarkerException, NotInitialized, IOException, InterruptedException, RestoreAlreadyInProgress, NotBoundException, OperationForbidden, SnapshotInterruptException, RestoreNotPossible, ClassNotFoundException {
         ArrayList<App<Message, State>> apps = new ArrayList<>();
         apps.add(new App<>("localhost", 11131));
         apps.add(new App<>("localhost", 11132));
@@ -181,11 +189,11 @@ public class DistributedSnapshotTest {
         });
 
         // make all the apps send messages to each other randomly
-        ExecutorService send= Executors.newCachedThreadPool();
-        send.submit(()-> sendLoop(apps, 0));
-        send.submit(()-> sendLoop(apps, 1));
-        send.submit(()-> sendLoop(apps, 2));
-        send.submit(()-> sendLoop(apps, 3));
+        ExecutorService executorService = Executors.newCachedThreadPool();
+        executorService.submit(()-> sendLoop(apps, 0));
+        executorService.submit(()-> sendLoop(apps, 1));
+        executorService.submit(()-> sendLoop(apps, 2));
+        executorService.submit(()-> sendLoop(apps, 3));
 
         //make a snapshot
         apps.get(0).snapshotLibrary.initiateSnapshot();
@@ -222,11 +230,19 @@ public class DistributedSnapshotTest {
             System.out.println("After: "+remoteNode.hostname+":"+remoteNode.port);
         }
 
+        executorService.shutdownNow();
+        if (!executorService.awaitTermination(100, TimeUnit.MICROSECONDS)) {
+            System.out.println("Still waiting...");
+            System.exit(0);
+        }
+        System.out.println("Exiting normally...");
+
         Storage.cleanStorageFolder();
+
     }
 
     @Test
-    public void restoreNotPossibleNodeNotAvailable() throws UnexpectedMarkerReceived, RestoreInProgress, DoubleMarkerException, NotInitialized, RemoteException, InterruptedException, OperationForbidden, SnapshotInterruptException, RestoreAlreadyInProgress, NotBoundException, RestoreNotPossible {
+    public void restoreNotPossibleNodeNotAvailable() throws UnexpectedMarkerReceived, RestoreInProgress, DoubleMarkerException, NotInitialized, IOException, InterruptedException, OperationForbidden, SnapshotInterruptException, RestoreAlreadyInProgress, NotBoundException, RestoreNotPossible {
         ArrayList<App<Message, State>> apps = new ArrayList<>();
         apps.add(new App<>("localhost", 11141));
         apps.add(new App<>("localhost", 11142));
@@ -255,11 +271,11 @@ public class DistributedSnapshotTest {
         });
 
         // make all the apps send messages to each other randomly
-        ExecutorService send= Executors.newCachedThreadPool();
-        send.submit(()-> sendLoop(apps, 0));
-        send.submit(()-> sendLoop(apps, 1));
-        send.submit(()-> sendLoop(apps, 2));
-        send.submit(()-> sendLoop(apps, 3));
+        ExecutorService executorService= Executors.newCachedThreadPool();
+        executorService.submit(()-> sendLoop(apps, 0));
+        executorService.submit(()-> sendLoop(apps, 1));
+        executorService.submit(()-> sendLoop(apps, 2));
+        executorService.submit(()-> sendLoop(apps, 3));
 
         apps.get(0).snapshotLibrary.initiateSnapshot(); // localhost:11141
         Thread.sleep(200);
@@ -275,13 +291,22 @@ public class DistributedSnapshotTest {
         assertThrows(RestoreNotPossible.class, () -> apps.get(1).snapshotLibrary.restoreLastSnapshot());
         Thread.sleep(100);
 
-        Storage.cleanStorageFolder();
         printAppsState(apps);
+
+        executorService.shutdownNow();
+        if (!executorService.awaitTermination(100, TimeUnit.MICROSECONDS)) {
+            System.out.println("Still waiting...");
+            System.exit(0);
+        }
+        System.out.println("Exiting normally...");
+
+        Storage.cleanStorageFolder();
+
 
     }
 
     @Test
-    public void restoreWithMultipleSnapshotAvailable() throws RemoteException, NotInitialized, RestoreInProgress, DoubleMarkerException, InterruptedException, UnexpectedMarkerReceived, RestoreNotPossible, NotBoundException, RestoreAlreadyInProgress {
+    public void restoreWithMultipleSnapshotAvailable() throws IOException, NotInitialized, RestoreInProgress, DoubleMarkerException, InterruptedException, UnexpectedMarkerReceived, RestoreNotPossible, NotBoundException, RestoreAlreadyInProgress, ClassNotFoundException {
         ArrayList<App<Message, State>> apps = new ArrayList<>();
         apps.add(new App<>("localhost", 11251));
         apps.add(new App<>("localhost", 11252));
@@ -309,11 +334,11 @@ public class DistributedSnapshotTest {
         });
 
         // make all the apps send messages to each other randomly
-        ExecutorService send= Executors.newCachedThreadPool();
-        send.submit(()-> sendLoop(apps, 0));
-        send.submit(()-> sendLoop(apps, 1));
-        send.submit(()-> sendLoop(apps, 2));
-        send.submit(()-> sendLoop(apps, 3));
+        ExecutorService executorService= Executors.newCachedThreadPool();
+        executorService.submit(()-> sendLoop(apps, 0));
+        executorService.submit(()-> sendLoop(apps, 1));
+        executorService.submit(()-> sendLoop(apps, 2));
+        executorService.submit(()-> sendLoop(apps, 3));
 
         apps.get(0).snapshotLibrary.initiateSnapshot(); // localhost:11151
         Thread.sleep(500);
@@ -334,7 +359,15 @@ public class DistributedSnapshotTest {
 
         //todo: assert
 
+        executorService.shutdownNow();
+        if (!executorService.awaitTermination(100, TimeUnit.MICROSECONDS)) {
+            System.out.println("Still waiting...");
+            System.exit(0);
+        }
+        System.out.println("Exiting normally...");
+
         Storage.cleanStorageFolder();
+
 
     }
 
@@ -347,27 +380,30 @@ public class DistributedSnapshotTest {
         System.out.println("----------------------------------");
     }
 
-    private void sendLoop(ArrayList<App<Message,State>> apps, int index)  {
+    private void sendLoop(ArrayList<App<Message,State>> apps, int index) {
         App<Message,State> current=apps.get(index);
         App<Message,State> send_to;
 
-        while(true){
-            send_to=apps.get(new Random().nextInt(apps.size())); // get a random app to send the message to
-            if(current!=null && send_to!=null && current.snapshotLibrary.remoteImplementation.remoteNodes.size()!=0) { // the thread that runs sendLoop on a removed node will be doing nothing
+        try {
+            while (true) {
+                send_to = apps.get(new Random().nextInt(apps.size())); // get a random app to send the message to
+                if (current != null && send_to != null && current.snapshotLibrary.remoteImplementation.remoteNodes.size() != 0) { // the thread that runs sendLoop on a removed node will be doing nothing
                     try {
+                        System.out.println("FROM [" + current.port + "] MSG TO " + send_to.port);
                         current.snapshotLibrary.sendMessage(send_to.hostname, send_to.port,
                                 new Message("MSG from [" + current.hostname + ":" + current.port + "]"));
-                        Thread.sleep(42);
                     } catch (RemoteException | NotBoundException | NotInitialized | SnapshotInterruptException e) {
                         System.out.println("ANOTHER TYPE OF ERROR");
                     } catch (RestoreInProgress e) {
                         System.out.println("WAITING END OF RESTORE");
                     } catch (RemoteNodeNotFound e) {
-                        System.out.println("TRYING TO SEND A MESSAGE TO REMOVED NODE");
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
+                        System.out.println("[" + current.port + "] TRYING TO SEND A MESSAGE TO REMOVED NODE: " + send_to.port);
                     }
+                }
+                Thread.sleep(10);
             }
+        }catch (InterruptedException e) {
+            System.out.println("sending thread exiting");
         }
     }
 }

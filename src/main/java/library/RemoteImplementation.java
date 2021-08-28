@@ -2,6 +2,7 @@ package library;
 
 import library.exceptions.*;
 
+import java.io.IOException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -83,7 +84,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
 
 
     @Override
-    public synchronized void receiveMarker(String senderHostname, int senderPort, String initiatorHostname, int initiatorPort, int snapshotId) throws DoubleMarkerException, UnexpectedMarkerReceived {
+    public synchronized void receiveMarker(String senderHostname, int senderPort, String initiatorHostname, int initiatorPort, int snapshotId) throws DoubleMarkerException, UnexpectedMarkerReceived, IOException {
         //TODO: remove SystemPrintln
         System.out.println("["+hostname + ":" + port + "] MARKER from -> " + senderHostname + ":" + senderPort);
         this.nodeReadyLock.readLock().lock();
@@ -124,7 +125,9 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
 
     @Override
     public synchronized void receiveMessage(String senderHostname, int senderPort, MessageType message) throws RemoteException, NotBoundException, SnapshotInterruptException {
+        System.out.println("Starting handling message");
         this.nodeReadyLock.readLock().lock();
+        System.out.println("LOCK PRESO");
         try {
             if (nodeReady) {
                 if (checkIfRemoteNodePresent(senderHostname, senderPort)) {
@@ -137,6 +140,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
                         });
                     }
                     //TODO: need to check if it's ok
+                    System.out.println("sending message calling handle incoming message on new thread");
                     executorsMsg.submit(() -> appConnector.handleIncomingMessage(senderHostname, senderPort, message));
                 } else {
                     // We issue the command to the remote node to remove us!
@@ -191,7 +195,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
     @Override
-    public synchronized ArrayList<Entity> getNodes() {
+    public synchronized ArrayList<Entity> getConnections() {
         ArrayList<Entity> nodes = new ArrayList<>();
         for (RemoteNode<MessageType> node : remoteNodes) {
             nodes.add(new Entity(node.hostname, node.port));
@@ -299,7 +303,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
     @Override
-    public void restoreState(int snapshotId) throws RestoreAlreadyInProgress, RemoteException {
+    public void restoreState(int snapshotId) throws RestoreAlreadyInProgress, IOException, ClassNotFoundException {
         this.nodeReadyLock.readLock().lock();
         try {
             if (!nodeReady) {
@@ -319,7 +323,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     }
 
     @Override
-    public void restoreConnections(int snapshotId) throws RestoreAlreadyInProgress, RemoteException, NotBoundException, RestoreNotPossible {
+    public void restoreConnections(int snapshotId) throws RestoreAlreadyInProgress, IOException, NotBoundException, RestoreNotPossible, ClassNotFoundException {
         this.nodeReadyLock.readLock().lock();
         try {
             if (!nodeReady) {
@@ -375,7 +379,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     }
 
     @Override
-    public void restoreOldIncomingMessages(int snapshotId) throws RestoreAlreadyInProgress {
+    public void restoreOldIncomingMessages(int snapshotId) throws RestoreAlreadyInProgress, IOException, ClassNotFoundException {
         this.nodeReadyLock.readLock().lock();
         try {
             if (nodeReady) {

@@ -5,6 +5,8 @@ import library.DistributedSnapshot;
 import library.exceptions.*;
 import library.Entity;
 import org.apache.logging.log4j.Logger;
+
+import java.io.IOException;
 import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
@@ -136,7 +138,7 @@ public class OilWell implements AppConnector<OilCargo, Integer> {
                 logger.warn("Cannot complete snapshot");
             } catch (NotInitialized e) {
                 logger.info("You must first initialize your oil well!");
-            } catch (RestoreInProgress restoreInProgress) {
+            } catch (RestoreInProgress | IOException restoreInProgress) {
                 restoreInProgress.printStackTrace();
             }
         } else logger.info("You must first initialize your oil well!");
@@ -149,7 +151,7 @@ public class OilWell implements AppConnector<OilCargo, Integer> {
         if (oilAmount != -1) {
             try {
                 distributedSnapshot.restoreLastSnapshot();
-            } catch (RestoreAlreadyInProgress | RemoteException | NotBoundException | RestoreInProgress | RestoreNotPossible e) {
+            } catch (IOException | ClassNotFoundException | RestoreAlreadyInProgress | NotBoundException | RestoreInProgress | RestoreNotPossible e) {
                 logger.warn("Cannot restore snapshot");
             }
         } else logger.info("You must first initialize your oil well!");
