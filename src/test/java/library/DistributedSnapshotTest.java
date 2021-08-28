@@ -84,7 +84,7 @@ public class DistributedSnapshotTest {
         ArrayList<App<Message,State>> apps = new ArrayList<>();
         apps.add(new App<>("localhost", 11121));
         apps.add(new App<>("localhost", 11122));
-        apps.add(new App<>("localhost", 11123));
+        //apps.add(new App<>("localhost", 11123));
 
         // app[i] initialize & app[i] set initial state
         apps.forEach((app)-> {
@@ -110,7 +110,7 @@ public class DistributedSnapshotTest {
         ExecutorService executorService= Executors.newCachedThreadPool();
         executorService.submit(()-> sendLoop(apps, 0));
         executorService.submit(()-> sendLoop(apps, 1));
-        executorService.submit(()-> sendLoop(apps, 2));
+        //executorService.submit(()-> sendLoop(apps, 2));
 
 
         // let localhost:11118 start the snapshot
@@ -391,6 +391,7 @@ public class DistributedSnapshotTest {
                 send_to = apps.get(new Random().nextInt(apps.size())); // get a random app to send the message to
                 if (current != null && send_to != null && current.snapshotLibrary.remoteImplementation.remoteNodes.size() != 0) { // the thread that runs sendLoop on a removed node will be doing nothing
                     try {
+                        System.out.println("FROM [" + current.port + "] MSG TO " + send_to.port);
                         current.snapshotLibrary.sendMessage(send_to.hostname, send_to.port,
                                 new Message("MSG from [" + current.hostname + ":" + current.port + "]"));
                     } catch (RemoteException | NotBoundException | NotInitialized | SnapshotInterruptException e) {
@@ -401,7 +402,7 @@ public class DistributedSnapshotTest {
                         System.out.println("[" + current.port + "] TRYING TO SEND A MESSAGE TO REMOVED NODE: " + send_to.port);
                     }
                 }
-                Thread.sleep(100);
+                Thread.sleep(10);
             }
         }catch (InterruptedException e) {
             System.out.println("sending thread exiting");

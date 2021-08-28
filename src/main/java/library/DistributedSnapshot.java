@@ -117,23 +117,31 @@ public class DistributedSnapshot<StateType, MessageType> {
      */
     public void sendMessage(String hostname, int port, MessageType message) throws RemoteNodeNotFound, RemoteException, NotBoundException, NotInitialized, SnapshotInterruptException, RestoreInProgress {
         distributedSnapshotLock.readLock().lock();
+
         remoteImplementation.nodeReadyLock.readLock().lock();
+        try {
+            if (!remoteImplementation.nodeReady) {
+                throw new RestoreInProgress("A restore is in progress, please wait until node is ready");
+            }
+        }finally {
+            remoteImplementation.nodeReadyLock.readLock().unlock();
+        }
+
         try {
             if (remoteImplementation.appConnector == null) throw new NotInitialized("You must initialize the instance and connect to hostname: " + hostname +
                     "and port " + port +
                     "before sending a message");
-            if (!remoteImplementation.nodeReady) {
-                throw new RestoreInProgress("A restore is in progress, please wait until node is ready");
-            }
+
             //send the message only if we are not sending the message to this node
             if(!(hostname.equals(this.remoteImplementation.hostname) && port==this.remoteImplementation.port)){
+                System.out.println("provo a mandare il messaggio");
                 getRemoteInterface(hostname, port).receiveMessage(remoteImplementation.hostname, remoteImplementation.port, message);
+                System.out.println("mandato");
             }else{
                 this.remoteImplementation.appConnector.handleIncomingMessage(hostname, port, message);
             }
         } finally {
             distributedSnapshotLock.readLock().unlock();
-            remoteImplementation.nodeReadyLock.readLock().unlock();
         }
     }
 
@@ -257,6 +265,7 @@ public class DistributedSnapshot<StateType, MessageType> {
 
             // we set our node to the not-ready state and restore our connections and state according to our snapshot
             this.remoteImplementation.nodeReady = false;
+            System.out.println("["+this.remoteImplementation.port+"] nodeReady=false");
             try {
                 this.remoteImplementation.restoreConnections(snapshotToRestore);
             }catch (RestoreNotPossible e){

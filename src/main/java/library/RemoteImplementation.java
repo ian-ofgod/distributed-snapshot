@@ -125,7 +125,9 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
 
     @Override
     public synchronized void receiveMessage(String senderHostname, int senderPort, MessageType message) throws RemoteException, NotBoundException, SnapshotInterruptException {
+        System.out.println("Starting handling message");
         this.nodeReadyLock.readLock().lock();
+        System.out.println("LOCK PRESO");
         try {
             if (nodeReady) {
                 if (checkIfRemoteNodePresent(senderHostname, senderPort)) {
@@ -138,6 +140,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
                         });
                     }
                     //TODO: need to check if it's ok
+                    System.out.println("sending message calling handle incoming message on new thread");
                     executorsMsg.submit(() -> appConnector.handleIncomingMessage(senderHostname, senderPort, message));
                 } else {
                     // We issue the command to the remote node to remove us!
