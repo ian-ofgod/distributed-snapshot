@@ -20,5 +20,6 @@ target/
 # Jar xecution
 storage_folder
 
-# .py env
+# .py testing
 /functional_testing/env.py
+outfile
