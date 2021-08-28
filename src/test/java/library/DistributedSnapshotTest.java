@@ -418,7 +418,7 @@ class App<MessageType, StateType> implements AppConnector<MessageType, StateType
 
     Entity getEntity(String hostname, int port){
         for (Entity entity : connections) {
-            if(entity.getIpAddress().equals(hostname)&& entity.getPort()==port)
+            if(entity.getHostname().equals(hostname)&& entity.getPort()==port)
                 return entity;
         }
         return null;

@@ -86,10 +86,10 @@ public class DistributedSnapshot<StateType, MessageType> {
                 this.remoteImplementation.remoteNodes.add(new RemoteNode<>(hostname, port, remoteInterface));
                 remoteInterface.addMeBack(remoteImplementation.hostname, remoteImplementation.port);
                 for (Entity entry : networkNodes) {
-                    if (!Objects.equals(entry.getIpAddress(), this.remoteImplementation.hostname) || entry.getPort() != this.remoteImplementation.port) {
-                        Registry nodeRegistry = LocateRegistry.getRegistry(entry.getIpAddress(), entry.getPort());
+                    if (!Objects.equals(entry.getHostname(), this.remoteImplementation.hostname) || entry.getPort() != this.remoteImplementation.port) {
+                        Registry nodeRegistry = LocateRegistry.getRegistry(entry.getHostname(), entry.getPort());
                         RemoteInterface<MessageType> nodeRemoteInterface = (RemoteInterface<MessageType>) nodeRegistry.lookup("RemoteInterface");
-                        remoteImplementation.remoteNodes.add(new RemoteNode<>(entry.getIpAddress(), entry.getPort(), nodeRemoteInterface));
+                        remoteImplementation.remoteNodes.add(new RemoteNode<>(entry.getHostname(), entry.getPort(), nodeRemoteInterface));
                         nodeRemoteInterface.addMeBack(remoteImplementation.hostname, remoteImplementation.port);
                     }
                 }

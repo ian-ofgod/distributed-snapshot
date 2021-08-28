@@ -92,8 +92,8 @@ public class OilWell implements AppConnector<OilCargo, Integer> {
                         ArrayList<Entity> nodes = distributedSnapshot.joinNetwork(hostname, port);
                         String connectedNodes = "";
                         for (Entity entry : nodes) {
-                            directConnections.add(new ConnectionDetails(entry.getIpAddress(), entry.getPort()));
-                            connectedNodes += ", " + entry.getIpAddress() + ":" + entry.getPort();
+                            directConnections.add(new ConnectionDetails(entry.getHostname(), entry.getPort()));
+                            connectedNodes += ", " + entry.getHostname() + ":" + entry.getPort();
                         }
                         logger.info("Successfully connected to: " + connectedNodes.substring(2));
                     } catch (RemoteException | NotBoundException e) {
@@ -213,7 +213,7 @@ public class OilWell implements AppConnector<OilCargo, Integer> {
     public void handleRestoredConnections(ArrayList<Entity> connections) {
         directConnections.clear();
         for (Entity entry : connections) {
-            directConnections.add(new ConnectionDetails(entry.getIpAddress(), entry.getPort()));
+            directConnections.add(new ConnectionDetails(entry.getHostname(), entry.getPort()));
         }
     }
 

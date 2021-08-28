@@ -34,7 +34,15 @@ public interface AppConnector<MessageType, StateType> {
      */
     void handleRemoveConnection(String removeConnectionHostname, int removeConnectionPort);
 
+    /**
+     * This is the method that the library will invoke on the user to handle the restore of its state
+     * @param state the restored state
+     */
     void handleRestoredState(StateType state);
 
+    /**
+     * This is the method that the library will invoke on the user to handle the restore of the connections from a snapshot
+     * @param connections an ArrayList of Entities of the restored connections
+     */
     void handleRestoredConnections(ArrayList<Entity> connections);
 }

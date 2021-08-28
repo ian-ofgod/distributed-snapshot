@@ -226,11 +226,11 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
                 ArrayList<RemoteNode<MessageType>> tempList= new ArrayList<>();
                 for (Entity entity : currentSnapshotToBeRestored.connectedNodes) {
                     try {
-                        Registry registry = LocateRegistry.getRegistry(entity.getIpAddress(), entity.getPort());
+                        Registry registry = LocateRegistry.getRegistry(entity.getHostname(), entity.getPort());
                         RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
-                        tempList.add(new RemoteNode<>(entity.getIpAddress(), entity.getPort(), remoteInterface));
+                        tempList.add(new RemoteNode<>(entity.getHostname(), entity.getPort(), remoteInterface));
                     }catch(RemoteException | NotBoundException e){
-                        throw new RestoreNotPossible("["+entity.getIpAddress()+":"+entity.getPort()+"] NOT AVAILABLE");
+                        throw new RestoreNotPossible("["+entity.getHostname()+":"+entity.getPort()+"] NOT AVAILABLE");
                     }
                 }
                 this.remoteNodes=tempList;
@@ -280,7 +280,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
                 }
                 executors.submit(()->{
                     for (Envelope<MessageType> envelope : currentSnapshotToBeRestored.messages) {
-                        this.appConnector.handleIncomingMessage(envelope.sender.getIpAddress(), envelope.sender.getPort(), envelope.message);
+                        this.appConnector.handleIncomingMessage(envelope.sender.getHostname(), envelope.sender.getPort(), envelope.message);
                     }
                 });
             }
