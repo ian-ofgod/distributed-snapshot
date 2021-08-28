@@ -1,7 +1,6 @@
 package library;
 
 import library.exceptions.*;
-import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -14,7 +13,6 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 public class DistributedSnapshotTest {
     @Test
@@ -60,7 +58,7 @@ public class DistributedSnapshotTest {
         executorService.submit(()-> {
             try {
                 apps.get(2).snapshotLibrary.initiateSnapshot();
-            } catch (RemoteException | DoubleMarkerException | UnexpectedMarkerReceived | NotInitialized | RestoreInProgress | InterruptedException e) {
+            } catch (RemoteException | DoubleMarkerException | UnexpectedMarkerReceived | NotInitialized | RestoreInProgress e) {
                 e.printStackTrace();
             }
         });
@@ -109,7 +107,7 @@ public class DistributedSnapshotTest {
         executorService.submit(()-> {
             try {
                 apps.get(1).snapshotLibrary.initiateSnapshot();
-            } catch (RemoteException | DoubleMarkerException | UnexpectedMarkerReceived | NotInitialized | RestoreInProgress | InterruptedException e) {
+            } catch (RemoteException | DoubleMarkerException | UnexpectedMarkerReceived | NotInitialized | RestoreInProgress e) {
                 e.printStackTrace();
             }
         });
