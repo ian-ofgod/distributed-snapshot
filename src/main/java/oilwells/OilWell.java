@@ -138,8 +138,6 @@ public class OilWell implements AppConnector<OilCargo, Integer> {
                 logger.info("You must first initialize your oil well!");
             } catch (RestoreInProgress restoreInProgress) {
                 restoreInProgress.printStackTrace();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
             }
         } else logger.info("You must first initialize your oil well!");
     }

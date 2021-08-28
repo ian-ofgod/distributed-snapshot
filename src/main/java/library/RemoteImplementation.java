@@ -375,7 +375,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     }
 
     @Override
-    public void restoreOldIncomingMessages(int snapshotId) throws RestoreAlreadyInProgress, RemoteException {
+    public void restoreOldIncomingMessages(int snapshotId) throws RestoreAlreadyInProgress {
         this.nodeReadyLock.readLock().lock();
         try {
             if (nodeReady) {
@@ -384,10 +384,11 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
                 } else if (snapshotId != currentSnapshotToBeRestored.snapshotId) {
                     throw new RestoreAlreadyInProgress("CRITICAL ERROR: Another snapshot is being restored");
                 }
-                for (Envelope<MessageType> envelope : currentSnapshotToBeRestored.messages) {
-                    this.appConnector.handleIncomingMessage(envelope.sender.getIpAddress(), envelope.sender.getPort(), envelope.message);
-                }
-
+                executors.submit(()->{
+                    for (Envelope<MessageType> envelope : currentSnapshotToBeRestored.messages) {
+                        this.appConnector.handleIncomingMessage(envelope.sender.getIpAddress(), envelope.sender.getPort(), envelope.message);
+                    }
+                });
             }
         } finally {
             this.nodeReadyLock.readLock().unlock();

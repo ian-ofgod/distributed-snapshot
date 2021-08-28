@@ -3,9 +3,7 @@ package library;
 import library.exceptions.*;
 
 import java.io.*;
-import java.rmi.AlreadyBoundException;
-import java.rmi.NotBoundException;
-import java.rmi.RemoteException;
+import java.rmi.*;
 import java.rmi.registry.Registry;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.server.UnicastRemoteObject;
@@ -36,7 +34,8 @@ public class DistributedSnapshot<StateType, MessageType> {
     protected ReadWriteLock distributedSnapshotLock = new ReentrantReadWriteLock();
 
     /**
-     * This method is used to initialize a DistributedSnapshot object. It sets the hostname, the port and the appConnector reference.
+     * This method is used to initialize a DistributedSnapshot object.
+     * It sets the hostname, the port and the appConnector reference.
      * It starts the rmi registry and publishes the RemoteInterface in order to be reachable from other nodes.
      * @param yourHostname the hostname the application can be reached at
      * @param rmiRegistryPort the port used by the rmi registry
@@ -66,6 +65,16 @@ public class DistributedSnapshot<StateType, MessageType> {
         }
     }
 
+    /**
+     * This method is used to join the mesh network provided a gateway node to access it.
+     * It populates the remoteImplementation.remoteNodes with the nodes of the network and their remoteInterfaces
+     * @param hostname the hostname of one node in the network (will be our initial gateway)
+     * @param port the port of our initial gateway to the network
+     * @return an ArrayList of Entity (a class containing hostname and port) of all the nodes in the network
+     * @throws RemoteException communication-related exception that may occur during remote calls
+     * @throws NotBoundException thrown if an attempt is made to lookup or unbind in the registry a name that has no associated binding.
+     * @throws NotInitialized thrown if an attempt to join the network is made before calling the init method of the library
+     */
     public ArrayList<Entity> joinNetwork(String hostname, int port) throws RemoteException, NotBoundException, NotInitialized {
         distributedSnapshotLock.writeLock().lock();
         try {
@@ -106,6 +115,7 @@ public class DistributedSnapshot<StateType, MessageType> {
      * @throws NotBoundException the remote node has not bound its remote implementation
      * @throws NotInitialized this instance hasn't been initialized, you must do it first
      * @throws SnapshotInterruptException it's not possible to remove a node when a snapshot is running
+     * @throws RestoreInProgress thrown if a restore of a snapshot is in progress and the user tries to send a message
      */
     public void sendMessage(String hostname, int port, MessageType message) throws RemoteNodeNotFound, RemoteException, NotBoundException, NotInitialized, SnapshotInterruptException, RestoreInProgress {
         distributedSnapshotLock.readLock().lock();
@@ -132,6 +142,7 @@ public class DistributedSnapshot<StateType, MessageType> {
     /** This method is used to update the state. It makes a deep copy to store inside the remoteImplementation
      * @param state the object to save
      * @throws StateUpdateException something went wrong making a deep copy
+     * @throws RestoreInProgress thrown if a restore of a snapshot is in progress and the user tries to update the state of the node
      * */
     public void updateState(StateType state) throws StateUpdateException, RestoreInProgress {
         remoteImplementation.nodeReadyLock.readLock().lock();
@@ -141,7 +152,7 @@ public class DistributedSnapshot<StateType, MessageType> {
             }
             synchronized (remoteImplementation.currentStateLock) {
                 try {
-                    this.remoteImplementation.currentState = deepClone(state);
+                    this.remoteImplementation.currentState = deepClone(state); // assign currentState a deepCopy of the state provided by the user
                 } catch (IOException | ClassNotFoundException e) {
                     throw new StateUpdateException("Problem in updating the state");
                 }
@@ -157,8 +168,9 @@ public class DistributedSnapshot<StateType, MessageType> {
      * @throws DoubleMarkerException received multiple marker (same id) from the same link
      * @throws UnexpectedMarkerReceived the sender node is not present in the remote nodes list
      * @throws NotInitialized this instance hasn't been initialized, you must do it first
+     * @throws RestoreInProgress thrown when trying to start a snapshot while a restore is in progress in this node
      * */
-    public void initiateSnapshot() throws RemoteException, DoubleMarkerException, UnexpectedMarkerReceived, NotInitialized, RestoreInProgress, InterruptedException {
+    public void initiateSnapshot() throws RemoteException, DoubleMarkerException, UnexpectedMarkerReceived, NotInitialized, RestoreInProgress {
         distributedSnapshotLock.writeLock().lock();
         remoteImplementation.nodeReadyLock.readLock().lock();
         try {
@@ -167,7 +179,7 @@ public class DistributedSnapshot<StateType, MessageType> {
             if (!remoteImplementation.nodeReady)
                 throw new RestoreInProgress("A restore is in progress, please wait until node is ready");
 
-            System.out.println("starting snapshot");
+            System.out.println("initiating the snapshot");
             int snapshotId;
             String snapshotIdString = remoteImplementation.hostname + remoteImplementation.port + remoteImplementation.localSnapshotCounter;
             snapshotId = snapshotIdString.hashCode();
@@ -186,7 +198,8 @@ public class DistributedSnapshot<StateType, MessageType> {
     }
 
     /**
-     * This is method is used to disconnect from a remote node
+     * This is method is used to disconnect from the mesh network.
+     * It does so by invoking removeMe on all connected nodes.
      * @throws RemoteException communication-related exception that may occur during remote calls
      * @throws SnapshotInterruptException it's not possible to remove a node when a snapshot is running
      * @throws NotInitialized this instance hasn't been initialized, you must do it first
@@ -199,7 +212,7 @@ public class DistributedSnapshot<StateType, MessageType> {
                 throw new NotInitialized("You must initialize the library before trying to disconnect from the network");
 
             // Since no change in the network topology is allowed during a snapshot
-            // this function WON'T BE CALLED if any snapshot is running THIS IS AN ASSUMPTION FROM THE TEXT
+            // this function WON'T BE CALLED if any snapshot is running THIS IS AN ASSUMPTION FROM THE ASSIGNMENT
             if (!remoteImplementation.runningSnapshots.isEmpty()) {
                 throw new OperationForbidden("Unable to disconnect from the network while snapshots are running");
             }
@@ -215,22 +228,24 @@ public class DistributedSnapshot<StateType, MessageType> {
     }
 
     /**
-     *
-     * */
-    public void stop() {
-        try {
-            //TODO: remove the stop of the whole jvm
-            UnicastRemoteObject.unexportObject(remoteImplementation, true);
-            LocateRegistry.getRegistry(remoteImplementation.port).unbind("RemoteInterface");
-            //SHOULD STOP HERE!!
-            //System.exit(0);
-        } catch (Exception e) {
-            //TODO: rimuovere printStackTrace
-            //TODO: evitare generic exceptions
-            e.printStackTrace();
-        }
+     * This method is used to un-export and unbind this remoteImplementation in the RMI registry
+     * @throws RemoteException communication-related exception that may occur during remote calls
+     * @throws NotBoundException thrown if an attempt is made to lookup or unbind in the registry a name that has no associated binding.
+     */
+    public void stop() throws NotBoundException, RemoteException {
+        UnicastRemoteObject.unexportObject(remoteImplementation, true);
+        LocateRegistry.getRegistry(remoteImplementation.port).unbind("RemoteInterface");
     }
 
+    /**
+     * This method is used to start restoring from the most recent snapshot available.
+     * The node must be initialized before calling this method.
+     * @throws RestoreAlreadyInProgress thrown when asking a remote node to restore while another restore is already in progress on the remote node
+     * @throws RemoteException communication-related exception that may occur during remote calls
+     * @throws NotBoundException thrown if an attempt is made to lookup or unbind in the registry a name that has no associated binding.
+     * @throws RestoreInProgress thrown if we are trying to restore while a restore is already in progress in our node
+     * @throws RestoreNotPossible thrown if the restore was not possible, reason specified in the exception message (for example a node is no more reachable)
+     */
     public void restoreLastSnapshot() throws RestoreAlreadyInProgress, RemoteException, NotBoundException, RestoreInProgress, RestoreNotPossible {
         distributedSnapshotLock.writeLock().lock();
         remoteImplementation.nodeReadyLock.writeLock().lock();
@@ -273,20 +288,8 @@ public class DistributedSnapshot<StateType, MessageType> {
 
             //handle old incoming messages
             this.remoteImplementation.restoreOldIncomingMessages(snapshotToRestore);
-            ExecutorService executors = Executors.newCachedThreadPool();
             for (RemoteNode<MessageType> remoteNode : this.remoteImplementation.remoteNodes) {
-                executors.submit(() -> {
-                    //TODO: handle exception in ExecutorService
-                    try {
-                        remoteNode.remoteInterface.restoreOldIncomingMessages(snapshotToRestore);
-                    } catch (RemoteException e) {
-                        // throw new RestoreException("Unable to restore incoming messages for remoteNode: "+remoteNode.hostname+":"+remoteNode.port);
-                        e.printStackTrace();
-                    } catch (RestoreAlreadyInProgress e) {
-                        // throw new RestoreAlreadyInProgress(e.getMessage());
-                        e.printStackTrace();
-                    }
-                });
+                remoteNode.remoteInterface.restoreOldIncomingMessages(snapshotToRestore);
             }
         } finally {
             distributedSnapshotLock.writeLock().unlock();
@@ -296,6 +299,10 @@ public class DistributedSnapshot<StateType, MessageType> {
 
     /**
      * Remove the specified node from the network by telling everyone to do so
+     * @param hostname the hostname of the node to remove
+     * @param port the port of the node to remove
+     * @throws RemoteException communication-related exception that may occur during remote calls
+     * @throws RestoreInProgress thrown when trying to remove a node while a snapshot restore is in progress
      */
     public void removeNode(String hostname, int port) throws RemoteException, RestoreInProgress {
         distributedSnapshotLock.writeLock().lock();
@@ -312,6 +319,11 @@ public class DistributedSnapshot<StateType, MessageType> {
             remoteImplementation.nodeReadyLock.writeLock().unlock();
         }
     }
+
+
+    //##############################################################
+    //              COMMODITY FUNCTIONS
+    //##############################################################
 
     /**
      * This is method is used to get the reference of a RemoteNode
@@ -333,9 +345,13 @@ public class DistributedSnapshot<StateType, MessageType> {
     /**
      * Courtesy of
      * www.infoworld.com/article/2077578/java-tip-76--an-alternative-to-the-deep-copy-technique.html
-     * given that we decided to make a deep copy of a serializable object this trick allows us
-     * to make it by using only properties deriving from the fact that that object is serializable
-     * (so no Cloneable or similar approaches)
+     *
+     * Given that we decided to make a deep copy of a serializable object this trick allows us
+     * to make it by using only properties deriving from the fact that that object is serializable.
+     * So no Cloneable or similar approaches, that would have implied that the user must create a State class
+     * with specific characteristics mandated by the library (so not completely State agnostic)
+     *
+     * @param state The state provided by the user
      */
     private StateType deepClone(StateType state) throws IOException, ClassNotFoundException {
         // First serializing the object and its state to memory using
@@ -354,8 +370,9 @@ public class DistributedSnapshot<StateType, MessageType> {
 
 /** Data class that encapsulates the structure of a Remote Node.
  * It contains the node identifiers (hostname and port) as well as the
- * reference to its corresponding Remote RMI Interface. The class is also
- * used to keep track of the Snapshot Received by the corresponding
+ * reference to its corresponding Remote RMI Interface.
+ * The class is also
+ * used to keep track of the Snapshot marker received by the corresponding
  * Remote Node.
  * @param <MessageType> this is the type that will be exchanged as a message between nodes
  * */
