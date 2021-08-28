@@ -14,6 +14,7 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class DistributedSnapshotTest {
     @Test
@@ -68,7 +69,7 @@ public class DistributedSnapshotTest {
         printAppsState(apps); // print the number of messages received
 
         executorService.shutdownNow();
-        if (!executorService.awaitTermination(100, TimeUnit.MICROSECONDS)) {
+        if (!executorService.awaitTermination(100, TimeUnit.MILLISECONDS)) {
             System.out.println("Still waiting...");
             System.exit(0);
         }
@@ -149,7 +150,7 @@ public class DistributedSnapshotTest {
         });
 
         executorService.shutdownNow();
-        if (!executorService.awaitTermination(100, TimeUnit.MICROSECONDS)) {
+        if (!executorService.awaitTermination(100, TimeUnit.MILLISECONDS)) {
             System.out.println("Still waiting...");
             System.exit(0);
         }
@@ -231,7 +232,7 @@ public class DistributedSnapshotTest {
         }
 
         executorService.shutdownNow();
-        if (!executorService.awaitTermination(100, TimeUnit.MICROSECONDS)) {
+        if (!executorService.awaitTermination(100, TimeUnit.MILLISECONDS)) {
             System.out.println("Still waiting...");
             System.exit(0);
         }
@@ -294,7 +295,7 @@ public class DistributedSnapshotTest {
         printAppsState(apps);
 
         executorService.shutdownNow();
-        if (!executorService.awaitTermination(100, TimeUnit.MICROSECONDS)) {
+        if (!executorService.awaitTermination(100, TimeUnit.MILLISECONDS)) {
             System.out.println("Still waiting...");
             System.exit(0);
         }
@@ -360,7 +361,7 @@ public class DistributedSnapshotTest {
         //todo: assert
 
         executorService.shutdownNow();
-        if (!executorService.awaitTermination(100, TimeUnit.MICROSECONDS)) {
+        if (!executorService.awaitTermination(100, TimeUnit.MILLISECONDS)) {
             System.out.println("Still waiting...");
             System.exit(0);
         }
