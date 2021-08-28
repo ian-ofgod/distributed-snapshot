@@ -73,7 +73,7 @@ class Storage {
         return allSnaps.get(Collections.max(allSnaps.keySet()));
     }
 
-    public static <StateType, MessageType> Snapshot<StateType, MessageType> readFile(int snapshotId, String currentIp, int currentPort) {
+    public synchronized static <StateType, MessageType> Snapshot<StateType, MessageType> readFile(int snapshotId, String currentIp, int currentPort) throws IOException, ClassNotFoundException {
         Snapshot<StateType, MessageType> loaded_snapshot = new Snapshot<>(snapshotId);
         loaded_snapshot.messages = new ArrayList<>();
 
@@ -95,10 +95,14 @@ class Storage {
                                 FileInputStream fos = new FileInputStream(folderName + "state.ser");
                                 ObjectInputStream oos = new ObjectInputStream(fos);
                                 loaded_snapshot.state = (StateType) oos.readObject();
+                                fos.close();
+                                oos.close();
                             } else if (filename.equals("connectedNodes.ser")) { // I'm reading the list of nodes
                                 FileInputStream fos = new FileInputStream(folderName + "connectedNodes.ser");
                                 ObjectInputStream oos = new ObjectInputStream(fos);
                                 loaded_snapshot.connectedNodes = (ArrayList<Entity>) oos.readObject();
+                                fos.close();
+                                oos.close();
                             } else { // I'm reading a message
                                 String[] tokens = filename.split("_");
                                 String ip = tokens[0];
@@ -112,6 +116,8 @@ class Storage {
 
 
                                 loaded_snapshot.messages.add(new Envelope<>(sender, message));
+                                fos.close();
+                                oos.close();
                             }
                         }
                     } else {
@@ -121,13 +127,12 @@ class Storage {
                  to avoid race conditions with another process that deletes
                  directories.*/
                     }
-
-
                 } catch (IOException e) {
                     System.err.println("Could not read file");
-                    e.printStackTrace();
+                    throw e;
                 } catch (ClassNotFoundException e){
                     System.err.println("Could not cast deserialized object to the expected type");
+                    throw e;
                 }
             }
 
@@ -146,7 +151,7 @@ class Storage {
      * @param runningSnapshots the list of snapshots running on the current node
      * @param snapshotId the id of the snapshot that the user want to save on disk
      * */
-    public synchronized static <StateType, MessageType> void writeFile(ArrayList<Snapshot<StateType, MessageType>> runningSnapshots, int snapshotId, String currentIp, int currentPort) {
+    public synchronized static <StateType, MessageType> void writeFile(ArrayList<Snapshot<StateType, MessageType>> runningSnapshots, int snapshotId, String currentIp, int currentPort) throws IOException {
         System.out.println("[STORAGE] SAVING TO DISK THE SNAPSHOT FOR ["+currentIp+":"+currentPort+"]" );
         COUNTER++;
         Snapshot<StateType, MessageType> toSaveSnapshot = runningSnapshots.stream().filter(snap -> snap.snapshotId==snapshotId).findFirst().orElse(null);
@@ -161,24 +166,28 @@ class Storage {
             FileOutputStream fos = new FileOutputStream(folderName+"state.ser");
             ObjectOutputStream oos = new ObjectOutputStream(fos);
             oos.writeObject(state);
+            fos.close();
+            oos.close();
+
             int i=0; // global id for messages
             for (Envelope<MessageType> envelope : envelopes) {
                 String entity_identifier = envelope.sender.toString().replace(":", "_");
                 fos = new FileOutputStream(folderName + entity_identifier + "_message_" + (++i) + ".ser");
                 oos = new ObjectOutputStream(fos);
                 oos.writeObject(envelope.message);
+                fos.close();
+                oos.close();
                 //TODO: controllare se non rimuovere it genera effettivamente una ConcurrentModificationException, nel cui caso bisogna clonare prima
                 //it.remove(); // avoids a ConcurrentModificationException
             }
             fos = new FileOutputStream(folderName+"connectedNodes.ser");
             oos = new ObjectOutputStream(fos);
             oos.writeObject(connectedNodes);
-
             oos.close();
             fos.close();
         } catch (IOException e) {
             System.err.println("Could not write file ");
-            e.printStackTrace();
+           throw e;
         }
     }
 
@@ -196,12 +205,13 @@ class Storage {
     }
 
 
-    public static void cleanStorageFolder(){
+    public synchronized static void cleanStorageFolder() throws IOException {
         if (new File(FOLDER).isDirectory()) {
             try {
                 FileUtils.deleteDirectory(new File(FOLDER));
             } catch (IOException e) {
                 System.out.println("Unable to delete folder");
+                throw e;
             }
         }
     }

@@ -9,8 +9,6 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.Objects;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -84,7 +82,7 @@ public class DistributedSnapshot<StateType, MessageType> {
                 ArrayList<Entity> networkNodes;
                 Registry registry = LocateRegistry.getRegistry(hostname, port);
                 RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
-                networkNodes = remoteInterface.getNodes();
+                networkNodes = remoteInterface.getConnections();
                 this.remoteImplementation.remoteNodes = new ArrayList<>(); //reset current node connections
                 this.remoteImplementation.remoteNodes.add(new RemoteNode<>(hostname, port, remoteInterface));
                 remoteInterface.addMeBack(remoteImplementation.hostname, remoteImplementation.port);
@@ -170,7 +168,7 @@ public class DistributedSnapshot<StateType, MessageType> {
      * @throws NotInitialized this instance hasn't been initialized, you must do it first
      * @throws RestoreInProgress thrown when trying to start a snapshot while a restore is in progress in this node
      * */
-    public void initiateSnapshot() throws RemoteException, DoubleMarkerException, UnexpectedMarkerReceived, NotInitialized, RestoreInProgress {
+    public void initiateSnapshot() throws IOException, DoubleMarkerException, UnexpectedMarkerReceived, NotInitialized, RestoreInProgress {
         distributedSnapshotLock.writeLock().lock();
         remoteImplementation.nodeReadyLock.readLock().lock();
         try {
@@ -245,8 +243,10 @@ public class DistributedSnapshot<StateType, MessageType> {
      * @throws NotBoundException thrown if an attempt is made to lookup or unbind in the registry a name that has no associated binding.
      * @throws RestoreInProgress thrown if we are trying to restore while a restore is already in progress in our node
      * @throws RestoreNotPossible thrown if the restore was not possible, reason specified in the exception message (for example a node is no more reachable)
+     * @throws ClassNotFoundException thrown when the storage facility is not able to reconstruct the Snapshot from the file
      */
-    public void restoreLastSnapshot() throws RestoreAlreadyInProgress, RemoteException, NotBoundException, RestoreInProgress, RestoreNotPossible {
+    public void restoreLastSnapshot() throws RestoreAlreadyInProgress, IOException, NotBoundException, RestoreInProgress, RestoreNotPossible, ClassNotFoundException {
+        System.out.println("INITIATING RESTORE LAST SNAPSHOT #######################");
         distributedSnapshotLock.writeLock().lock();
         remoteImplementation.nodeReadyLock.writeLock().lock();
         try {
@@ -270,11 +270,21 @@ public class DistributedSnapshot<StateType, MessageType> {
             // we set all the nodes in our new connections list to the not-ready state and proceed to set their connection
             // list and state according to their snapshot
             // those calls should not be parallelized: if the
+            System.out.println("STARTING RESTORE ON OTHER NODES #######################");
+
             for (RemoteNode<MessageType> remoteNode : this.remoteImplementation.remoteNodes) {
+                System.out.println("STARTING RESTORE ON ["+remoteNode.port+"]");
+                System.out.println("SET TO FALSE");
                 remoteNode.remoteInterface.setReady(false);
+                System.out.println("RESTORE CONNECTIONS");
                 remoteNode.remoteInterface.restoreConnections(snapshotToRestore);
+                System.out.println("RESTORE STATE");
                 remoteNode.remoteInterface.restoreState(snapshotToRestore);
+                System.out.println("ENDING RESTORE ON ["+remoteNode.port+"]");
             }
+
+            System.out.println("ENDING RESTORE ON OTHER NODES #######################");
+
 
             // now all the nodes can be set to the ready state
             // TODO: what if the application is automated (like sending a message every X seconds)?
@@ -295,6 +305,8 @@ public class DistributedSnapshot<StateType, MessageType> {
             distributedSnapshotLock.writeLock().unlock();
             remoteImplementation.nodeReadyLock.writeLock().unlock();
         }
+        System.out.println("FINISH RESTORE LAST SNAPSHOT #######################");
+
     }
 
     /**
