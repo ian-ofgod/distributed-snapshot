@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit;
 
 public class DistributedSnapshotTest {
     @Test
-    public void simpleExample() throws InterruptedException, IOException {
+    public void simpleExample() throws InterruptedException, IOException, UnexpectedMarkerReceived, RestoreInProgress, DoubleMarkerException, NotInitialized {
         ArrayList<App<Message,State>> apps = new ArrayList<>();
         apps.add(new App<>("localhost", 11111));
         apps.add(new App<>("localhost", 11112));
@@ -57,14 +57,7 @@ public class DistributedSnapshotTest {
         printAppsState(apps); //print the number of messages received
 
         // start snapshot
-        executorService.submit(()-> {
-            try {
-                apps.get(2).snapshotLibrary.initiateSnapshot();
-            } catch (IOException | DoubleMarkerException | UnexpectedMarkerReceived | NotInitialized | RestoreInProgress e) {   
-                e.printStackTrace();
-            }
-        });
-
+        apps.get(2).snapshotLibrary.initiateSnapshot();
         Thread.sleep(100);  // let them exchange some messages
         printAppsState(apps); // print the number of messages received
 
@@ -109,7 +102,7 @@ public class DistributedSnapshotTest {
         ExecutorService executorService= Executors.newCachedThreadPool();
         executorService.submit(()-> sendLoop(apps, 0));
         executorService.submit(()-> sendLoop(apps, 1));
-        //executorService.submit(()-> sendLoop(apps, 2));
+        executorService.submit(()-> sendLoop(apps, 2));
 
 
         // let localhost:11118 start the snapshot
@@ -135,12 +128,10 @@ public class DistributedSnapshotTest {
         });
 
         //we restore the snapshot that we made
-        apps.forEach((app)->System.out.println());
         apps.get(0).snapshotLibrary.restoreLastSnapshot();
         Thread.sleep(200);
 
         //at this point we should be able to see the same state of the previous setup
-        //TODO: check also for same connections
         apps.forEach((app)-> {
             System.out.println(app.state.appId);
             assertEquals(app.state, new State(app.port),
@@ -401,7 +392,7 @@ public class DistributedSnapshotTest {
                         System.out.println("[" + current.port + "] TRYING TO SEND A MESSAGE TO REMOVED NODE: " + send_to.port);
                     }
                 }
-                Thread.sleep(10);
+                Thread.sleep(42); // Answer to the Ultimate Question of Life, the Universe, and Everything.
             }
         }catch (InterruptedException e) {
             System.out.println("sending thread exiting");

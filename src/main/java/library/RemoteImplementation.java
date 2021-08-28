@@ -20,7 +20,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * @param <MessageType> this is the type that will be exchanged as a message between nodes
  * @param <StateType> this is the type that will be saved as the state of the application
  * */
-    //TODO: testare un paio di metodi interni qui
 class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<MessageType> {
 
     /**
@@ -75,22 +74,22 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     protected final ReadWriteLock nodeReadyLock = new ReentrantReadWriteLock();
 
     /**
-     * Handles the propagateMarker calls (see receiveMarker method)
+     * Handles the propagateMarker calls (see receiveMarker method) and handleIncomingMessage in receiveMessage
      * */
     private final ExecutorService executors = Executors.newCachedThreadPool();
-    private final ExecutorService executorsMsg = Executors.newCachedThreadPool();
 
+    /**
+     * Stores the current snapshot that is being restored
+     */
     private Snapshot<StateType, MessageType> currentSnapshotToBeRestored =  null;
 
 
     @Override
     public synchronized void receiveMarker(String senderHostname, int senderPort, String initiatorHostname, int initiatorPort, int snapshotId) throws DoubleMarkerException, UnexpectedMarkerReceived, IOException {
-        //TODO: remove SystemPrintln
-        System.out.println("["+hostname + ":" + port + "] MARKER from -> " + senderHostname + ":" + senderPort);
         this.nodeReadyLock.readLock().lock();
         try {
             if (nodeReady) {
-                if (checkIfRemoteNodePresent(senderHostname, senderPort)) { //TODO: is this check still needed?
+                if (checkIfRemoteNodePresent(senderHostname, senderPort)) {
                     Snapshot<StateType, MessageType> snap;
                     synchronized (currentStateLock) {
                         snap = new Snapshot<>(snapshotId, currentState, remoteNodes); //Creates the snapshot and saves the current state!
@@ -109,7 +108,6 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
                     }
 
                     if (receivedMarkerFromAllLinks(snapshotId)) { //we have received a marker from all the channels
-                        System.out.println("[" + hostname + ":" + port + "] ===> SAVING SNAPSHOT ############ ");
                         Storage.writeFile(runningSnapshots, snapshotId, this.hostname, this.port);
                         runningSnapshots.remove(snap);
                     }
@@ -134,14 +132,12 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
                     if (!runningSnapshots.isEmpty()) { // Snapshot running
                         runningSnapshots.forEach((snap) -> {
                             if (!checkIfReceivedMarker(senderHostname, senderPort, snap.snapshotId)) {
-
                                 snap.messages.add(new Envelope<>(new Entity(senderHostname, senderPort), message));
                             }
                         });
                     }
-                    //TODO: need to check if it's ok
-                    System.out.println("sending message calling handle incoming message on new thread");
-                    executorsMsg.submit(() -> appConnector.handleIncomingMessage(senderHostname, senderPort, message));
+                    System.out.println("executors: receiveMessage->handleIncomingMessage");
+                    executors.submit(() -> appConnector.handleIncomingMessage(senderHostname, senderPort, message));
                 } else {
                     // We issue the command to the remote node to remove us!
                     //TODO: given the mesh topology should we keep this case? Or we should do the opposite (add the node)?
@@ -190,113 +186,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
         }
     }
 
-    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-    //                      COMMODITY FUNCTIONS
-    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-    @Override
-    public synchronized ArrayList<Entity> getConnections() {
-        ArrayList<Entity> nodes = new ArrayList<>();
-        for (RemoteNode<MessageType> node : remoteNodes) {
-            nodes.add(new Entity(node.hostname, node.port));
-        }
-        return nodes;
-    }
-
-    /**
-     * This function stores the provided snapshotId inside the provided remote entity
-     * @param senderHostname the hostname of the entity in which the snapshotId will be recorded
-     * @param senderPort the RMI registry port of the entity in which the snapshotId will be recorded
-     * @param snapshotId the snapshot identifier to be recorded
-     * @throws DoubleMarkerException received multiple marker (same id) from the same link
-     */
-    private void recordSnapshotId(String senderHostname, int senderPort, int snapshotId) throws DoubleMarkerException {
-        RemoteNode<MessageType> remoteNode = getRemoteNode(senderHostname,senderPort);
-        if(remoteNode!=null) {
-            if(remoteNode.snapshotIdsReceived.contains(snapshotId)){
-                throw new DoubleMarkerException(hostname +":"+port + " | ERROR: received multiple marker (same id) for the same link");
-            }else {
-                remoteNode.snapshotIdsReceived.add(snapshotId);
-            }
-        }else{
-            System.out.println("RemoteNode not found!");
-        }
-    }
-
-    /**
-     * This method sends a specific marker to all the connected RemoteNodes via RMI.
-     * Together with the specific marker, also an identifier of the snapshot initiator
-     * is propagated
-     * @param snapshotId the unique snapshot identifier (i.e. marker) that is being propagated
-     * @param initiatorHostname the IP address of the entity that initiated the snapshot
-     * @param initiatorPort the port of the entity that initiated the snapshot
-     * */
-    //    private synchronized void propagateMarker(String initiatorHostname, int initiatorPort, int snapshotId) {
-    private void propagateMarker(String initiatorHostname, int initiatorPort, int snapshotId) {
-        System.out.println("INIZIO propagazione PER NODO ["+this.hostname+":"+this.port+"]");
-        for (RemoteNode<MessageType> remoteNode : this.remoteNodes) {
-            try {
-                System.out.println("["+this.hostname + ":" + this.port + "] Sending MARKER to: " + remoteNode.hostname + ":" + remoteNode.port);
-                remoteNode.remoteInterface.receiveMarker(this.hostname, this.port, initiatorHostname, initiatorPort, snapshotId);
-            } //catch (RemoteException | DoubleMarkerException | UnexpectedMarkerReceived e) {
-            catch (Exception e){
-                System.err.println("Error in propagating marker!");
-            }
-        }
-        System.out.println("FINE propagazione PER NODO ["+this.hostname+":"+this.port+"]");
-    }
-
-    /**
-     * This methods retrieve the RemoteNode object associated to the hostname/port couple by
-     * performing a lookup in the list of stored RemoteNode objects, since each one
-     * contains the hostname/port as attributes. The association RemoteNode and hostname/port is unique
-     * @param hostname the hostname of the Remote Node to look up
-     * @param port the port of the Remote Node to look up
-     * */
-    protected RemoteNode<MessageType> getRemoteNode(String hostname, int port) {
-        for (RemoteNode<MessageType> remoteNode : remoteNodes) {
-            if(remoteNode.hostname.equals(hostname) && remoteNode.port==port)
-                return remoteNode;
-        }
-        return null;
-    }
-
-    /**
-     * This method checks if the same marker has been received by all nodes connected to the current node.
-     * If all connected nodes have send a specific marker, it means that the related snapshot is over
-     * @param snapshotId the unique snapshot identifier (i.e. marker) to check
-     * */
-    private boolean receivedMarkerFromAllLinks(int snapshotId) {
-        return remoteNodes.stream().filter(rn->rn.snapshotIdsReceived.contains(snapshotId)).count() == remoteNodes.size();
-    }
-
-    /**
-     * This method checks if inside the remote node list it exists a node with the provided hostname and port
-     * @param hostname the hostname of the node to search for
-     * @param port the RMI registry port of the node to search for
-     */
-    private boolean checkIfRemoteNodePresent(String hostname, int port){
-        for (RemoteNode<MessageType> remoteNode : remoteNodes){
-            if(remoteNode.equals(new RemoteNode<>(hostname, port, null)))
-                return true;
-        }
-        return false;
-    }
-
-    /**
-     * This method checks if from the provided entity the local node has already received the marker
-     * @param hostname the hostname of the provided entity
-     * @param port the RMI port of the provided entity
-     * @param snapshotId the identifier of the snapshot to check for
-     */
-    private boolean checkIfReceivedMarker(String hostname, int port, int snapshotId){
-        for (RemoteNode<MessageType> remoteNode : remoteNodes){
-            if(remoteNode.equals(new RemoteNode<>(hostname, port, null)))
-                if(remoteNode.snapshotIdsReceived.contains(snapshotId))
-                    return true;
-        }
-        return false;
-    }
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     //                      RESTORE FUNCTIONS
@@ -323,7 +213,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     }
 
     @Override
-    public void restoreConnections(int snapshotId) throws RestoreAlreadyInProgress, IOException, NotBoundException, RestoreNotPossible, ClassNotFoundException {
+    public void restoreConnections(int snapshotId) throws RestoreAlreadyInProgress, IOException, RestoreNotPossible, ClassNotFoundException {
         this.nodeReadyLock.readLock().lock();
         try {
             if (!nodeReady) {
@@ -399,4 +289,113 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
         }
     }
 
+    @Override
+    public synchronized ArrayList<Entity> getConnections() {
+        ArrayList<Entity> nodes = new ArrayList<>();
+        for (RemoteNode<MessageType> node : remoteNodes) {
+            nodes.add(new Entity(node.hostname, node.port));
+        }
+        return nodes;
+    }
+
+
+
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    //                      COMMODITY FUNCTIONS
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+
+    /**
+     * This function stores the provided snapshotId inside the provided remote entity
+     * @param senderHostname the hostname of the entity in which the snapshotId will be recorded
+     * @param senderPort the RMI registry port of the entity in which the snapshotId will be recorded
+     * @param snapshotId the snapshot identifier to be recorded
+     * @throws DoubleMarkerException received multiple marker (same id) from the same link
+     */
+    private void recordSnapshotId(String senderHostname, int senderPort, int snapshotId) throws DoubleMarkerException {
+        RemoteNode<MessageType> remoteNode = getRemoteNode(senderHostname,senderPort);
+        if(remoteNode!=null) {
+            if(remoteNode.snapshotIdsReceived.contains(snapshotId)){
+                throw new DoubleMarkerException(hostname +":"+port + " | ERROR: received multiple marker (same id) for the same link");
+            }else {
+                remoteNode.snapshotIdsReceived.add(snapshotId);
+            }
+        }else{
+            System.out.println("RemoteNode not found!");
+        }
+    }
+
+    /**
+     * This method sends a specific marker to all the connected RemoteNodes via RMI.
+     * Together with the specific marker, also an identifier of the snapshot initiator
+     * is propagated
+     * @param snapshotId the unique snapshot identifier (i.e. marker) that is being propagated
+     * @param initiatorHostname the IP address of the entity that initiated the snapshot
+     * @param initiatorPort the port of the entity that initiated the snapshot
+     * */
+    private void propagateMarker(String initiatorHostname, int initiatorPort, int snapshotId) {
+        for (RemoteNode<MessageType> remoteNode : this.remoteNodes) {
+            try {
+                System.out.println("["+this.hostname + ":" + this.port + "] Sending MARKER to: " + remoteNode.hostname + ":" + remoteNode.port);
+                remoteNode.remoteInterface.receiveMarker(this.hostname, this.port, initiatorHostname, initiatorPort, snapshotId);
+            }
+            catch (Exception e){
+                //TODO: this function is used as a lambda so the exception is not rethrown... should we asses this?
+                System.err.println("Error in propagating marker!");
+            }
+        }
+        System.out.println("FINE propagazione PER NODO ["+this.hostname+":"+this.port+"]");
+    }
+
+    /**
+     * This methods retrieve the RemoteNode object associated to the hostname/port couple by
+     * performing a lookup in the list of stored RemoteNode objects, since each one
+     * contains the hostname/port as attributes. The association RemoteNode and hostname/port is unique
+     * @param hostname the hostname of the Remote Node to look up
+     * @param port the port of the Remote Node to look up
+     * */
+    protected RemoteNode<MessageType> getRemoteNode(String hostname, int port) {
+        for (RemoteNode<MessageType> remoteNode : remoteNodes) {
+            if(remoteNode.hostname.equals(hostname) && remoteNode.port==port)
+                return remoteNode;
+        }
+        return null;
+    }
+
+    /**
+     * This method checks if the same marker has been received by all nodes connected to the current node.
+     * If all connected nodes have send a specific marker, it means that the related snapshot is over
+     * @param snapshotId the unique snapshot identifier (i.e. marker) to check
+     * */
+    private boolean receivedMarkerFromAllLinks(int snapshotId) {
+        return remoteNodes.stream().filter(rn->rn.snapshotIdsReceived.contains(snapshotId)).count() == remoteNodes.size();
+    }
+
+    /**
+     * This method checks if inside the remote node list it exists a node with the provided hostname and port
+     * @param hostname the hostname of the node to search for
+     * @param port the RMI registry port of the node to search for
+     */
+    private boolean checkIfRemoteNodePresent(String hostname, int port){
+        for (RemoteNode<MessageType> remoteNode : remoteNodes){
+            if(remoteNode.equals(new RemoteNode<>(hostname, port, null)))
+                return true;
+        }
+        return false;
+    }
+
+    /**
+     * This method checks if from the provided entity the local node has already received the marker
+     * @param hostname the hostname of the provided entity
+     * @param port the RMI port of the provided entity
+     * @param snapshotId the identifier of the snapshot to check for
+     */
+    private boolean checkIfReceivedMarker(String hostname, int port, int snapshotId){
+        for (RemoteNode<MessageType> remoteNode : remoteNodes){
+            if(remoteNode.equals(new RemoteNode<>(hostname, port, null)))
+                if(remoteNode.snapshotIdsReceived.contains(snapshotId))
+                    return true;
+        }
+        return false;
+    }
 }

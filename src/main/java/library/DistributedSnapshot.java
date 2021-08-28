@@ -19,7 +19,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * @param <StateType> this is the type that will be used to store the application state
  * @param <MessageType> this is the type that will be exchanged as a message between nodes
  * */
-//TODO: reason on RestoreInProgress exception
 public class DistributedSnapshot<StateType, MessageType> {
     /**
      * The implementation of the remoteInterface used on this node
