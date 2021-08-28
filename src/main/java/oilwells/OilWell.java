@@ -151,6 +151,7 @@ public class OilWell implements AppConnector<OilCargo, Integer> {
         if (oilAmount != -1) {
             try {
                 distributedSnapshot.restoreLastSnapshot();
+                logger.info("Successfully restored last snapshot. New oilAmount = " + oilAmount);
             } catch (IOException | ClassNotFoundException | RestoreAlreadyInProgress | NotBoundException | RestoreInProgress | RestoreNotPossible e) {
                 logger.warn("Cannot restore snapshot");
             }
@@ -205,6 +206,7 @@ public class OilWell implements AppConnector<OilCargo, Integer> {
         synchronized (oilAmountLock) {
             oilAmount = state;
         }
+        logger.info("Restored snapshot. New oilAmount = " + oilAmount);
     }
 
     @Override
