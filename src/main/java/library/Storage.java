@@ -76,7 +76,6 @@ class Storage {
     public synchronized static <StateType, MessageType> Snapshot<StateType, MessageType> readFile(int snapshotId, String currentIp, int currentPort) throws IOException, ClassNotFoundException {
         Snapshot<StateType, MessageType> loaded_snapshot = new Snapshot<>(snapshotId);
         loaded_snapshot.messages = new ArrayList<>();
-
         File dir = new File(FOLDER + "/" + currentIp + "_" + currentPort + "/");
         File[] all_snaps = dir.listFiles();
         assert all_snaps != null;
@@ -87,21 +86,17 @@ class Storage {
                     File dir2 = new File(folderName);
                     File[] directoryListing = dir2.listFiles();
                     if (directoryListing != null) {
-
                         for (File child : directoryListing) { //for each entity
-
                             String filename = child.getName();
                             if(filename.equals("state.ser")){ // I'm reading the state
                                 FileInputStream fos = new FileInputStream(folderName + "state.ser");
                                 ObjectInputStream oos = new ObjectInputStream(fos);
                                 loaded_snapshot.state = (StateType) oos.readObject();
-                                fos.close();
                                 oos.close();
                             } else if (filename.equals("connectedNodes.ser")) { // I'm reading the list of nodes
                                 FileInputStream fos = new FileInputStream(folderName + "connectedNodes.ser");
                                 ObjectInputStream oos = new ObjectInputStream(fos);
                                 loaded_snapshot.connectedNodes = (ArrayList<Entity>) oos.readObject();
-                                fos.close();
                                 oos.close();
                             } else { // I'm reading a message
                                 String[] tokens = filename.split("_");
@@ -109,15 +104,11 @@ class Storage {
                                 int port = Integer.parseInt(tokens[1]);
                                 int msg_idx = Integer.parseInt(tokens[tokens.length-1].substring(0,1));
                                 Entity sender = new Entity(ip,port);
-
                                 FileInputStream fos = new FileInputStream(folderName + filename);
                                 ObjectInputStream oos = new ObjectInputStream(fos);
                                 MessageType message = (MessageType) oos.readObject();
-
-
-                                loaded_snapshot.messages.add(new Envelope<>(sender, message));
-                                fos.close();
                                 oos.close();
+                                loaded_snapshot.messages.add(new Envelope<>(sender, message));
                             }
                         }
                     } else {
@@ -166,7 +157,6 @@ class Storage {
             FileOutputStream fos = new FileOutputStream(folderName+"state.ser");
             ObjectOutputStream oos = new ObjectOutputStream(fos);
             oos.writeObject(state);
-            fos.close();
             oos.close();
 
             int i=0; // global id for messages
@@ -175,8 +165,8 @@ class Storage {
                 fos = new FileOutputStream(folderName + entity_identifier + "_message_" + (++i) + ".ser");
                 oos = new ObjectOutputStream(fos);
                 oos.writeObject(envelope.message);
-                fos.close();
                 oos.close();
+
                 //TODO: controllare se non rimuovere it genera effettivamente una ConcurrentModificationException, nel cui caso bisogna clonare prima
                 //it.remove(); // avoids a ConcurrentModificationException
             }
@@ -184,7 +174,6 @@ class Storage {
             oos = new ObjectOutputStream(fos);
             oos.writeObject(connectedNodes);
             oos.close();
-            fos.close();
         } catch (IOException e) {
             System.err.println("Could not write file ");
            throw e;
