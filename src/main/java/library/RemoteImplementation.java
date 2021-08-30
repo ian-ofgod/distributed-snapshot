@@ -112,7 +112,6 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
                         runningSnapshots.remove(snap);
                     }
                 } else {
-                    System.out.println("Remote node not present!");
                     throw new UnexpectedMarkerReceived("ERROR: received a marker from a node not present in my remote nodes list");
                 }
             }
@@ -123,9 +122,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
 
     @Override
     public synchronized void receiveMessage(String senderHostname, int senderPort, MessageType message) throws RemoteException, NotBoundException, SnapshotInterruptException {
-        System.out.println("Starting handling message");
         this.nodeReadyLock.readLock().lock();
-        System.out.println("LOCK PRESO");
         try {
             if (nodeReady) {
                 if (checkIfRemoteNodePresent(senderHostname, senderPort)) {
@@ -136,7 +133,6 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
                             }
                         });
                     }
-                    System.out.println("executors: receiveMessage->handleIncomingMessage");
                     executors.submit(() -> appConnector.handleIncomingMessage(senderHostname, senderPort, message));
                 } else {
                     // We issue the command to the remote node to remove us!
@@ -320,8 +316,6 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
             }else {
                 remoteNode.snapshotIdsReceived.add(snapshotId);
             }
-        }else{
-            System.out.println("RemoteNode not found!");
         }
     }
 
@@ -336,15 +330,12 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     private void propagateMarker(String initiatorHostname, int initiatorPort, int snapshotId) {
         for (RemoteNode<MessageType> remoteNode : this.remoteNodes) {
             try {
-                System.out.println("["+this.hostname + ":" + this.port + "] Sending MARKER to: " + remoteNode.hostname + ":" + remoteNode.port);
                 remoteNode.remoteInterface.receiveMarker(this.hostname, this.port, initiatorHostname, initiatorPort, snapshotId);
             }
             catch (Exception e){
                 //TODO: this function is used as a lambda so the exception is not rethrown... should we asses this?
-                System.err.println("Error in propagating marker!");
             }
         }
-        System.out.println("FINE propagazione PER NODO ["+this.hostname+":"+this.port+"]");
     }
 
     /**

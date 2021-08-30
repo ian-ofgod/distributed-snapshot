@@ -143,7 +143,6 @@ class Storage {
      * @param snapshotId the id of the snapshot that the user want to save on disk
      * */
     public synchronized static <StateType, MessageType> void writeFile(ArrayList<Snapshot<StateType, MessageType>> runningSnapshots, int snapshotId, String currentIp, int currentPort) throws IOException {
-        System.out.println("[STORAGE] SAVING TO DISK THE SNAPSHOT FOR ["+currentIp+":"+currentPort+"]" );
         COUNTER++;
         Snapshot<StateType, MessageType> toSaveSnapshot = runningSnapshots.stream().filter(snap -> snap.snapshotId==snapshotId).findFirst().orElse(null);
         assert toSaveSnapshot != null;
