@@ -1,4 +1,4 @@
-import subprocess, time
+import subprocess, time, shutil
 from random import randrange
 from subprocess import PIPE, STDOUT
 
@@ -9,6 +9,12 @@ apps = []
 max_nodes = 20
 
 outfile_w = open('outfile', 'w')
+
+### CLEAN storage_folder
+try:
+    shutil.rmtree('storage_folder')
+except:
+    pass
 
 ### LAUNCH ###
 for i in range(0, max_nodes):
@@ -44,6 +50,7 @@ print("Sleeping...")
 time.sleep(5)
 i = randrange(max_nodes)
 apps[i].kill()
+time.sleep(5)
 apps[i] = subprocess.Popen([java_path, r'-jar', jar_path, str(i)], stdout=outfile_w, stdin=PIPE, stderr=subprocess.STDOUT, bufsize=0)
 apps[i].stdin.write(bytes("initialize, localhost, " +  str(10000+i) + ", " + str(oilAmount) + "\n", 'utf-8'))
 apps[i].stdin.write(bytes("restore\n", 'utf-8'))
@@ -60,7 +67,7 @@ for i in range(0, max_nodes):
     time.sleep(0.1)
 
 with open('outfile', 'r') as outfile_r:
-    while True:
+    while False:
         line = outfile_r.readline()
         if not line:
             time.sleep(1)
