@@ -1,5 +1,5 @@
-outfile_r=open('outfile_100', 'r')
-filtered_r=open('filtered_outfile_100', 'w')
+outfile_r=open('outfile', 'r')
+filtered_r=open('filtered_outfile', 'w')
 
 lines = outfile_r.readlines()
 

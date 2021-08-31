@@ -23,3 +23,4 @@ storage_folder
 # .py testing
 /functional_testing/env.py
 outfile
+filtered_outfile
