@@ -63,17 +63,6 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     protected int localSnapshotCounter=0;
 
     /**
-     * Variable that indicates if the node is able to perform modifying functions (true) or if the node is undergoing a
-     * restore of a snapshot (false)
-     */
-    protected boolean nodeReady = true;
-
-    /**
-     * Lock object for nodeReady variable
-     * */
-    protected final ReadWriteLock nodeReadyLock = new ReentrantReadWriteLock();
-
-    /**
      * Handles the propagateMarker calls (see receiveMarker method) and handleIncomingMessage in receiveMessage
      * */
     private final ExecutorService executors = Executors.newCachedThreadPool();
@@ -83,102 +72,132 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
      */
     private Snapshot<StateType, MessageType> currentSnapshotToBeRestored =  null;
 
+    /**
+     * Lock object
+     * */
+    protected final ReadWriteLock nodeSnapshotLock = new ReentrantReadWriteLock();
+
+    protected NodeState nodeState = NodeState.STARTED;
+
+    protected final ReadWriteLock nodeStateLock = new ReentrantReadWriteLock();
+
 
     @Override
-    public synchronized void receiveMarker(String senderHostname, int senderPort, String initiatorHostname, int initiatorPort, int snapshotId) throws DoubleMarkerException, UnexpectedMarkerReceived, IOException {
-        this.nodeReadyLock.readLock().lock();
+    public void receiveMarker(String senderHostname, int senderPort, String initiatorHostname, int initiatorPort, int snapshotId) throws DoubleMarkerException, UnexpectedMarkerReceived, IOException {
+        this.nodeStateLock.readLock().lock();
         try {
-            if (nodeReady) {
-                if (checkIfRemoteNodePresent(senderHostname, senderPort)) {
-                    Snapshot<StateType, MessageType> snap;
-                    synchronized (currentStateLock) {
-                        snap = new Snapshot<>(snapshotId, currentState, remoteNodes); //Creates the snapshot and saves the current state!
-                    }
+            if (nodeState == NodeState.READY) {
+                nodeSnapshotLock.writeLock().lock();
+                try {
+                    if (checkIfRemoteNodePresent(senderHostname, senderPort)) {
+                        Snapshot<StateType, MessageType> snap;
+                        synchronized (currentStateLock) {
+                            snap = new Snapshot<>(snapshotId, currentState, remoteNodes); //Creates the snapshot and saves the current state!
+                        }
 
-                    if (!runningSnapshots.contains(snap)) {
-                        //This is the first time we receive a marker,
-                        // so we HAVE TO propagate the marker to the other nodes
-                        runningSnapshots.add(snap);
-                        recordSnapshotId(senderHostname, senderPort, snapshotId);
-                        executors.submit(() -> propagateMarker(initiatorHostname, initiatorPort, snapshotId));
+                        if (!runningSnapshots.contains(snap)) {
+                            //This is the first time we receive a marker,
+                            // so we HAVE TO propagate the marker to the other nodes
+                            runningSnapshots.add(snap);
+                            recordSnapshotId(senderHostname, senderPort, snapshotId);
+                            executors.submit(() -> propagateMarker(initiatorHostname, initiatorPort, snapshotId));
+                        } else {
+                            // we have already received a marker for this snapshotId,
+                            // so we don't have to propagate the marker to other nodes
+                            recordSnapshotId(senderHostname, senderPort, snapshotId);
+                        }
+
+                        if (receivedMarkerFromAllLinks(snapshotId)) { //we have received a marker from all the channels
+                            Storage.writeFile(runningSnapshots, snapshotId, this.hostname, this.port);
+                            runningSnapshots.remove(snap);
+                        }
                     } else {
-                        // we have already received a marker for this snapshotId,
-                        // so we don't have to propagate the marker to other nodes
-                        recordSnapshotId(senderHostname, senderPort, snapshotId);
+                        throw new UnexpectedMarkerReceived("ERROR: received a marker from a node not present in my remote nodes list");
                     }
-
-                    if (receivedMarkerFromAllLinks(snapshotId)) { //we have received a marker from all the channels
-                        Storage.writeFile(runningSnapshots, snapshotId, this.hostname, this.port);
-                        runningSnapshots.remove(snap);
-                    }
-                } else {
-                    throw new UnexpectedMarkerReceived("ERROR: received a marker from a node not present in my remote nodes list");
+                } finally {
+                    nodeSnapshotLock.writeLock().unlock();
                 }
             }
         } finally {
-            this.nodeReadyLock.readLock().unlock();
+            this.nodeStateLock.readLock().unlock();
         }
     }
 
     @Override
-    public synchronized void receiveMessage(String senderHostname, int senderPort, MessageType message) throws RemoteException, NotBoundException, SnapshotInterruptException {
-        this.nodeReadyLock.readLock().lock();
+    public void receiveMessage(String senderHostname, int senderPort, MessageType message) throws RemoteException, NotBoundException, SnapshotInterruptException {
+        this.nodeStateLock.readLock().lock();
         try {
-            if (nodeReady) {
-                if (checkIfRemoteNodePresent(senderHostname, senderPort)) {
-                    if (!runningSnapshots.isEmpty()) { // Snapshot running
-                        runningSnapshots.forEach((snap) -> {
-                            if (!checkIfReceivedMarker(senderHostname, senderPort, snap.snapshotId)) {
-                                snap.messages.add(new Envelope<>(new Entity(senderHostname, senderPort), message));
-                            }
-                        });
+            if (nodeState == NodeState.READY) {
+                nodeSnapshotLock.writeLock().lock();
+                try {
+                    if (checkIfRemoteNodePresent(senderHostname, senderPort)) {
+                        if (!runningSnapshots.isEmpty()) { // Snapshot running
+                            runningSnapshots.forEach((snap) -> {
+                                if (!checkIfReceivedMarker(senderHostname, senderPort, snap.snapshotId)) {
+                                    snap.messages.add(new Envelope<>(new Entity(senderHostname, senderPort), message));
+                                }
+                            });
+                        }
+                        executors.submit(() -> appConnector.handleIncomingMessage(senderHostname, senderPort, message));
+                    } else {
+                        // We issue the command to the remote node to remove us!
+                        //TODO: given the mesh topology should we keep this case? Or we should do the opposite (add the node)?
+                        Registry registry = LocateRegistry.getRegistry(senderHostname, senderPort);
+                        RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
+                        remoteInterface.removeMe(this.hostname, this.port);
                     }
-                    executors.submit(() -> appConnector.handleIncomingMessage(senderHostname, senderPort, message));
-                } else {
-                    // We issue the command to the remote node to remove us!
-                    //TODO: given the mesh topology should we keep this case? Or we should do the opposite (add the node)?
-                    Registry registry = LocateRegistry.getRegistry(senderHostname, senderPort);
+                } finally {
+                    nodeSnapshotLock.writeLock().unlock();
+                }
+            }
+        } finally {
+            this.nodeStateLock.readLock().unlock();
+        }
+    }
+
+    @Override
+    public void addMeBack(String hostname, int port) throws RemoteException, NotBoundException {
+        this.nodeStateLock.writeLock().lock();
+        try {
+            if (nodeState == NodeState.READY || nodeState == NodeState.DETACHED) {
+                nodeSnapshotLock.writeLock().lock();
+                try {
+                    Registry registry = LocateRegistry.getRegistry(hostname, port);
                     RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
-                    remoteInterface.removeMe(this.hostname, this.port);
+                    if (getRemoteNode(hostname, port) == null) {
+                        remoteNodes.add(new RemoteNode<>(hostname, port, remoteInterface));
+                        appConnector.handleNewConnection(hostname, port);
+                    }
+                } finally {
+                    nodeSnapshotLock.writeLock().unlock();
                 }
+                this.nodeState = NodeState.READY;
             }
         } finally {
-            this.nodeReadyLock.readLock().unlock();
-        }
-    }
-
-    @Override
-    public synchronized void addMeBack(String hostname, int port) throws RemoteException, NotBoundException {
-        this.nodeReadyLock.readLock().lock();
-        try {
-            if (nodeReady) {
-                Registry registry = LocateRegistry.getRegistry(hostname, port);
-                RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
-                if (getRemoteNode(hostname, port) == null) {
-                    remoteNodes.add(new RemoteNode<>(hostname, port, remoteInterface));
-                    appConnector.handleNewConnection(hostname, port);
-                }
-            }
-        } finally {
-            this.nodeReadyLock.readLock().unlock();
+            this.nodeStateLock.writeLock().unlock();
         }
     }
 
 
     @Override
-    public synchronized void removeMe(String hostname, int port) throws RemoteException, SnapshotInterruptException {
-        this.nodeReadyLock.readLock().lock();
+    public void removeMe(String hostname, int port) throws RemoteException, SnapshotInterruptException {
+        nodeStateLock.readLock().lock();
         try {
-            if (nodeReady) {
-                if (!this.runningSnapshots.isEmpty()) {
-                    throw new SnapshotInterruptException(hostname + ":" + port + " | ERROR: REMOVING DURING SNAPSHOT, ASSUMPTION NOT RESPECTED");
+            if (nodeState == NodeState.READY) {
+                nodeSnapshotLock.writeLock().lock();
+                try {
+                    if (!this.runningSnapshots.isEmpty()) {
+                        throw new SnapshotInterruptException(hostname + ":" + port + " | ERROR: REMOVING DURING SNAPSHOT, ASSUMPTION NOT RESPECTED");
+                    }
+                    RemoteNode<MessageType> remoteNode = getRemoteNode(hostname, port);
+                    this.remoteNodes.remove(remoteNode);
+                } finally {
+                    nodeSnapshotLock.writeLock().unlock();
                 }
-                RemoteNode<MessageType> remoteNode = getRemoteNode(hostname, port);
-                this.remoteNodes.remove(remoteNode);
                 appConnector.handleRemoveConnection(hostname, port);
             }
         } finally {
-            this.nodeReadyLock.readLock().unlock();
+            nodeStateLock.readLock().unlock();
         }
     }
 
@@ -190,9 +209,9 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
 
     @Override
     public void restoreState(int snapshotId) throws RestoreAlreadyInProgress, IOException, ClassNotFoundException {
-        this.nodeReadyLock.readLock().lock();
+        this.nodeStateLock.readLock().lock();
         try {
-            if (!nodeReady) {
+            if (!(nodeState == NodeState.READY)) {
                 if (currentSnapshotToBeRestored == null) {
                     currentSnapshotToBeRestored = Storage.readFile(snapshotId, this.hostname, this.port);
                 } else if (snapshotId != currentSnapshotToBeRestored.snapshotId) {
@@ -204,15 +223,15 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
                 appConnector.handleRestoredState(this.currentState);
             }
         } finally {
-            this.nodeReadyLock.readLock().unlock();
+            this.nodeStateLock.readLock().unlock();
         }
     }
 
     @Override
     public void restoreConnections(int snapshotId) throws RestoreAlreadyInProgress, IOException, RestoreNotPossible, ClassNotFoundException {
-        this.nodeReadyLock.readLock().lock();
+        this.nodeStateLock.readLock().lock();
         try {
-            if (!nodeReady) {
+            if (!(nodeState == NodeState.READY)) {
                 if (currentSnapshotToBeRestored == null) {
                     currentSnapshotToBeRestored = Storage.readFile(snapshotId, this.hostname, this.port);
                 } else if (snapshotId != currentSnapshotToBeRestored.snapshotId) {
@@ -233,42 +252,28 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
                 appConnector.handleRestoredConnections(currentSnapshotToBeRestored.connectedNodes);
             }
         } finally {
-            this.nodeReadyLock.readLock().unlock();
+            this.nodeStateLock.readLock().unlock();
         }
     }
 
     @Override
-    public void setReady(boolean value) throws RemoteException{
-        this.nodeReadyLock.writeLock().lock();
+    public void setReady(boolean value) throws RemoteException {
+        nodeStateLock.writeLock().lock();
         try {
             // in the case of flipping the nodeReady bit from false to true we "reset" the currentSnapshotToBeRestored to null
-            if(!nodeReady && value)
-                currentSnapshotToBeRestored=null;
-            this.nodeReady=value;
+            if (!(nodeState == NodeState.READY) && value)
+                currentSnapshotToBeRestored = null;
+            this.nodeState = value ? NodeState.READY : NodeState.RESTORING;
         } finally {
-            this.nodeReadyLock.writeLock().unlock();
-        }
-    }
-
-    @Override
-    public void forgetThisNode(String hostname, int port) throws RemoteException {
-        this.nodeReadyLock.readLock().lock();
-        try {
-            if (nodeReady) {
-                if (getRemoteNode(hostname, port) != null) {
-                    this.remoteNodes.remove(getRemoteNode(hostname, port));
-                }
-            }
-        } finally {
-            this.nodeReadyLock.readLock().unlock();
+            nodeStateLock.writeLock().unlock();
         }
     }
 
     @Override
     public void restoreOldIncomingMessages(int snapshotId) throws RestoreAlreadyInProgress, IOException, ClassNotFoundException {
-        this.nodeReadyLock.readLock().lock();
+        this.nodeStateLock.readLock().lock();
         try {
-            if (nodeReady) {
+            if (nodeState == NodeState.READY) {
                 if (currentSnapshotToBeRestored == null) {
                     currentSnapshotToBeRestored = Storage.readFile(snapshotId, this.hostname, this.port);
                 } else if (snapshotId != currentSnapshotToBeRestored.snapshotId) {
@@ -281,17 +286,30 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
                 });
             }
         } finally {
-            this.nodeReadyLock.readLock().unlock();
+            this.nodeStateLock.readLock().unlock();
         }
     }
 
     @Override
-    public synchronized ArrayList<Entity> getConnections() {
-        ArrayList<Entity> nodes = new ArrayList<>();
-        for (RemoteNode<MessageType> node : remoteNodes) {
-            nodes.add(new Entity(node.hostname, node.port));
+    public ArrayList<Entity> getConnections() {
+        nodeStateLock.readLock().lock();
+        try {
+            if (nodeState == NodeState.READY || nodeState == NodeState.DETACHED) {
+                nodeSnapshotLock.readLock().lock();
+                try {
+                    ArrayList<Entity> nodes = new ArrayList<>();
+                    for (RemoteNode<MessageType> node : remoteNodes) {
+                        nodes.add(new Entity(node.hostname, node.port));
+                    }
+                    return nodes;
+                } finally {
+                    nodeSnapshotLock.readLock().unlock();
+                }
+            }
+            return null;
+        } finally {
+            nodeStateLock.readLock().unlock();
         }
-        return nodes;
     }
 
 

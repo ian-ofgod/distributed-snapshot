@@ -102,12 +102,4 @@ interface RemoteInterface<MessageType> extends Remote {
      * @throws RemoteException communication-related exception that may occur during remote calls
      */
     void setReady(boolean value) throws RemoteException;
-
-    /**
-     * This method is called from a remote node to ask us to remove a node from our connections
-     * @param hostname the hostname of the node to remove
-     * @param port the port of the node to remove
-     * @throws RemoteException communication-related exception that may occur during remote calls
-     */
-    void forgetThisNode(String hostname, int port) throws RemoteException;
 }
