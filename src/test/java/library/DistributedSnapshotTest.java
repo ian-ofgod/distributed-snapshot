@@ -42,7 +42,7 @@ public class DistributedSnapshotTest {
         // app[i] join network
         apps.forEach((app)-> {
             try {
-                if (app.hostname != apps.get(0).hostname || app.port != apps.get(0).port)
+                if (!Objects.equals(app.hostname, apps.get(0).hostname) || app.port != apps.get(0).port)
                     app.snapshotLibrary.joinNetwork(apps.get(0).hostname,apps.get(0).port);
             } catch (RemoteException | NotBoundException | NotInitialized | OperationForbidden e) {
                 e.printStackTrace();
@@ -96,7 +96,7 @@ public class DistributedSnapshotTest {
         // app[i] join network
         apps.forEach((app)-> {
             try {
-                if (app.hostname != apps.get(0).hostname || app.port != apps.get(0).port)
+                if (!Objects.equals(app.hostname, apps.get(0).hostname) || app.port != apps.get(0).port)
                     app.snapshotLibrary.joinNetwork(apps.get(0).hostname,apps.get(0).port);
             } catch (RemoteException | NotBoundException | NotInitialized | OperationForbidden e) {
                 e.printStackTrace();
@@ -179,7 +179,7 @@ public class DistributedSnapshotTest {
         // app[i] join network
         apps.forEach((app) -> {
             try {
-                if (app.hostname != apps.get(0).hostname || app.port != apps.get(0).port)
+                if (!Objects.equals(app.hostname, apps.get(0).hostname) || app.port != apps.get(0).port)
                     app.snapshotLibrary.joinNetwork(apps.get(0).hostname, apps.get(0).port);
             } catch (RemoteException | NotBoundException | NotInitialized | OperationForbidden e) {
                 e.printStackTrace();
@@ -240,7 +240,7 @@ public class DistributedSnapshotTest {
     }
 
     @Test
-    public void restoreNotPossibleNodeNotAvailable() throws UnexpectedMarkerReceived, RestoreInProgress, DoubleMarkerException, NotInitialized, IOException, InterruptedException, OperationForbidden, SnapshotInterruptException, RestoreAlreadyInProgress, NotBoundException, RestoreNotPossible {
+    public void restoreNotPossibleNodeNotAvailable() throws UnexpectedMarkerReceived, RestoreInProgress, DoubleMarkerException, NotInitialized, IOException, InterruptedException, OperationForbidden, SnapshotInterruptException, NotBoundException {
         ArrayList<App<Message, State>> apps = new ArrayList<>();
         apps.add(new App<>("localhost", 11141));
         apps.add(new App<>("localhost", 11142));
@@ -262,12 +262,13 @@ public class DistributedSnapshotTest {
         // app[i] join network
         apps.forEach((app) -> {
             try {
-                if (app.hostname != apps.get(0).hostname || app.port != apps.get(0).port)
+                if (!Objects.equals(app.hostname, apps.get(0).hostname) || app.port != apps.get(0).port)
                     app.snapshotLibrary.joinNetwork(apps.get(0).hostname, apps.get(0).port);
             } catch (RemoteException | NotBoundException | NotInitialized | OperationForbidden e) {
                 e.printStackTrace();
             }
         });
+        Thread.sleep(200);
 
         // make all the apps send messages to each other randomly
         ExecutorService executorService= Executors.newCachedThreadPool();
@@ -326,7 +327,7 @@ public class DistributedSnapshotTest {
         // app[i] join network
         apps.forEach((app) -> {
             try {
-                if (app.hostname != apps.get(0).hostname || app.port != apps.get(0).port)
+                if (!Objects.equals(app.hostname, apps.get(0).hostname) || app.port != apps.get(0).port)
                     app.snapshotLibrary.joinNetwork(apps.get(0).hostname, apps.get(0).port);
             } catch (RemoteException | NotBoundException | NotInitialized | OperationForbidden e) {
                 e.printStackTrace();
@@ -394,7 +395,7 @@ public class DistributedSnapshotTest {
         // app[i] join network
         apps.forEach((app)-> {
             try {
-                if (app.hostname != apps.get(0).hostname || app.port != apps.get(0).port)
+                if (!Objects.equals(app.hostname, apps.get(0).hostname) || app.port != apps.get(0).port)
                     app.snapshotLibrary.joinNetwork(apps.get(0).hostname,apps.get(0).port);
             } catch (RemoteException | NotBoundException | NotInitialized | OperationForbidden e) {
                 e.printStackTrace();
@@ -456,9 +457,7 @@ public class DistributedSnapshotTest {
     private void printAppsState(ArrayList<App<Message,State>> apps){
         System.out.println("----------------------------------");
         System.out.println("STATUS:");
-        apps.forEach((app)->{
-            System.out.println("["+app.hostname+":"+app.port+"] -> #MSG="+app.state.messages.size());
-        });
+        apps.forEach((app)-> System.out.println("["+app.hostname+":"+app.port+"] -> #MSG="+app.state.messages.size()));
         System.out.println("----------------------------------");
     }
 
@@ -474,6 +473,7 @@ public class DistributedSnapshotTest {
                         current.snapshotLibrary.sendMessage(send_to.hostname, send_to.port,
                                 new Message("MSG from [" + current.hostname + ":" + current.port + "]"));
                     } catch (RemoteException | NotBoundException | NotInitialized | SnapshotInterruptException e) {
+                        e.printStackTrace();
                         System.out.println("ANOTHER TYPE OF ERROR");
                     } catch (RestoreInProgress e) {
                         System.out.println("WAITING END OF RESTORE");
