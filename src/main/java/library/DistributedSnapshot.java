@@ -176,7 +176,9 @@ public class DistributedSnapshot<StateType, MessageType> {
                 try {
                     this.remoteImplementation.currentState = deepClone(state); // assign currentState a deepCopy of the state provided by the user
                 } catch (IOException | ClassNotFoundException e) {
-                    throw new StateUpdateException("Problem in updating the state");
+                    StateUpdateException sue = new StateUpdateException("Problem in updating the state");
+                    sue.setStackTrace(e.getStackTrace());
+                    throw sue;
                 }
             }
         } finally {
@@ -420,17 +422,29 @@ public class DistributedSnapshot<StateType, MessageType> {
      * @param state The state provided by the user
      */
     private StateType deepClone(StateType state) throws IOException, ClassNotFoundException {
-        // First serializing the object and its state to memory using
-        // ByteArrayOutputStream instead of FileOutputStream.
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        ObjectOutputStream out = new ObjectOutputStream(bos);
-        out.writeObject(state);
+        ObjectOutputStream out = null;
+        ObjectInputStream in = null;
+        try {
+            // First serializing the object and its state to memory using
+            // ByteArrayOutputStream instead of FileOutputStream.
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            out = new ObjectOutputStream(bos);
+            out.writeObject(state);
+            out.flush();
 
-        // And then deserializing it from memory using ByteArrayOutputStream instead of FileInputStream.
-        // Deserialization process will create a new object with the same state as in the serialized object,
-        ByteArrayInputStream bis = new ByteArrayInputStream(bos.toByteArray());
-        ObjectInputStream in = new ObjectInputStream(bis);
-        return (StateType) in.readObject();
+            // And then deserializing it from memory using ByteArrayOutputStream instead of FileInputStream.
+            // Deserialization process will create a new object with the same state as in the serialized object,
+            ByteArrayInputStream bis = new ByteArrayInputStream(bos.toByteArray());
+            in = new ObjectInputStream(bis);
+            return (StateType) in.readObject();
+        } finally {
+            if (out != null) {
+                out.close();
+            }
+            if (in != null) {
+                in.close();
+            }
+        }
     }
 }
 
