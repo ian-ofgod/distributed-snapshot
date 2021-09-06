@@ -166,7 +166,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
                     RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
                     if (getRemoteNode(hostname, port) == null) {
                         remoteNodes.add(new RemoteNode<>(hostname, port, remoteInterface));
-                        appConnector.handleNewConnection(hostname, port);
+                        executors.submit(()->appConnector.handleNewConnection(hostname, port));
                     }
                 } finally {
                     nodeSnapshotLock.writeLock().unlock();
@@ -194,7 +194,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
                 } finally {
                     nodeSnapshotLock.writeLock().unlock();
                 }
-                appConnector.handleRemoveConnection(hostname, port);
+                executors.submit(()->appConnector.handleRemoveConnection(hostname, port));
             }
         } finally {
             nodeStateLock.readLock().unlock();
@@ -220,7 +220,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
                 synchronized (currentStateLock) {
                     this.currentState = currentSnapshotToBeRestored.state;
                 }
-                appConnector.handleRestoredState(this.currentState);
+                executors.submit(()->appConnector.handleRestoredState(this.currentState));
             }
         } finally {
             this.nodeStateLock.readLock().unlock();
@@ -249,7 +249,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
                     }
                 }
                 this.remoteNodes=tempList;
-                appConnector.handleRestoredConnections(currentSnapshotToBeRestored.connectedNodes);
+                executors.submit(()->appConnector.handleRestoredConnections(currentSnapshotToBeRestored.connectedNodes));
             }
         } finally {
             this.nodeStateLock.readLock().unlock();
@@ -281,7 +281,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
                 }
                 executors.submit(()->{
                     for (Envelope<MessageType> envelope : currentSnapshotToBeRestored.messages) {
-                        this.appConnector.handleIncomingMessage(envelope.sender.getHostname(), envelope.sender.getPort(), envelope.message);
+                        executors.submit(()->appConnector.handleIncomingMessage(envelope.sender.getHostname(), envelope.sender.getPort(), envelope.message));
                     }
                 });
             }
