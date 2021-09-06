@@ -140,25 +140,31 @@ public class DistributedSnapshot<StateType, MessageType> {
             } finally {
                 remoteImplementation.nodeStateLock.readLock().unlock();
             }
+            RemoteInterface<MessageType> remoteInterface;
             remoteImplementation.nodeSnapshotLock.writeLock().lock();
             try {
                 // send the message only if we are not sending the message to this node
                 if (!(hostname.equals(this.remoteImplementation.hostname) && port==this.remoteImplementation.port)) {
-                    try {
-                        getRemoteInterface(hostname, port).receiveMessage(remoteImplementation.hostname, remoteImplementation.port, message);
-                    } catch (RemoteException e) {
-                        Registry nodeRegistry = LocateRegistry.getRegistry(hostname, port);
-                        RemoteInterface<MessageType> nodeRemoteInterface = (RemoteInterface<MessageType>) nodeRegistry.lookup("RemoteInterface");
-                        this.remoteImplementation.getRemoteNode(hostname, port).remoteInterface=nodeRemoteInterface; //set the new remoteInterface
-                        nodeRemoteInterface.receiveMessage(remoteImplementation.hostname, remoteImplementation.port, message);
-                    }
+                    remoteInterface = getRemoteInterface(hostname, port);
                 } else {
                     throw new OperationForbidden("You cannot send a message to yourself");
                 }
             } finally {
                 remoteImplementation.nodeSnapshotLock.writeLock().unlock();
             }
-
+            try {
+                remoteInterface.receiveMessage(remoteImplementation.hostname, remoteImplementation.port, message);
+            } catch (RemoteException e) {
+                Registry nodeRegistry = LocateRegistry.getRegistry(hostname, port);
+                RemoteInterface<MessageType> nodeRemoteInterface = (RemoteInterface<MessageType>) nodeRegistry.lookup("RemoteInterface");
+                remoteImplementation.nodeSnapshotLock.writeLock().lock();
+                try {
+                    this.remoteImplementation.getRemoteNode(hostname, port).remoteInterface = nodeRemoteInterface; //set the new remoteInterface
+                } finally {
+                    remoteImplementation.nodeSnapshotLock.writeLock().unlock();
+                }
+                nodeRemoteInterface.receiveMessage(remoteImplementation.hostname, remoteImplementation.port, message);
+            }
         } finally {
             distributedSnapshotLock.readLock().unlock();
         }
