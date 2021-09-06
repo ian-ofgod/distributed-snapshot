@@ -199,6 +199,8 @@ public class OilWell implements AppConnector<OilCargo, Integer> {
                         logger.info("Error in updating state");
                     } catch (RestoreInProgress restoreInProgress) {
                         logger.info("Cannot send oil while a restore is in progress");
+                    } catch (OperationForbidden operationForbidden) {
+                        logger.info(operationForbidden.getMessage());
                     }
                 }
             }
@@ -215,9 +217,11 @@ public class OilWell implements AppConnector<OilCargo, Integer> {
 
     @Override
     public void handleRestoredConnections(ArrayList<Entity> connections) {
-        directConnections.clear();
-        for (Entity entry : connections) {
-            directConnections.add(new ConnectionDetails(entry.getHostname(), entry.getPort()));
+        synchronized (directConnectionsLock) {
+            directConnections.clear();
+            for (Entity entry : connections) {
+                directConnections.add(new ConnectionDetails(entry.getHostname(), entry.getPort()));
+            }
         }
     }
 
