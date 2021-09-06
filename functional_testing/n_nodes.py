@@ -59,8 +59,17 @@ print("Restore command sent to process " + str(i))
 
 outfile_w.close()
 
+### DISCONNECT ###
 print("Sleeping...")
 time.sleep(5)
+for i in range(0, max_nodes):
+     apps[i].stdin.write(bytes("disconnect\n", 'utf-8'))
+     print("Disconnect command sent to process " + str(i))
+     time.sleep(0.5)
+
+### KILL PROCESSES ###
+print("Sleeping...")
+time.sleep(1)
 for i in range(0, max_nodes):
     apps[i].kill()
     print("Killed process " + str(i))
