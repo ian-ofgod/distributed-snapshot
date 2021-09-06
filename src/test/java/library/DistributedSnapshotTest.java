@@ -479,6 +479,8 @@ public class DistributedSnapshotTest {
                         System.out.println("WAITING END OF RESTORE");
                     } catch (RemoteNodeNotFound e) {
                         System.out.println("[" + current.port + "] TRYING TO SEND A MESSAGE TO REMOVED NODE: " + send_to.port);
+                    } catch (OperationForbidden operationForbidden) {
+                        operationForbidden.printStackTrace();
                     }
                 }
                 Thread.sleep(100); // Answer to the Ultimate Question of Life, the Universe, and Everything.

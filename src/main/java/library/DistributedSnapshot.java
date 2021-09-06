@@ -126,7 +126,7 @@ public class DistributedSnapshot<StateType, MessageType> {
      * @throws SnapshotInterruptException it's not possible to remove a node when a snapshot is running
      * @throws RestoreInProgress thrown if a restore of a snapshot is in progress and the user tries to send a message
      */
-    public void sendMessage(String hostname, int port, MessageType message) throws RemoteNodeNotFound, RemoteException, NotBoundException, NotInitialized, SnapshotInterruptException, RestoreInProgress {
+    public void sendMessage(String hostname, int port, MessageType message) throws RemoteNodeNotFound, RemoteException, NotBoundException, NotInitialized, SnapshotInterruptException, RestoreInProgress, OperationForbidden {
         distributedSnapshotLock.readLock().lock();
         try {
             remoteImplementation.nodeStateLock.readLock().lock();
@@ -140,19 +140,25 @@ public class DistributedSnapshot<StateType, MessageType> {
             } finally {
                 remoteImplementation.nodeStateLock.readLock().unlock();
             }
-            // send the message only if we are not sending the message to this node
-            if (!(hostname.equals(this.remoteImplementation.hostname) && port==this.remoteImplementation.port)) {
-                try {
-                    getRemoteInterface(hostname, port).receiveMessage(remoteImplementation.hostname, remoteImplementation.port, message);
-                } catch (RemoteException e) {
-                    Registry nodeRegistry = LocateRegistry.getRegistry(hostname, port);
-                    RemoteInterface<MessageType> nodeRemoteInterface = (RemoteInterface<MessageType>) nodeRegistry.lookup("RemoteInterface");
-                    this.remoteImplementation.getRemoteNode(hostname, port).remoteInterface=nodeRemoteInterface; //set the new remoteInterface
-                    nodeRemoteInterface.receiveMessage(remoteImplementation.hostname, remoteImplementation.port, message);
+            remoteImplementation.nodeSnapshotLock.writeLock().lock();
+            try {
+                // send the message only if we are not sending the message to this node
+                if (!(hostname.equals(this.remoteImplementation.hostname) && port==this.remoteImplementation.port)) {
+                    try {
+                        getRemoteInterface(hostname, port).receiveMessage(remoteImplementation.hostname, remoteImplementation.port, message);
+                    } catch (RemoteException e) {
+                        Registry nodeRegistry = LocateRegistry.getRegistry(hostname, port);
+                        RemoteInterface<MessageType> nodeRemoteInterface = (RemoteInterface<MessageType>) nodeRegistry.lookup("RemoteInterface");
+                        this.remoteImplementation.getRemoteNode(hostname, port).remoteInterface=nodeRemoteInterface; //set the new remoteInterface
+                        nodeRemoteInterface.receiveMessage(remoteImplementation.hostname, remoteImplementation.port, message);
+                    }
+                } else {
+                    throw new OperationForbidden("You cannot send a message to yourself");
                 }
-            } else {
-                this.remoteImplementation.appConnector.handleIncomingMessage(hostname, port, message);
+            } finally {
+                remoteImplementation.nodeSnapshotLock.writeLock().unlock();
             }
+
         } finally {
             distributedSnapshotLock.readLock().unlock();
         }
