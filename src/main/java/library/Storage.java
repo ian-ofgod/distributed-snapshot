@@ -3,6 +3,7 @@ package library;
 import org.apache.commons.io.FileUtils;
 
 import java.io.*;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -39,7 +40,9 @@ class Storage {
         try {
             Path path = Paths.get(FOLDER);
             if (!Files.exists(path)) {
-                Files.createDirectory(path);
+                try {
+                    Files.createDirectory(path);
+                } catch (FileAlreadyExistsException ignored) {}
             }
 
             path = Paths.get(FOLDER + "/" + currentIp + "_" + currentPort + "/");
