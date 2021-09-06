@@ -48,6 +48,8 @@ public class DistributedSnapshotTest {
                 e.printStackTrace();
             }
         });
+        Thread.sleep(500);
+
 
         // each app will start sending messages to each other randomly
         ExecutorService executorService= Executors.newCachedThreadPool();
@@ -102,6 +104,8 @@ public class DistributedSnapshotTest {
                 e.printStackTrace();
             }
         });
+        Thread.sleep(500);
+
 
         // start sending messages
         ExecutorService executorService= Executors.newCachedThreadPool();
@@ -185,6 +189,8 @@ public class DistributedSnapshotTest {
                 e.printStackTrace();
             }
         });
+        Thread.sleep(500);
+
 
         // make all the apps send messages to each other randomly
         ExecutorService executorService = Executors.newCachedThreadPool();
@@ -268,7 +274,7 @@ public class DistributedSnapshotTest {
                 e.printStackTrace();
             }
         });
-        Thread.sleep(200);
+        Thread.sleep(500);
 
         // make all the apps send messages to each other randomly
         ExecutorService executorService= Executors.newCachedThreadPool();
@@ -333,6 +339,8 @@ public class DistributedSnapshotTest {
                 e.printStackTrace();
             }
         });
+        Thread.sleep(500);
+
 
         // make all the apps send messages to each other randomly
         ExecutorService executorService= Executors.newCachedThreadPool();
@@ -374,7 +382,7 @@ public class DistributedSnapshotTest {
 
     @Test
     public void simpleRestoreWithMoreNodes() throws InterruptedException, UnexpectedMarkerReceived, RestoreInProgress, DoubleMarkerException, NotInitialized, IOException, RestoreAlreadyInProgress, NotBoundException, ClassNotFoundException, RestoreNotPossible {
-        int NUMBER_OF_NODES = 100;
+        int NUMBER_OF_NODES = 50;
 
         ArrayList<App<Message,State>> apps = new ArrayList<>();
         for(int i=0; i<NUMBER_OF_NODES; i++){
@@ -401,6 +409,8 @@ public class DistributedSnapshotTest {
                 e.printStackTrace();
             }
         });
+        Thread.sleep(500);
+
 
         // start sending messages
         ExecutorService executorService= Executors.newCachedThreadPool();
@@ -468,7 +478,7 @@ public class DistributedSnapshotTest {
         try {
             while (true) {
                 send_to = apps.get(new Random().nextInt(apps.size())); // get a random app to send the message to
-                if (current != null && send_to != null && current.snapshotLibrary.remoteImplementation.remoteNodes.size() != 0) { // the thread that runs sendLoop on a removed node will be doing nothing
+                if (send_to!=current && current != null && send_to != null && current.snapshotLibrary.remoteImplementation.remoteNodes.size() != 0) { // the thread that runs sendLoop on a removed node will be doing nothing
                     try {
                         current.snapshotLibrary.sendMessage(send_to.hostname, send_to.port,
                                 new Message("MSG from [" + current.hostname + ":" + current.port + "]"));
