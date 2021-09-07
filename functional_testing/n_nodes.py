@@ -6,7 +6,7 @@ from env import *
 
 oilAmount = 1000
 apps = []
-max_nodes = 20
+max_nodes = 60
 
 outfile_w = open('outfile', 'w')
 
@@ -76,12 +76,9 @@ for i in range(0, max_nodes):
     time.sleep(0.1)
 
 with open('outfile', 'r') as outfile_r:
-    while False:
-        line = outfile_r.readline()
-        if not line:
-            time.sleep(1)
-        else:
-            print(line, end="")
+    lines = outfile_r.readlines()
+    for line in lines:
+        print(line, end="")
 
 # useful resource
 # https://eli.thegreenplace.net/2017/interacting-with-a-long-running-child-process-in-python/
