@@ -6,8 +6,7 @@ from env import *
 
 oilAmount = 1000
 apps = []
-max_nodes = 20
-
+max_nodes = 40
 outfile_w = open('outfile', 'w')
 
 ### CLEAN storage_folder
@@ -50,7 +49,6 @@ while i == j:
     j = randrange(max_nodes)
 apps[i].stdin.write(b"snapshot\n")
 apps[i].stdin.flush()
-time.sleep(0.2)
 apps[j].stdin.write(b"snapshot\n")
 apps[j].stdin.flush()
 print("Snapshot command sent to process " + str(i)+" and "+str(j))
