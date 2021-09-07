@@ -6,7 +6,7 @@ from env import *
 
 oilAmount = 1000
 apps = []
-max_nodes = 40
+max_nodes = 20
 
 outfile_w = open('outfile', 'w')
 
@@ -18,23 +18,25 @@ except:
 
 ### LAUNCH ###
 for i in range(0, max_nodes):
-    apps.append(subprocess.Popen([java_path, r'-jar', jar_path, str(i)], stdout=outfile_w, stdin=PIPE, stderr=subprocess.STDOUT, bufsize=0))
+    apps.append(
+        subprocess.Popen([java_path, r'-jar', jar_path, str(i)], stdout=outfile_w, stdin=PIPE, stderr=subprocess.STDOUT,
+                         bufsize=0))
     print("Started process " + str(i))
     time.sleep(0.1)
 time.sleep(5)
 
 ### INITIALIZE ###
 for i in range(0, max_nodes):
-    apps[i].stdin.write(bytes("initialize, localhost, " +  str(10000+i) + ", " + str(oilAmount) + "\n", 'utf-8'))
+    apps[i].stdin.write(bytes("initialize, localhost, " + str(10000 + i) + ", " + str(oilAmount) + "\n", 'utf-8'))
     print("Initialize command sent to process " + str(i))
     time.sleep(0.2)
 time.sleep(5)
 
 ### JOIN ###
 for i in range(1, max_nodes):
-     apps[i].stdin.write(bytes("join, localhost, " +  str(10000) + "\n", 'utf-8'))
-     print("Join command sent to process " + str(i))
-     time.sleep(1)
+    apps[i].stdin.write(bytes("join, localhost, " + str(10000) + "\n", 'utf-8'))
+    print("Join command sent to process " + str(i))
+    time.sleep(1)
 
 for i in range(0, max_nodes):
     apps[i].stdin.flush()
@@ -43,9 +45,15 @@ for i in range(0, max_nodes):
 print("Sleeping...")
 time.sleep(10)
 i = randrange(max_nodes)
-apps[i].stdin.write(bytes("snapshot\n", 'utf-8'))
+j = randrange(max_nodes)
+while i == j:
+    j = randrange(max_nodes)
+apps[i].stdin.write(b"snapshot\n")
 apps[i].stdin.flush()
-print("Snapshot command sent to process " + str(i))
+time.sleep(0.2)
+apps[j].stdin.write(b"snapshot\n")
+apps[j].stdin.flush()
+print("Snapshot command sent to process " + str(i)+" and "+str(j))
 
 ### RESTORE ###
 print("Sleeping...")
@@ -53,8 +61,9 @@ time.sleep(10)
 i = randrange(max_nodes)
 apps[i].kill()
 time.sleep(10)
-apps[i] = subprocess.Popen([java_path, r'-jar', jar_path, str(i)], stdout=outfile_w, stdin=PIPE, stderr=subprocess.STDOUT, bufsize=0)
-apps[i].stdin.write(bytes("initialize, localhost, " +  str(10000+i) + ", " + str(oilAmount) + "\n", 'utf-8'))
+apps[i] = subprocess.Popen([java_path, r'-jar', jar_path, str(i)], stdout=outfile_w, stdin=PIPE,
+                           stderr=subprocess.STDOUT, bufsize=0)
+apps[i].stdin.write(bytes("initialize, localhost, " + str(10000 + i) + ", " + str(oilAmount) + "\n", 'utf-8'))
 apps[i].stdin.write(bytes("restore\n", 'utf-8'))
 apps[i].stdin.flush()
 print("Restore command sent to process " + str(i))
@@ -65,9 +74,9 @@ outfile_w.close()
 print("Sleeping...")
 time.sleep(15)
 for i in range(0, max_nodes):
-     apps[i].stdin.write(bytes("disconnect\n", 'utf-8'))
-     print("Disconnect command sent to process " + str(i))
-     time.sleep(1)
+    apps[i].stdin.write(bytes("disconnect\n", 'utf-8'))
+    print("Disconnect command sent to process " + str(i))
+    time.sleep(1)
 
 ### KILL PROCESSES ###
 print("Sleeping...")

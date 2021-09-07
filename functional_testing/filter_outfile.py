@@ -1,6 +1,6 @@
 import re
 
-outfile_r = open('outfile.txt', 'r')
+outfile_r = open('outfile', 'r')
 filtered_r = open('filtered_outfile.txt', 'w')
 
 lines = outfile_r.readlines()
