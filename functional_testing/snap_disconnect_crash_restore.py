@@ -16,17 +16,17 @@ apps[i].stdin.flush()
 print("Snapshot command sent to process " + str(i))
 time.sleep(5)
 
-### JOIN ###
-new_app = create_app(outfile_w, initial_port + max_nodes, max_nodes, 1000)  # should be APP40 in the logs
-new_app.stdin.write(bytes("join, localhost, " + str(initial_port) + "\n", 'utf-8'))
-new_app.stdin.flush()
-print("Initialized new node " + str(initial_port+max_nodes))
+### DISCONNECT ###
+i = randrange(max_nodes)
+apps[i].stdin.write(b"disconnect\n")
+apps[i].stdin.flush()
+print("Disconnected node " + str(i))
 time.sleep(5)
 
 ### CRASH ###
 i = randrange(max_nodes)
 apps[i].kill()
-time.sleep(0.05)
+time.sleep(10)
 
 ### RESTORE ###
 apps[i] = subprocess.Popen([java_path, r'-jar', jar_path, str(i)], stdout=outfile_w, stdin=PIPE, stderr=subprocess.STDOUT, bufsize=0)
