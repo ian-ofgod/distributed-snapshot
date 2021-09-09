@@ -166,6 +166,8 @@ public class OilWell implements AppConnector<OilCargo, Integer> {
                 logger.info("################################################");
             } catch (IOException | ClassNotFoundException | RestoreAlreadyInProgress | NotBoundException | RestoreInProgress | RestoreNotPossible e) {
                 logger.warn("Cannot restore snapshot");
+            } catch (OperationForbidden e) {
+                logger.info(e.getMessage());
             }
         } else logger.info("You must first initialize your oil well!");
     }

@@ -317,6 +317,9 @@ public class DistributedSnapshot<StateType, MessageType> {
             if (remoteImplementation.nodeState == NodeState.RESTORING)
                 throw new RestoreInProgress("A restore is in progress, please wait until node is ready");
 
+            if (remoteImplementation.nodeState != NodeState.DETACHED)
+                throw new OperationForbidden("You cannot restore a snapshot while connected to a network");
+
             int snapshotToRestore = Storage.getLastSnapshotId(remoteImplementation.hostname, remoteImplementation.port);
 
             // we set our node to the not-ready state and restore our connections and state according to our snapshot

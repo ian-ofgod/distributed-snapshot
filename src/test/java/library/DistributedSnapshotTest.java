@@ -137,7 +137,11 @@ public class DistributedSnapshotTest {
         });
 
         //we restore the snapshot that we made
-        apps.get(0).snapshotLibrary.restoreLastSnapshot();
+        try {
+            apps.get(0).snapshotLibrary.restoreLastSnapshot();
+        } catch (OperationForbidden e) {
+            e.printStackTrace();
+        }
         Thread.sleep(200);
 
         //at this point we should be able to see the same state of the previous setup
@@ -361,7 +365,11 @@ public class DistributedSnapshotTest {
 
 
         //we restore the snapshot that we made
-        apps.get(0).snapshotLibrary.restoreLastSnapshot();
+        try {
+            apps.get(0).snapshotLibrary.restoreLastSnapshot();
+        } catch (OperationForbidden e) {
+            e.printStackTrace();
+        }
         Thread.sleep(500);
 
         printAppsState(apps);
@@ -441,7 +449,11 @@ public class DistributedSnapshotTest {
         System.out.println(apps.get(12).state.appId);
 
         //we restore the snapshot that we made
-        apps.get(2).snapshotLibrary.restoreLastSnapshot(); // localhost:11002
+        try {
+            apps.get(2).snapshotLibrary.restoreLastSnapshot(); // localhost:11002
+        } catch (OperationForbidden e) {
+            e.printStackTrace();
+        }
         Thread.sleep(2000);
 
         //at this point we should be able to see the same state of the previous setup
