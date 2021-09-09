@@ -279,9 +279,12 @@ public class DistributedSnapshot<StateType, MessageType> {
                 remoteImplementation.nodeStateLock.readLock().unlock();
             }
             remoteImplementation.nodeStateLock.writeLock().lock();
+            remoteImplementation.nodeSnapshotLock.writeLock().lock();
             try {
-                remoteImplementation.nodeState = NodeState.DETACHED;
+                if (remoteImplementation.remoteNodes.size()==0)
+                    remoteImplementation.nodeState = NodeState.DETACHED;
             } finally {
+                remoteImplementation.nodeSnapshotLock.writeLock().unlock();
                 remoteImplementation.nodeStateLock.writeLock().unlock();
             }
             distributedSnapshotLock.writeLock().unlock();
@@ -308,7 +311,7 @@ public class DistributedSnapshot<StateType, MessageType> {
      * @throws RestoreNotPossible thrown if the restore was not possible, reason specified in the exception message (for example a node is no more reachable)
      * @throws ClassNotFoundException thrown when the storage facility is not able to reconstruct the Snapshot from the file
      */
-    public void restoreLastSnapshot() throws RestoreAlreadyInProgress, IOException, NotBoundException, RestoreInProgress, RestoreNotPossible, ClassNotFoundException {
+    public void restoreLastSnapshot() throws RestoreAlreadyInProgress, IOException, NotBoundException, RestoreInProgress, RestoreNotPossible, ClassNotFoundException, OperationForbidden {
         System.out.println("["+ remoteImplementation.hostname+":"+ remoteImplementation.port+"] INITIATING RESTORE LAST SNAPSHOT #######################");
         distributedSnapshotLock.writeLock().lock();
         remoteImplementation.nodeStateLock.writeLock().lock();

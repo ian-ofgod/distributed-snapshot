@@ -199,6 +199,15 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
         } finally {
             nodeStateLock.readLock().unlock();
         }
+        nodeStateLock.writeLock().lock();
+        nodeSnapshotLock.writeLock().lock();
+        try {
+            if (remoteNodes.size()==0)
+                nodeState = NodeState.DETACHED;
+        } finally {
+            nodeSnapshotLock.writeLock().unlock();
+            nodeStateLock.writeLock().unlock();
+        }
     }
 
 
