@@ -38,7 +38,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     protected StateType currentState;
 
     /**
-     * Lock object for currentState variable
+     * Lock-object for currentState variable
      * */
     protected final Object currentStateLock = new Object();
 
@@ -357,7 +357,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
     }
 
     /**
-     * This methods retrieve the RemoteNode object associated to the hostname/port couple by
+     * This method retrieve the RemoteNode object associated to the hostname/port couple by
      * performing a lookup in the list of stored RemoteNode objects, since each one
      * contains the hostname/port as attributes. The association RemoteNode and hostname/port is unique
      * @param hostname the hostname of the Remote Node to look up
@@ -373,7 +373,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
 
     /**
      * This method checks if the same marker has been received by all nodes connected to the current node.
-     * If all connected nodes have send a specific marker, it means that the related snapshot is over
+     * If all connected nodes have sent a specific marker, it means that the related snapshot is over
      * @param snapshotId the unique snapshot identifier (i.e. marker) to check
      * */
     private boolean receivedMarkerFromAllLinks(int snapshotId) {

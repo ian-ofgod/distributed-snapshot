@@ -72,6 +72,7 @@ public class DistributedSnapshot<StateType, MessageType> {
      * @throws RemoteException communication-related exception that may occur during remote calls
      * @throws NotBoundException thrown if an attempt is made to lookup or unbind in the registry a name that has no associated binding.
      * @throws NotInitialized thrown if an attempt to join the network is made before calling the init method of the library
+     * @throws OperationForbidden thrown if an attempt to join the network is made through the node itself
      */
     public ArrayList<Entity> joinNetwork(String hostname, int port) throws RemoteException, NotBoundException, NotInitialized, OperationForbidden {
         distributedSnapshotLock.writeLock().lock();
@@ -125,6 +126,7 @@ public class DistributedSnapshot<StateType, MessageType> {
      * @throws NotInitialized this instance hasn't been initialized, you must do it first
      * @throws SnapshotInterruptException it's not possible to remove a node when a snapshot is running
      * @throws RestoreInProgress thrown if a restore of a snapshot is in progress and the user tries to send a message
+     * @throws OperationForbidden thrown if an attempt to send a message to the node itself is made
      */
     public void sendMessage(String hostname, int port, MessageType message) throws RemoteNodeNotFound, RemoteException, NotBoundException, NotInitialized, SnapshotInterruptException, RestoreInProgress, OperationForbidden {
         distributedSnapshotLock.readLock().lock();
@@ -174,6 +176,7 @@ public class DistributedSnapshot<StateType, MessageType> {
      * @param state the object to save
      * @throws StateUpdateException something went wrong making a deep copy
      * @throws RestoreInProgress thrown if a restore of a snapshot is in progress and the user tries to update the state of the node
+     * @throws NotInitialized thrown if an attempt to update the state is made before the node is correctly initialized
      * */
     public void updateState(StateType state) throws StateUpdateException, RestoreInProgress, NotInitialized {
         remoteImplementation.nodeStateLock.readLock().lock();
@@ -238,10 +241,10 @@ public class DistributedSnapshot<StateType, MessageType> {
     /**
      * This is method is used to disconnect from the mesh network.
      * It does so by invoking removeMe on all connected nodes.
-     * @throws RemoteException communication-related exception that may occur during remote calls
      * @throws SnapshotInterruptException it's not possible to remove a node when a snapshot is running
      * @throws NotInitialized this instance hasn't been initialized, you must do it first
      * @throws OperationForbidden it is not possible to remove a connection while a snapshot is running
+     * @throws RestoreInProgress thrown if an attempt to disconnect this node from the network is made while a restore is in progress
      * */
     public void disconnect() throws OperationForbidden, SnapshotInterruptException, NotInitialized, RestoreInProgress {
         distributedSnapshotLock.writeLock().lock();
@@ -376,6 +379,8 @@ public class DistributedSnapshot<StateType, MessageType> {
      * @param port the port of the node to remove
      * @throws RemoteException communication-related exception that may occur during remote calls
      * @throws RestoreInProgress thrown when trying to remove a node while a snapshot restore is in progress
+     * @throws NotInitialized thrown if an attempt to ask to remove a node is made before this node is correctly initialized
+     * @throws SnapshotInterruptException thrown if an attempt to remove a node (change in the network topology) is made while a snapshot is running
      */
     public void removeNode(String hostname, int port) throws RemoteException, RestoreInProgress, NotInitialized, SnapshotInterruptException {
         distributedSnapshotLock.writeLock().lock();
