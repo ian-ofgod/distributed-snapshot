@@ -25,11 +25,6 @@ class Storage {
     private static int COUNTER = 0;
 
     /**
-     * Constant containing the extension of the files used to store snapshots on disk
-     * */
-    private static final String EXTENSION = ".data";
-
-    /**
      * Method to create a folder for the snapshots to be saved
      * @param folderName the name of the folder to create
      * */
@@ -108,7 +103,6 @@ class Storage {
                                 String[] tokens = filename.split("_");
                                 String ip = tokens[0];
                                 int port = Integer.parseInt(tokens[1]);
-                                int msg_idx = Integer.parseInt(tokens[tokens.length-1].substring(0,1));
                                 Entity sender = new Entity(ip,port);
                                 FileInputStream fos = new FileInputStream(folderName + filename);
                                 ObjectInputStream oos = new ObjectInputStream(fos);
