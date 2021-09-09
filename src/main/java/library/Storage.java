@@ -72,7 +72,18 @@ class Storage {
             }
 
         }
-        return allSnaps.get(Collections.max(allSnaps.keySet()));
+        Integer max_key = -1, max_snapshotId=-1;
+
+        for (HashMap.Entry<Integer, Integer> entry : allSnaps.entrySet()) {
+            Integer key = entry.getKey();
+            Integer snapshotId = entry.getValue();
+            if(key>max_key) {
+                max_key = key;
+                max_snapshotId = snapshotId;
+            }
+        }
+
+        return max_snapshotId;
     }
 
     public synchronized static <StateType, MessageType> Snapshot<StateType, MessageType> readFile(int snapshotId, String currentHostname, int currentPort) throws IOException, ClassNotFoundException {
