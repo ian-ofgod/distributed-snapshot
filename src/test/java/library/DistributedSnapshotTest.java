@@ -369,8 +369,9 @@ public class DistributedSnapshotTest {
 
         //we restore the snapshot that we made
         try {
+            apps.get(0).snapshotLibrary.disconnect();
             apps.get(0).snapshotLibrary.restoreLastSnapshot();
-        } catch (OperationForbidden e) {
+        } catch (OperationForbidden | SnapshotInterruptException e) {
             e.printStackTrace();
         }
         Thread.sleep(500);
