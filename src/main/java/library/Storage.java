@@ -10,6 +10,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.logging.Logger;
 
 /**
  * This class provides static methods to handle the storage of snapshots on disk.
@@ -143,6 +144,10 @@ class Storage {
         createFolder(folderName, currentHostname, currentPort);
 
         try {
+            System.out.println("####################################################");
+            System.out.println("["+currentHostname+":"+currentPort+"] oilAmount inside of the snapshot: "+state.toString());
+            System.out.println("####################################################");
+
             FileOutputStream fos = new FileOutputStream(folderName+"state.ser");
             ObjectOutputStream oos = new ObjectOutputStream(fos);
             oos.writeObject(state);
