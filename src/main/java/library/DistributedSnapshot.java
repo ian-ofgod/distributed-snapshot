@@ -43,8 +43,9 @@ public class DistributedSnapshot<StateType, MessageType> {
      */
     public void init(String yourHostname, int rmiRegistryPort, AppConnector<MessageType, StateType> appConnector) throws RemoteException, AlreadyBoundException, AlreadyInitialized {
         distributedSnapshotLock.writeLock().lock();
+        remoteImplementation.nodeStateLock.writeLock().lock();
         try {
-            if (remoteImplementation.appConnector != null)
+            if (remoteImplementation.nodeState != NodeState.STARTED)
                 throw new AlreadyInitialized("You are trying to initialize an instance that is already initialized");
 
             remoteImplementation.hostname = yourHostname;
@@ -54,10 +55,10 @@ public class DistributedSnapshot<StateType, MessageType> {
             Registry registry = LocateRegistry.createRegistry(remoteImplementation.port);
             registry.bind("RemoteInterface", stub);
 
-            //assignment done here and note above so that if a RemoteException is thrown
-            // the appConnector will still result as unassigned
             remoteImplementation.appConnector = appConnector;
+            remoteImplementation.nodeState = NodeState.DETACHED;
         } finally {
+            remoteImplementation.nodeStateLock.writeLock().unlock();
             distributedSnapshotLock.writeLock().unlock();
         }
     }
@@ -71,14 +72,23 @@ public class DistributedSnapshot<StateType, MessageType> {
      * @throws RemoteException communication-related exception that may occur during remote calls
      * @throws NotBoundException thrown if an attempt is made to lookup or unbind in the registry a name that has no associated binding.
      * @throws NotInitialized thrown if an attempt to join the network is made before calling the init method of the library
+     * @throws OperationForbidden thrown if an attempt to join the network is made through the node itself
      */
-    public ArrayList<Entity> joinNetwork(String hostname, int port) throws RemoteException, NotBoundException, NotInitialized {
+    public ArrayList<Entity> joinNetwork(String hostname, int port) throws RemoteException, NotBoundException, NotInitialized, OperationForbidden {
         distributedSnapshotLock.writeLock().lock();
+        remoteImplementation.nodeStateLock.writeLock().lock();
         try {
-            if (remoteImplementation.appConnector == null)
-                throw new NotInitialized("Before connecting to (hostname " + hostname + "and port " + port + ") you must initialize this instance");
-            if (!Objects.equals(hostname, this.remoteImplementation.hostname) || port != this.remoteImplementation.port) {
-                ArrayList<Entity> networkNodes;
+            if (remoteImplementation.nodeState == NodeState.STARTED)
+                throw new NotInitialized("You must initialize the library and join a network before trying to disconnect from it");
+            if (remoteImplementation.nodeState != NodeState.DETACHED)
+                throw new OperationForbidden("You are already connected to a network!");
+
+            if (Objects.equals(hostname, this.remoteImplementation.hostname) && port == this.remoteImplementation.port)
+                throw new OperationForbidden("You cannot join yourself");
+
+            remoteImplementation.nodeSnapshotLock.writeLock().lock();
+            ArrayList<Entity> networkNodes;
+            try {
                 Registry registry = LocateRegistry.getRegistry(hostname, port);
                 RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
                 networkNodes = remoteInterface.getConnections();
@@ -93,11 +103,14 @@ public class DistributedSnapshot<StateType, MessageType> {
                         nodeRemoteInterface.addMeBack(remoteImplementation.hostname, remoteImplementation.port);
                     }
                 }
-                networkNodes.add(new Entity(hostname, port));
-                return networkNodes;
+            } finally {
+                remoteImplementation.nodeSnapshotLock.writeLock().unlock();
             }
-            return null;
+            networkNodes.add(new Entity(hostname, port));
+            remoteImplementation.nodeState = NodeState.READY;
+            return networkNodes;
         } finally {
+            remoteImplementation.nodeStateLock.writeLock().unlock();
             distributedSnapshotLock.writeLock().unlock();
         }
     }
@@ -113,29 +126,46 @@ public class DistributedSnapshot<StateType, MessageType> {
      * @throws NotInitialized this instance hasn't been initialized, you must do it first
      * @throws SnapshotInterruptException it's not possible to remove a node when a snapshot is running
      * @throws RestoreInProgress thrown if a restore of a snapshot is in progress and the user tries to send a message
+     * @throws OperationForbidden thrown if an attempt to send a message to the node itself is made
      */
-    public void sendMessage(String hostname, int port, MessageType message) throws RemoteNodeNotFound, RemoteException, NotBoundException, NotInitialized, SnapshotInterruptException, RestoreInProgress {
+    public void sendMessage(String hostname, int port, MessageType message) throws RemoteNodeNotFound, RemoteException, NotBoundException, NotInitialized, SnapshotInterruptException, RestoreInProgress, OperationForbidden {
         distributedSnapshotLock.readLock().lock();
-
-        remoteImplementation.nodeReadyLock.readLock().lock();
         try {
-            if (!remoteImplementation.nodeReady) {
-                throw new RestoreInProgress("A restore is in progress, please wait until node is ready");
+            remoteImplementation.nodeStateLock.readLock().lock();
+            try {
+                if (remoteImplementation.nodeState == NodeState.STARTED || remoteImplementation.nodeState == NodeState.DETACHED) {
+                    throw new NotInitialized("You must initialize the instance and connect to a network before sending any message");
+                }
+                if (remoteImplementation.nodeState == NodeState.RESTORING) {
+                    throw new RestoreInProgress("A restore is in progress, please wait until node is ready");
+                }
+            } finally {
+                remoteImplementation.nodeStateLock.readLock().unlock();
             }
-        }finally {
-            remoteImplementation.nodeReadyLock.readLock().unlock();
-        }
-
-        try {
-            if (remoteImplementation.appConnector == null) throw new NotInitialized("You must initialize the instance and connect to hostname: " + hostname +
-                    "and port " + port +
-                    "before sending a message");
-
-            //send the message only if we are not sending the message to this node
-            if(!(hostname.equals(this.remoteImplementation.hostname) && port==this.remoteImplementation.port)){
-                getRemoteInterface(hostname, port).receiveMessage(remoteImplementation.hostname, remoteImplementation.port, message);
-            }else{
-                this.remoteImplementation.appConnector.handleIncomingMessage(hostname, port, message);
+            RemoteInterface<MessageType> remoteInterface;
+            remoteImplementation.nodeSnapshotLock.writeLock().lock();
+            try {
+                // send the message only if we are not sending the message to this node
+                if (!(hostname.equals(this.remoteImplementation.hostname) && port==this.remoteImplementation.port)) {
+                    remoteInterface = getRemoteInterface(hostname, port);
+                } else {
+                    throw new OperationForbidden("You cannot send a message to yourself");
+                }
+            } finally {
+                remoteImplementation.nodeSnapshotLock.writeLock().unlock();
+            }
+            try {
+                remoteInterface.receiveMessage(remoteImplementation.hostname, remoteImplementation.port, message);
+            } catch (RemoteException e) {
+                Registry nodeRegistry = LocateRegistry.getRegistry(hostname, port);
+                RemoteInterface<MessageType> nodeRemoteInterface = (RemoteInterface<MessageType>) nodeRegistry.lookup("RemoteInterface");
+                remoteImplementation.nodeSnapshotLock.writeLock().lock();
+                try {
+                    this.remoteImplementation.getRemoteNode(hostname, port).remoteInterface = nodeRemoteInterface; //set the new remoteInterface
+                } finally {
+                    remoteImplementation.nodeSnapshotLock.writeLock().unlock();
+                }
+                nodeRemoteInterface.receiveMessage(remoteImplementation.hostname, remoteImplementation.port, message);
             }
         } finally {
             distributedSnapshotLock.readLock().unlock();
@@ -146,22 +176,28 @@ public class DistributedSnapshot<StateType, MessageType> {
      * @param state the object to save
      * @throws StateUpdateException something went wrong making a deep copy
      * @throws RestoreInProgress thrown if a restore of a snapshot is in progress and the user tries to update the state of the node
+     * @throws NotInitialized thrown if an attempt to update the state is made before the node is correctly initialized
      * */
-    public void updateState(StateType state) throws StateUpdateException, RestoreInProgress {
-        remoteImplementation.nodeReadyLock.readLock().lock();
+    public void updateState(StateType state) throws StateUpdateException, RestoreInProgress, NotInitialized {
+        remoteImplementation.nodeStateLock.readLock().lock();
         try {
-            if (!remoteImplementation.nodeReady) {
+            if (remoteImplementation.nodeState == NodeState.STARTED) {
+                throw new NotInitialized("You must initialize the instance before saving the state");
+            }
+            if (remoteImplementation.nodeState == NodeState.RESTORING) {
                 throw new RestoreInProgress("A restore is in progress, please wait until node is ready");
             }
             synchronized (remoteImplementation.currentStateLock) {
                 try {
                     this.remoteImplementation.currentState = deepClone(state); // assign currentState a deepCopy of the state provided by the user
                 } catch (IOException | ClassNotFoundException e) {
-                    throw new StateUpdateException("Problem in updating the state");
+                    StateUpdateException sue = new StateUpdateException("Problem in updating the state");
+                    sue.setStackTrace(e.getStackTrace());
+                    throw sue;
                 }
             }
         } finally {
-            remoteImplementation.nodeReadyLock.readLock().unlock();
+            remoteImplementation.nodeStateLock.readLock().unlock();
         }
     }
 
@@ -175,55 +211,79 @@ public class DistributedSnapshot<StateType, MessageType> {
      * */
     public void initiateSnapshot() throws IOException, DoubleMarkerException, UnexpectedMarkerReceived, NotInitialized, RestoreInProgress {
         distributedSnapshotLock.writeLock().lock();
-        remoteImplementation.nodeReadyLock.readLock().lock();
+        remoteImplementation.nodeStateLock.readLock().lock();
         try {
-            if (remoteImplementation.appConnector == null)
-                throw new NotInitialized("You must initialize the instance before starting a snapshot");
-            if (!remoteImplementation.nodeReady)
+            if (remoteImplementation.nodeState == NodeState.STARTED || remoteImplementation.nodeState == NodeState.DETACHED)
+                throw new NotInitialized("You must initialize the instance and connect to a network before starting a snapshot");
+            if (remoteImplementation.nodeState == NodeState.RESTORING)
                 throw new RestoreInProgress("A restore is in progress, please wait until node is ready");
-
+            remoteImplementation.nodeSnapshotLock.writeLock().lock();
             int snapshotId;
-            String snapshotIdString = remoteImplementation.hostname + remoteImplementation.port + remoteImplementation.localSnapshotCounter;
-            snapshotId = snapshotIdString.hashCode();
-            remoteImplementation.localSnapshotCounter++;
-            Snapshot<StateType, MessageType> snap = new Snapshot<>(snapshotId, remoteImplementation.currentState, remoteImplementation.remoteNodes);
-            remoteImplementation.runningSnapshots.add(snap);
+            try {
+                String snapshotIdString = remoteImplementation.hostname + remoteImplementation.port + remoteImplementation.localSnapshotCounter;
+                snapshotId = snapshotIdString.hashCode();
+                remoteImplementation.localSnapshotCounter++;
+                Snapshot<StateType, MessageType> snap = new Snapshot<>(snapshotId, remoteImplementation.currentState, remoteImplementation.remoteNodes);
+                remoteImplementation.runningSnapshots.add(snap);
+            } finally {
+                remoteImplementation.nodeSnapshotLock.writeLock().unlock();
+            }
             // Assumption from the text: no change in the network topology is allowed during a snapshot!
             for (RemoteNode<MessageType> remoteNode : remoteImplementation.remoteNodes) {
                 remoteNode.remoteInterface.receiveMarker(remoteImplementation.hostname, remoteImplementation.port, remoteImplementation.hostname, remoteImplementation.port, snapshotId);
             }
         } finally {
+            remoteImplementation.nodeStateLock.readLock().unlock();
             distributedSnapshotLock.writeLock().unlock();
-            remoteImplementation.nodeReadyLock.readLock().unlock();
         }
     }
 
     /**
      * This is method is used to disconnect from the mesh network.
      * It does so by invoking removeMe on all connected nodes.
-     * @throws RemoteException communication-related exception that may occur during remote calls
      * @throws SnapshotInterruptException it's not possible to remove a node when a snapshot is running
      * @throws NotInitialized this instance hasn't been initialized, you must do it first
      * @throws OperationForbidden it is not possible to remove a connection while a snapshot is running
+     * @throws RestoreInProgress thrown if an attempt to disconnect this node from the network is made while a restore is in progress
      * */
-    public void disconnect() throws OperationForbidden, SnapshotInterruptException, RemoteException, NotInitialized {
+    public void disconnect() throws OperationForbidden, SnapshotInterruptException, NotInitialized, RestoreInProgress {
         distributedSnapshotLock.writeLock().lock();
+        remoteImplementation.nodeStateLock.writeLock().lock();
         try {
-            if (remoteImplementation.appConnector == null)
-                throw new NotInitialized("You must initialize the library before trying to disconnect from the network");
-
-            // Since no change in the network topology is allowed during a snapshot
-            // this function WON'T BE CALLED if any snapshot is running THIS IS AN ASSUMPTION FROM THE ASSIGNMENT
-            if (!remoteImplementation.runningSnapshots.isEmpty()) {
-                throw new OperationForbidden("Unable to disconnect from the network while snapshots are running");
-            }
-            ArrayList<RemoteNode<MessageType>> toRemove = new ArrayList<>();
-            for (RemoteNode<MessageType> remoteNode : remoteImplementation.remoteNodes) {
-                remoteNode.remoteInterface.removeMe(remoteImplementation.hostname, remoteImplementation.port);
-                toRemove.add(remoteNode);
-            }
-            remoteImplementation.remoteNodes.removeAll(toRemove);
+            if (remoteImplementation.nodeState == NodeState.STARTED || remoteImplementation.nodeState == NodeState.DETACHED)
+                throw new NotInitialized("You must initialize the library and join a network before trying to disconnect from it");
+            if (remoteImplementation.nodeState == NodeState.RESTORING)
+                throw new RestoreInProgress("A restore is in progress, please wait until node is ready");
+            remoteImplementation.nodeState = NodeState.DISCONNECTING;
         } finally {
+            remoteImplementation.nodeStateLock.readLock().lock();
+            remoteImplementation.nodeStateLock.writeLock().unlock();
+            try {
+                remoteImplementation.nodeSnapshotLock.writeLock().lock();
+                try {
+                    // Since no change in the network topology is allowed during a snapshot
+                    // this function WON'T BE CALLED if any snapshot is running THIS IS AN ASSUMPTION FROM THE ASSIGNMENT
+                    if (!remoteImplementation.runningSnapshots.isEmpty()) {
+                        throw new OperationForbidden("Unable to disconnect from the network while snapshots are running");
+                    }
+                    for (RemoteNode<MessageType> remoteNode : remoteImplementation.remoteNodes) {
+                        try {
+                            remoteNode.remoteInterface.removeMe(remoteImplementation.hostname, remoteImplementation.port);
+                        } catch (RemoteException ignored) {}
+                    }
+                    remoteImplementation.remoteNodes = new ArrayList<>();
+                } finally {
+                    remoteImplementation.nodeSnapshotLock.writeLock().unlock();
+                }
+            } finally {
+                remoteImplementation.nodeStateLock.readLock().unlock();
+            }
+            remoteImplementation.nodeStateLock.writeLock().lock();
+            try {
+                remoteImplementation.nodeState = NodeState.DETACHED;
+            } finally {
+                remoteImplementation.nodeStateLock.writeLock().unlock();
+            }
             distributedSnapshotLock.writeLock().unlock();
         }
     }
@@ -251,21 +311,22 @@ public class DistributedSnapshot<StateType, MessageType> {
     public void restoreLastSnapshot() throws RestoreAlreadyInProgress, IOException, NotBoundException, RestoreInProgress, RestoreNotPossible, ClassNotFoundException {
         System.out.println("["+ remoteImplementation.hostname+":"+ remoteImplementation.port+"] INITIATING RESTORE LAST SNAPSHOT #######################");
         distributedSnapshotLock.writeLock().lock();
-        remoteImplementation.nodeReadyLock.writeLock().lock();
+        remoteImplementation.nodeStateLock.writeLock().lock();
+        remoteImplementation.nodeSnapshotLock.writeLock().lock();
         try {
-            if (!remoteImplementation.nodeReady)
+            if (remoteImplementation.nodeState == NodeState.RESTORING)
                 throw new RestoreInProgress("A restore is in progress, please wait until node is ready");
 
             int snapshotToRestore = Storage.getLastSnapshotId(remoteImplementation.hostname, remoteImplementation.port);
 
             // we set our node to the not-ready state and restore our connections and state according to our snapshot
-            this.remoteImplementation.nodeReady = false;
+            remoteImplementation.nodeState = NodeState.RESTORING;
             try {
                 this.remoteImplementation.restoreConnections(snapshotToRestore);
-            }catch (RestoreNotPossible e){
+            } catch (RestoreNotPossible e){
                 //if a restore is not possible we should restore the state of the node to ready=true
                 // by re-throwing the exception we let the user handle this case
-                this.remoteImplementation.nodeReady=true;
+                this.remoteImplementation.nodeState = NodeState.READY;
                 throw e;
             }
             this.remoteImplementation.restoreState(snapshotToRestore);
@@ -291,7 +352,7 @@ public class DistributedSnapshot<StateType, MessageType> {
             //       in this case the application would start as soon as the ready state is set to true,
             //       without restoring the incoming messages
             System.out.println("["+ remoteImplementation.hostname+":"+ remoteImplementation.port+"] SETTING nodeReady=true #######################");
-            this.remoteImplementation.nodeReady = true;
+            remoteImplementation.nodeState = NodeState.READY;
             for (RemoteNode<MessageType> remoteNode : this.remoteImplementation.remoteNodes) {
                 remoteNode.remoteInterface.setReady(true);
             }
@@ -304,8 +365,9 @@ public class DistributedSnapshot<StateType, MessageType> {
                 remoteNode.remoteInterface.restoreOldIncomingMessages(snapshotToRestore);
             }
         } finally {
+            remoteImplementation.nodeSnapshotLock.writeLock().unlock();
+            remoteImplementation.nodeStateLock.writeLock().unlock();
             distributedSnapshotLock.writeLock().unlock();
-            remoteImplementation.nodeReadyLock.writeLock().unlock();
         }
         System.out.println("["+ remoteImplementation.hostname+":"+ remoteImplementation.port+"] FINISHED RESTORE LAST SNAPSHOT #######################");
 
@@ -317,20 +379,29 @@ public class DistributedSnapshot<StateType, MessageType> {
      * @param port the port of the node to remove
      * @throws RemoteException communication-related exception that may occur during remote calls
      * @throws RestoreInProgress thrown when trying to remove a node while a snapshot restore is in progress
+     * @throws NotInitialized thrown if an attempt to ask to remove a node is made before this node is correctly initialized
+     * @throws SnapshotInterruptException thrown if an attempt to remove a node (change in the network topology) is made while a snapshot is running
      */
-    public void removeNode(String hostname, int port) throws RemoteException, RestoreInProgress {
+    public void removeNode(String hostname, int port) throws RemoteException, RestoreInProgress, NotInitialized, SnapshotInterruptException {
         distributedSnapshotLock.writeLock().lock();
-        remoteImplementation.nodeReadyLock.writeLock().lock();
+        remoteImplementation.nodeStateLock.readLock().lock();
         try {
-            if (!remoteImplementation.nodeReady)
+            if (remoteImplementation.nodeState == NodeState.RESTORING)
                 throw new RestoreInProgress("A restore is in progress, please wait until node is ready");
-            this.remoteImplementation.remoteNodes.remove(this.remoteImplementation.getRemoteNode(hostname, port));
-            for (RemoteNode<MessageType> remoteNode : this.remoteImplementation.remoteNodes) {
-                remoteNode.remoteInterface.forgetThisNode(hostname, port);
+            if (remoteImplementation.nodeState == NodeState.STARTED || remoteImplementation.nodeState == NodeState.DETACHED)
+                throw new NotInitialized("You must initialize the library and join a network before trying to disconnect a node from it");
+            remoteImplementation.nodeSnapshotLock.writeLock().lock();
+            try {
+                this.remoteImplementation.remoteNodes.remove(this.remoteImplementation.getRemoteNode(hostname, port));
+                for (RemoteNode<MessageType> remoteNode : this.remoteImplementation.remoteNodes) {
+                    remoteNode.remoteInterface.removeMe(hostname, port);
+                }
+            } finally {
+                remoteImplementation.nodeSnapshotLock.writeLock().unlock();
             }
         } finally {
+            remoteImplementation.nodeStateLock.readLock().unlock();
             distributedSnapshotLock.writeLock().unlock();
-            remoteImplementation.nodeReadyLock.writeLock().unlock();
         }
     }
 
@@ -368,17 +439,29 @@ public class DistributedSnapshot<StateType, MessageType> {
      * @param state The state provided by the user
      */
     private StateType deepClone(StateType state) throws IOException, ClassNotFoundException {
-        // First serializing the object and its state to memory using
-        // ByteArrayOutputStream instead of FileOutputStream.
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        ObjectOutputStream out = new ObjectOutputStream(bos);
-        out.writeObject(state);
+        ObjectOutputStream out = null;
+        ObjectInputStream in = null;
+        try {
+            // First serializing the object and its state to memory using
+            // ByteArrayOutputStream instead of FileOutputStream.
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            out = new ObjectOutputStream(bos);
+            out.writeObject(state);
+            out.flush();
 
-        // And then deserializing it from memory using ByteArrayOutputStream instead of FileInputStream.
-        // Deserialization process will create a new object with the same state as in the serialized object,
-        ByteArrayInputStream bis = new ByteArrayInputStream(bos.toByteArray());
-        ObjectInputStream in = new ObjectInputStream(bis);
-        return (StateType) in.readObject();
+            // And then deserializing it from memory using ByteArrayOutputStream instead of FileInputStream.
+            // Deserialization process will create a new object with the same state as in the serialized object,
+            ByteArrayInputStream bis = new ByteArrayInputStream(bos.toByteArray());
+            in = new ObjectInputStream(bis);
+            return (StateType) in.readObject();
+        } finally {
+            if (out != null) {
+                out.close();
+            }
+            if (in != null) {
+                in.close();
+            }
+        }
     }
 }
 

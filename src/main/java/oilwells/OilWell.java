@@ -28,7 +28,7 @@ public class OilWell implements AppConnector<OilCargo, Integer> {
     private int oilAmount = -1;
 
     /**
-     * Lock object for oilAmount variable
+     * Lock-object for oilAmount variable
      */
     private final Object oilAmountLock = new Object();
 
@@ -63,6 +63,10 @@ public class OilWell implements AppConnector<OilCargo, Integer> {
 
     /**
      * It is called to set the initial oil amount and set hostname and port inside the library
+     * @param hostname the hostname of this node
+     * @param port the port of this node
+     * @param oilAmount the initial oil amount
+     * @throws StateUpdateException thrown if an error occur during the update of the state
      */
     public void initialize(String hostname, int port, int oilAmount) throws StateUpdateException {
         try {
@@ -75,13 +79,15 @@ public class OilWell implements AppConnector<OilCargo, Integer> {
             logger.warn("Cannot initialize new node");
         } catch (AlreadyInitialized e) {
             logger.info("You have already initialized your node!");
-        } catch (RestoreInProgress restoreInProgress) {
-            restoreInProgress.printStackTrace();
-        }
+        } catch (RestoreInProgress e) {
+            logger.info(e.getMessage());
+        } catch (NotInitialized ignored) {}
     }
 
     /**
      * It is called to join an existing network of nodes
+     * @param hostname the hostname of the gateway used to join the network
+     * @param port the port of the gateway used to join the network
      */
     public void join(String hostname, int port) {
         if (oilAmount != -1) {
@@ -90,16 +96,18 @@ public class OilWell implements AppConnector<OilCargo, Integer> {
                     logger.info("Connecting to " + hostname + ":" + port + " to join a network");
                     try {
                         ArrayList<Entity> nodes = distributedSnapshot.joinNetwork(hostname, port);
-                        String connectedNodes = "";
+                        StringBuilder connectedNodes = new StringBuilder();
                         for (Entity entry : nodes) {
                             directConnections.add(new ConnectionDetails(entry.getHostname(), entry.getPort()));
-                            connectedNodes += ", " + entry.getHostname() + ":" + entry.getPort();
+                            connectedNodes.append(", ").append(entry.getHostname()).append(":").append(entry.getPort());
                         }
                         logger.info("Successfully connected to: " + connectedNodes.substring(2));
                     } catch (RemoteException | NotBoundException e) {
                         logger.warn("Error joining network through " + hostname + ":" + port);
                     } catch (NotInitialized notInitialized) {
                         logger.info("You must first initialize your oil well!");
+                    } catch (OperationForbidden operationForbidden) {
+                        logger.info(operationForbidden.getMessage());
                     }
                 } else logger.info("You are already connected to a network");
             }
@@ -116,11 +124,13 @@ public class OilWell implements AppConnector<OilCargo, Integer> {
                 try {
                     distributedSnapshot.disconnect();
                     directConnections.clear();
-                } catch (RemoteException | OperationForbidden | SnapshotInterruptException e) {
+                } catch (OperationForbidden | SnapshotInterruptException e) {
                     logger.warn("Cannot disconnect from the network");
                 } catch (NotInitialized notInitialized) {
                     logger.info("You must first initialize your oil well!");
-                    }
+                } catch (RestoreInProgress e) {
+                    logger.info(e.getMessage());
+                }
             }
         } else logger.info("You must first initialize your oil well!");
     }
@@ -138,8 +148,8 @@ public class OilWell implements AppConnector<OilCargo, Integer> {
                 logger.warn("Cannot complete snapshot");
             } catch (NotInitialized e) {
                 logger.info("You must first initialize your oil well!");
-            } catch (RestoreInProgress | IOException restoreInProgress) {
-                restoreInProgress.printStackTrace();
+            } catch (RestoreInProgress | IOException e) {
+                logger.info(e.getMessage());
             }
         } else logger.info("You must first initialize your oil well!");
     }
@@ -184,9 +194,9 @@ public class OilWell implements AppConnector<OilCargo, Integer> {
                         try {
                             distributedSnapshot.removeNode(randomWell.getHostname(), randomWell.getPort());
                             directConnections.remove(randomWell);
-                        } catch (RemoteException | RestoreInProgress ex) {
+                        } catch (RemoteException | RestoreInProgress | SnapshotInterruptException ex) {
                             logger.warn("Error removing node " + randomWell.getHostname() + ":" + randomWell.getPort());
-                        }
+                        } catch (NotInitialized ignored) {}
                     } catch (NotBoundException | SnapshotInterruptException e) {
                         logger.warn("Error sending oil cargo");
                     } catch (NotInitialized notInitialized) {
@@ -195,6 +205,8 @@ public class OilWell implements AppConnector<OilCargo, Integer> {
                         logger.info("Error in updating state");
                     } catch (RestoreInProgress restoreInProgress) {
                         logger.info("Cannot send oil while a restore is in progress");
+                    } catch (OperationForbidden operationForbidden) {
+                        logger.info(operationForbidden.getMessage());
                     }
                 }
             }
@@ -211,9 +223,11 @@ public class OilWell implements AppConnector<OilCargo, Integer> {
 
     @Override
     public void handleRestoredConnections(ArrayList<Entity> connections) {
-        directConnections.clear();
-        for (Entity entry : connections) {
-            directConnections.add(new ConnectionDetails(entry.getHostname(), entry.getPort()));
+        synchronized (directConnectionsLock) {
+            directConnections.clear();
+            for (Entity entry : connections) {
+                directConnections.add(new ConnectionDetails(entry.getHostname(), entry.getPort()));
+            }
         }
     }
 
@@ -229,7 +243,7 @@ public class OilWell implements AppConnector<OilCargo, Integer> {
                 logger.info("Received " + message.getOilAmount() + " oil from " + senderHostname + ":" + senderPort + ". New oilAmount = " + oilAmount);
             } catch (StateUpdateException | RestoreInProgress e) {
                 logger.warn("Received " + message.getOilAmount() + " oil from " + senderHostname + ":" + senderPort + ". Error updating state");
-            }
+            } catch (NotInitialized ignored) {}
         }
     }
 

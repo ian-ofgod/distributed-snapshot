@@ -34,7 +34,7 @@ public class DistributedSnapshotTest {
             try {
                 app.init(app);
                 app.snapshotLibrary.updateState(new State());
-            } catch (AlreadyBoundException | RemoteException | AlreadyInitialized | RestoreInProgress | StateUpdateException e) {
+            } catch (AlreadyBoundException | RemoteException | AlreadyInitialized | RestoreInProgress | StateUpdateException | NotInitialized e) {
                 e.printStackTrace();
             }
         });
@@ -42,11 +42,14 @@ public class DistributedSnapshotTest {
         // app[i] join network
         apps.forEach((app)-> {
             try {
-                app.snapshotLibrary.joinNetwork(apps.get(0).hostname,apps.get(0).port);
-            } catch (RemoteException | NotBoundException | NotInitialized e) {
+                if (!Objects.equals(app.hostname, apps.get(0).hostname) || app.port != apps.get(0).port)
+                    app.snapshotLibrary.joinNetwork(apps.get(0).hostname,apps.get(0).port);
+            } catch (RemoteException | NotBoundException | NotInitialized | OperationForbidden e) {
                 e.printStackTrace();
             }
         });
+        Thread.sleep(500);
+
 
         // each app will start sending messages to each other randomly
         ExecutorService executorService= Executors.newCachedThreadPool();
@@ -87,7 +90,7 @@ public class DistributedSnapshotTest {
                 app.init(app);
                 app.state=new State(app.port);
                 app.snapshotLibrary.updateState(app.state);
-            } catch (AlreadyBoundException | RemoteException | AlreadyInitialized | RestoreInProgress | StateUpdateException e) {
+            } catch (AlreadyBoundException | RemoteException | AlreadyInitialized | RestoreInProgress | StateUpdateException | NotInitialized e) {
                 e.printStackTrace();
             }
         });
@@ -95,11 +98,14 @@ public class DistributedSnapshotTest {
         // app[i] join network
         apps.forEach((app)-> {
             try {
-                app.snapshotLibrary.joinNetwork(apps.get(0).hostname,apps.get(0).port);
-            } catch (RemoteException | NotBoundException | NotInitialized e) {
+                if (!Objects.equals(app.hostname, apps.get(0).hostname) || app.port != apps.get(0).port)
+                    app.snapshotLibrary.joinNetwork(apps.get(0).hostname,apps.get(0).port);
+            } catch (RemoteException | NotBoundException | NotInitialized | OperationForbidden e) {
                 e.printStackTrace();
             }
         });
+        Thread.sleep(500);
+
 
         // start sending messages
         ExecutorService executorService= Executors.newCachedThreadPool();
@@ -118,7 +124,7 @@ public class DistributedSnapshotTest {
             try {
                 app.state=new State(-1);
                 app.snapshotLibrary.updateState(app.state);
-            } catch (RestoreInProgress | StateUpdateException e) {
+            } catch (RestoreInProgress | StateUpdateException | NotInitialized e) {
                 e.printStackTrace();
             }
         });
@@ -169,7 +175,7 @@ public class DistributedSnapshotTest {
                 app.init(app);
                 app.state = new State(app.port);
                 app.snapshotLibrary.updateState(app.state);
-            } catch (AlreadyBoundException | RemoteException | AlreadyInitialized | RestoreInProgress | StateUpdateException e) {
+            } catch (AlreadyBoundException | RemoteException | AlreadyInitialized | RestoreInProgress | StateUpdateException | NotInitialized e) {
                 e.printStackTrace();
             }
         });
@@ -177,11 +183,14 @@ public class DistributedSnapshotTest {
         // app[i] join network
         apps.forEach((app) -> {
             try {
-                app.snapshotLibrary.joinNetwork(apps.get(0).hostname, apps.get(0).port);
-            } catch (RemoteException | NotBoundException | NotInitialized e) {
+                if (!Objects.equals(app.hostname, apps.get(0).hostname) || app.port != apps.get(0).port)
+                    app.snapshotLibrary.joinNetwork(apps.get(0).hostname, apps.get(0).port);
+            } catch (RemoteException | NotBoundException | NotInitialized | OperationForbidden e) {
                 e.printStackTrace();
             }
         });
+        Thread.sleep(500);
+
 
         // make all the apps send messages to each other randomly
         ExecutorService executorService = Executors.newCachedThreadPool();
@@ -237,7 +246,7 @@ public class DistributedSnapshotTest {
     }
 
     @Test
-    public void restoreNotPossibleNodeNotAvailable() throws UnexpectedMarkerReceived, RestoreInProgress, DoubleMarkerException, NotInitialized, IOException, InterruptedException, OperationForbidden, SnapshotInterruptException, RestoreAlreadyInProgress, NotBoundException, RestoreNotPossible {
+    public void restoreNotPossibleNodeNotAvailable() throws UnexpectedMarkerReceived, RestoreInProgress, DoubleMarkerException, NotInitialized, IOException, InterruptedException, OperationForbidden, SnapshotInterruptException, NotBoundException {
         ArrayList<App<Message, State>> apps = new ArrayList<>();
         apps.add(new App<>("localhost", 11141));
         apps.add(new App<>("localhost", 11142));
@@ -251,7 +260,7 @@ public class DistributedSnapshotTest {
                 app.init(app);
                 app.state = new State(app.port);
                 app.snapshotLibrary.updateState(app.state);
-            } catch (AlreadyBoundException | RemoteException | AlreadyInitialized | RestoreInProgress | StateUpdateException e) {
+            } catch (AlreadyBoundException | RemoteException | AlreadyInitialized | RestoreInProgress | StateUpdateException | NotInitialized e) {
                 e.printStackTrace();
             }
         });
@@ -259,11 +268,13 @@ public class DistributedSnapshotTest {
         // app[i] join network
         apps.forEach((app) -> {
             try {
-                app.snapshotLibrary.joinNetwork(apps.get(0).hostname, apps.get(0).port);
-            } catch (RemoteException | NotBoundException | NotInitialized e) {
+                if (!Objects.equals(app.hostname, apps.get(0).hostname) || app.port != apps.get(0).port)
+                    app.snapshotLibrary.joinNetwork(apps.get(0).hostname, apps.get(0).port);
+            } catch (RemoteException | NotBoundException | NotInitialized | OperationForbidden e) {
                 e.printStackTrace();
             }
         });
+        Thread.sleep(500);
 
         // make all the apps send messages to each other randomly
         ExecutorService executorService= Executors.newCachedThreadPool();
@@ -314,7 +325,7 @@ public class DistributedSnapshotTest {
                 app.init(app);
                 app.state = new State(app.port);
                 app.snapshotLibrary.updateState(app.state);
-            } catch (AlreadyBoundException | RemoteException | AlreadyInitialized | RestoreInProgress | StateUpdateException e) {
+            } catch (AlreadyBoundException | RemoteException | AlreadyInitialized | RestoreInProgress | StateUpdateException | NotInitialized e) {
                 e.printStackTrace();
             }
         });
@@ -322,11 +333,14 @@ public class DistributedSnapshotTest {
         // app[i] join network
         apps.forEach((app) -> {
             try {
-                app.snapshotLibrary.joinNetwork(apps.get(0).hostname, apps.get(0).port);
-            } catch (RemoteException | NotBoundException | NotInitialized e) {
+                if (!Objects.equals(app.hostname, apps.get(0).hostname) || app.port != apps.get(0).port)
+                    app.snapshotLibrary.joinNetwork(apps.get(0).hostname, apps.get(0).port);
+            } catch (RemoteException | NotBoundException | NotInitialized | OperationForbidden e) {
                 e.printStackTrace();
             }
         });
+        Thread.sleep(500);
+
 
         // make all the apps send messages to each other randomly
         ExecutorService executorService= Executors.newCachedThreadPool();
@@ -368,7 +382,7 @@ public class DistributedSnapshotTest {
 
     @Test
     public void simpleRestoreWithMoreNodes() throws InterruptedException, UnexpectedMarkerReceived, RestoreInProgress, DoubleMarkerException, NotInitialized, IOException, RestoreAlreadyInProgress, NotBoundException, ClassNotFoundException, RestoreNotPossible {
-        int NUMBER_OF_NODES = 100;
+        int NUMBER_OF_NODES = 50;
 
         ArrayList<App<Message,State>> apps = new ArrayList<>();
         for(int i=0; i<NUMBER_OF_NODES; i++){
@@ -381,7 +395,7 @@ public class DistributedSnapshotTest {
                 app.init(app);
                 app.state=new State(app.port);
                 app.snapshotLibrary.updateState(app.state);
-            } catch (AlreadyBoundException | RemoteException | AlreadyInitialized | RestoreInProgress | StateUpdateException e) {
+            } catch (AlreadyBoundException | RemoteException | AlreadyInitialized | RestoreInProgress | StateUpdateException | NotInitialized e) {
                 e.printStackTrace();
             }
         });
@@ -389,11 +403,14 @@ public class DistributedSnapshotTest {
         // app[i] join network
         apps.forEach((app)-> {
             try {
-                app.snapshotLibrary.joinNetwork(apps.get(0).hostname,apps.get(0).port);
-            } catch (RemoteException | NotBoundException | NotInitialized e) {
+                if (!Objects.equals(app.hostname, apps.get(0).hostname) || app.port != apps.get(0).port)
+                    app.snapshotLibrary.joinNetwork(apps.get(0).hostname,apps.get(0).port);
+            } catch (RemoteException | NotBoundException | NotInitialized | OperationForbidden e) {
                 e.printStackTrace();
             }
         });
+        Thread.sleep(500);
+
 
         // start sending messages
         ExecutorService executorService= Executors.newCachedThreadPool();
@@ -411,7 +428,7 @@ public class DistributedSnapshotTest {
             try {
                 app.state=new State(-1);
                 app.snapshotLibrary.updateState(app.state);
-            } catch (RestoreInProgress | StateUpdateException e) {
+            } catch (RestoreInProgress | StateUpdateException | NotInitialized e) {
                 e.printStackTrace();
             }
         });
@@ -450,9 +467,7 @@ public class DistributedSnapshotTest {
     private void printAppsState(ArrayList<App<Message,State>> apps){
         System.out.println("----------------------------------");
         System.out.println("STATUS:");
-        apps.forEach((app)->{
-            System.out.println("["+app.hostname+":"+app.port+"] -> #MSG="+app.state.messages.size());
-        });
+        apps.forEach((app)-> System.out.println("["+app.hostname+":"+app.port+"] -> #MSG="+app.state.messages.size()));
         System.out.println("----------------------------------");
     }
 
@@ -463,16 +478,19 @@ public class DistributedSnapshotTest {
         try {
             while (true) {
                 send_to = apps.get(new Random().nextInt(apps.size())); // get a random app to send the message to
-                if (current != null && send_to != null && current.snapshotLibrary.remoteImplementation.remoteNodes.size() != 0) { // the thread that runs sendLoop on a removed node will be doing nothing
+                if (send_to!=current && current != null && send_to != null && current.snapshotLibrary.remoteImplementation.remoteNodes.size() != 0) { // the thread that runs sendLoop on a removed node will be doing nothing
                     try {
                         current.snapshotLibrary.sendMessage(send_to.hostname, send_to.port,
                                 new Message("MSG from [" + current.hostname + ":" + current.port + "]"));
                     } catch (RemoteException | NotBoundException | NotInitialized | SnapshotInterruptException e) {
+                        e.printStackTrace();
                         System.out.println("ANOTHER TYPE OF ERROR");
                     } catch (RestoreInProgress e) {
                         System.out.println("WAITING END OF RESTORE");
                     } catch (RemoteNodeNotFound e) {
                         System.out.println("[" + current.port + "] TRYING TO SEND A MESSAGE TO REMOVED NODE: " + send_to.port);
+                    } catch (OperationForbidden operationForbidden) {
+                        operationForbidden.printStackTrace();
                     }
                 }
                 Thread.sleep(100); // Answer to the Ultimate Question of Life, the Universe, and Everything.
@@ -512,7 +530,7 @@ class App<MessageType, StateType> implements AppConnector<MessageType, StateType
         state.messages.add((Message) o);
         try {
             snapshotLibrary.updateState(state);
-        } catch (StateUpdateException | RestoreInProgress e) {
+        } catch (StateUpdateException | RestoreInProgress | NotInitialized e) {
             e.printStackTrace();
         }
     }

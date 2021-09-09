@@ -3,6 +3,7 @@ package library;
 import org.apache.commons.io.FileUtils;
 
 import java.io.*;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -21,28 +22,22 @@ class Storage {
      * */
     private static final String FOLDER = "storage_folder";
 
-
     private static int COUNTER = 0;
 
     /**
-     * Constant containing the extension of the files used to store snapshots on disk
+     * Method to create a folder for the snapshots to be saved
+     * @param folderName the name of the folder to create
      * */
-    private static final String EXTENSION = ".data";
-
-
-
-    /**
-     * Method to create a folder for the snapshots to be saved.
-     *
-     * @param folderName*/
-    private  static void createFolder(String folderName, String currentIp, int currentPort) {
+    private  static void createFolder(String folderName, String currentHostname, int currentPort) {
         try {
             Path path = Paths.get(FOLDER);
             if (!Files.exists(path)) {
-                Files.createDirectory(path);
+                try {
+                    Files.createDirectory(path);
+                } catch (FileAlreadyExistsException ignored) {}
             }
 
-            path = Paths.get(FOLDER + "/" + currentIp + "_" + currentPort + "/");
+            path = Paths.get(FOLDER + "/" + currentHostname + "_" + currentPort + "/");
             if (!Files.exists(path)) {
                 Files.createDirectory(path);
             }
@@ -57,9 +52,15 @@ class Storage {
         }
     }
 
-    public static int getLastSnapshotId(String currentIp, int currentPort) {
+    /**
+     * Retrieve the id of the last snapshot available to be restored
+     * @param currentHostname the hostname of the node requesting this information
+     * @param currentPort the port of the node requesting this information
+     * @return the id of the last snapshot
+     */
+    public static int getLastSnapshotId(String currentHostname, int currentPort) {
 
-        File dir = new File(FOLDER + "/" + currentIp + "_" + currentPort + "/");
+        File dir = new File(FOLDER + "/" + currentHostname + "_" + currentPort + "/");
         File[] directoryListing = dir.listFiles();
         HashMap<Integer,Integer> allSnaps = new HashMap<>();
         if (directoryListing != null) {
@@ -73,10 +74,10 @@ class Storage {
         return allSnaps.get(Collections.max(allSnaps.keySet()));
     }
 
-    public synchronized static <StateType, MessageType> Snapshot<StateType, MessageType> readFile(int snapshotId, String currentIp, int currentPort) throws IOException, ClassNotFoundException {
+    public synchronized static <StateType, MessageType> Snapshot<StateType, MessageType> readFile(int snapshotId, String currentHostname, int currentPort) throws IOException, ClassNotFoundException {
         Snapshot<StateType, MessageType> loaded_snapshot = new Snapshot<>(snapshotId);
         loaded_snapshot.messages = new ArrayList<>();
-        File dir = new File(FOLDER + "/" + currentIp + "_" + currentPort + "/");
+        File dir = new File(FOLDER + "/" + currentHostname + "_" + currentPort + "/");
         File[] all_snaps = dir.listFiles();
         assert all_snaps != null;
         for (File folder : all_snaps){
@@ -102,7 +103,6 @@ class Storage {
                                 String[] tokens = filename.split("_");
                                 String ip = tokens[0];
                                 int port = Integer.parseInt(tokens[1]);
-                                int msg_idx = Integer.parseInt(tokens[tokens.length-1].substring(0,1));
                                 Entity sender = new Entity(ip,port);
                                 FileInputStream fos = new FileInputStream(folderName + filename);
                                 ObjectInputStream oos = new ObjectInputStream(fos);
@@ -111,12 +111,6 @@ class Storage {
                                 loaded_snapshot.messages.add(new Envelope<>(sender, message));
                             }
                         }
-                    } else {
-                        //TODO: controllare se serve gestire il caso in cui dir non e' davvero directory
-
-                /*Checking dir.isDirectory() above would not be sufficient
-                 to avoid race conditions with another process that deletes
-                 directories.*/
                     }
                 } catch (IOException e) {
                     System.err.println("Could not read file");
@@ -126,11 +120,7 @@ class Storage {
                     throw e;
                 }
             }
-
-
-
         }
-
         return loaded_snapshot;
     }
 
@@ -142,15 +132,15 @@ class Storage {
      * @param runningSnapshots the list of snapshots running on the current node
      * @param snapshotId the id of the snapshot that the user want to save on disk
      * */
-    public synchronized static <StateType, MessageType> void writeFile(ArrayList<Snapshot<StateType, MessageType>> runningSnapshots, int snapshotId, String currentIp, int currentPort) throws IOException {
+    public synchronized static <StateType, MessageType> void writeFile(ArrayList<Snapshot<StateType, MessageType>> runningSnapshots, int snapshotId, String currentHostname, int currentPort) throws IOException {
         COUNTER++;
         Snapshot<StateType, MessageType> toSaveSnapshot = runningSnapshots.stream().filter(snap -> snap.snapshotId==snapshotId).findFirst().orElse(null);
         assert toSaveSnapshot != null;
         StateType state = toSaveSnapshot.state;
         ArrayList<Envelope<MessageType>> envelopes = toSaveSnapshot.messages;
         ArrayList<Entity> connectedNodes = toSaveSnapshot.connectedNodes;
-        String folderName = buildFolderName(toSaveSnapshot,currentIp,currentPort);
-        createFolder(folderName, currentIp, currentPort);
+        String folderName = buildFolderName(toSaveSnapshot,currentHostname,currentPort);
+        createFolder(folderName, currentHostname, currentPort);
 
         try {
             FileOutputStream fos = new FileOutputStream(folderName+"state.ser");
@@ -165,9 +155,6 @@ class Storage {
                 oos = new ObjectOutputStream(fos);
                 oos.writeObject(envelope.message);
                 oos.close();
-
-                //TODO: controllare se non rimuovere it genera effettivamente una ConcurrentModificationException, nel cui caso bisogna clonare prima
-                //it.remove(); // avoids a ConcurrentModificationException
             }
             fos = new FileOutputStream(folderName+"connectedNodes.ser");
             oos = new ObjectOutputStream(fos);
@@ -187,12 +174,16 @@ class Storage {
      * @param <StateType> this is the type that will be saved as the state of the application
      * @param snapshot the snapshot for which the name is built, will be saved on disk
      * */
-    private static <StateType, MessageType> String buildFolderName(Snapshot<StateType, MessageType> snapshot, String currentIp, int currentPort) {
-        return FOLDER + "/" + currentIp + "_" + currentPort + "/" + COUNTER +
+    private static <StateType, MessageType> String buildFolderName(Snapshot<StateType, MessageType> snapshot, String currentHostname, int currentPort) {
+        return FOLDER + "/" + currentHostname + "_" + currentPort + "/" + COUNTER +
                 "_"+ snapshot.snapshotId + "/" ;
     }
 
 
+    /**
+     * Method to be called to clean the storage folder
+     * @throws IOException thrown if something went wrong (for example files still open by other processes)
+     */
     public synchronized static void cleanStorageFolder() throws IOException {
         if (new File(FOLDER).isDirectory()) {
             try {
