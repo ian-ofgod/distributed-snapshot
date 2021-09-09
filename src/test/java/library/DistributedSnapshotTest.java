@@ -138,8 +138,9 @@ public class DistributedSnapshotTest {
 
         //we restore the snapshot that we made
         try {
+            apps.get(0).snapshotLibrary.disconnect();
             apps.get(0).snapshotLibrary.restoreLastSnapshot();
-        } catch (OperationForbidden e) {
+        } catch (OperationForbidden | SnapshotInterruptException e) {
             e.printStackTrace();
         }
         Thread.sleep(200);
@@ -224,6 +225,7 @@ public class DistributedSnapshotTest {
         }
 
         //we restore the snapshot that we made
+        apps.get(1).snapshotLibrary.disconnect();
         apps.get(1).snapshotLibrary.restoreLastSnapshot();
         Thread.sleep(200);
 
@@ -298,6 +300,7 @@ public class DistributedSnapshotTest {
 
 
         //we check that the restore is not possible
+        apps.get(1).snapshotLibrary.disconnect();
         assertThrows(RestoreNotPossible.class, () -> apps.get(1).snapshotLibrary.restoreLastSnapshot());
         Thread.sleep(100);
 
@@ -374,8 +377,6 @@ public class DistributedSnapshotTest {
 
         printAppsState(apps);
 
-        //todo: assert
-
         executorService.shutdownNow();
         if (!executorService.awaitTermination(100, TimeUnit.MILLISECONDS)) {
             System.out.println("Still waiting...");
@@ -450,8 +451,9 @@ public class DistributedSnapshotTest {
 
         //we restore the snapshot that we made
         try {
+            apps.get(2).snapshotLibrary.disconnect();
             apps.get(2).snapshotLibrary.restoreLastSnapshot(); // localhost:11002
-        } catch (OperationForbidden e) {
+        } catch (OperationForbidden | SnapshotInterruptException e) {
             e.printStackTrace();
         }
         Thread.sleep(2000);

@@ -354,9 +354,6 @@ public class DistributedSnapshot<StateType, MessageType> {
 
 
             // now all the nodes can be set to the ready state
-            // TODO: what if the application is automated (like sending a message every X seconds)?
-            //       in this case the application would start as soon as the ready state is set to true,
-            //       without restoring the incoming messages
             System.out.println("["+ remoteImplementation.hostname+":"+ remoteImplementation.port+"] SETTING nodeReady=true #######################");
             remoteImplementation.nodeState = NodeState.READY;
             for (RemoteNode<MessageType> remoteNode : this.remoteImplementation.remoteNodes) {

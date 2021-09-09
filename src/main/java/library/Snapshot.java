@@ -61,7 +61,6 @@ class Snapshot<StateType, MessageType> {
     }
 
     /** CONSTRUCTOR needed for tests without storing connectedNodes.
-     * todo: check if we can remove it
      * Snapshot constructor that builds a full snapshot objects. Additionally to
      * the unique snapshot identifier, this constructor also stores the state of
      * the current node. The snapshot created with this constructor will be stored

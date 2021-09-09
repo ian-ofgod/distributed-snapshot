@@ -141,7 +141,6 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
                         executors.submit(() -> appConnector.handleIncomingMessage(senderHostname, senderPort, message));
                     } else {
                         // We issue the command to the remote node to remove us!
-                        //TODO: given the mesh topology should we keep this case? Or we should do the opposite (add the node)?
                         Registry registry = LocateRegistry.getRegistry(senderHostname, senderPort);
                         RemoteInterface<MessageType> remoteInterface = (RemoteInterface<MessageType>) registry.lookup("RemoteInterface");
                         remoteInterface.removeMe(this.hostname, this.port);
@@ -359,8 +358,7 @@ class RemoteImplementation<StateType, MessageType>  implements RemoteInterface<M
             try {
                 remoteNode.remoteInterface.receiveMarker(this.hostname, this.port, initiatorHostname, initiatorPort, snapshotId);
             }
-            catch (Exception e){
-                //TODO: this function is used as a lambda so the exception is not rethrown... should we asses this?
+            catch (Exception ignore){
             }
         }
     }
