@@ -39,7 +39,7 @@ class Snapshot<StateType, MessageType> {
     protected ArrayList<Envelope<MessageType>> messages = new ArrayList<>();
 
     /**
-     * Snapshot constructor that builds a full snapshot objects. Additionally to
+     * Snapshot constructor that builds a full snapshot objects. Additionally, to
      * the unique snapshot identifier, this constructor also stores the state of
      * the current node. The snapshot created with this constructor will be stored
      * in the current node.

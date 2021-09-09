@@ -28,7 +28,7 @@ public class OilWell implements AppConnector<OilCargo, Integer> {
     private int oilAmount = -1;
 
     /**
-     * Lock object for oilAmount variable
+     * Lock-object for oilAmount variable
      */
     private final Object oilAmountLock = new Object();
 
@@ -63,6 +63,10 @@ public class OilWell implements AppConnector<OilCargo, Integer> {
 
     /**
      * It is called to set the initial oil amount and set hostname and port inside the library
+     * @param hostname the hostname of this node
+     * @param port the port of this node
+     * @param oilAmount the initial oil amount
+     * @throws StateUpdateException thrown if an error occur during the update of the state
      */
     public void initialize(String hostname, int port, int oilAmount) throws StateUpdateException {
         try {
@@ -82,6 +86,8 @@ public class OilWell implements AppConnector<OilCargo, Integer> {
 
     /**
      * It is called to join an existing network of nodes
+     * @param hostname the hostname of the gateway used to join the network
+     * @param port the port of the gateway used to join the network
      */
     public void join(String hostname, int port) {
         if (oilAmount != -1) {
@@ -90,10 +96,10 @@ public class OilWell implements AppConnector<OilCargo, Integer> {
                     logger.info("Connecting to " + hostname + ":" + port + " to join a network");
                     try {
                         ArrayList<Entity> nodes = distributedSnapshot.joinNetwork(hostname, port);
-                        String connectedNodes = "";
+                        StringBuilder connectedNodes = new StringBuilder();
                         for (Entity entry : nodes) {
                             directConnections.add(new ConnectionDetails(entry.getHostname(), entry.getPort()));
-                            connectedNodes += ", " + entry.getHostname() + ":" + entry.getPort();
+                            connectedNodes.append(", ").append(entry.getHostname()).append(":").append(entry.getPort());
                         }
                         logger.info("Successfully connected to: " + connectedNodes.substring(2));
                     } catch (RemoteException | NotBoundException e) {

@@ -4,7 +4,7 @@ import java.util.ArrayList;
 
 /**
  * This interface must be implemented by the application in order to use the library.
- * It is composed of the methods that will be triggered by the library when an new event occurs.
+ * It is composed of the methods that will be triggered by the library when a new event occurs.
  * @param <MessageType> this is the type that will be exchanged as a message between nodes
  */
 public interface AppConnector<MessageType, StateType> {
@@ -26,7 +26,7 @@ public interface AppConnector<MessageType, StateType> {
     void handleNewConnection(String newConnectionHostname, int newConnectionPort);
 
     /**
-     * This is the method for the application to handle the removal of a connection asked from a another node of the network.
+     * This is the method for the application to handle the removal of a connection asked from a node of the network.
      * When creating a link the library establish a bi-directional communication between the two nodes, so this function
      * is called when the other party decides to remove the connection.
      * @param removeConnectionHostname the hostname of the node requesting the removal of the connection
