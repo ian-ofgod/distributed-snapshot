@@ -6,7 +6,7 @@ from env import *
 
 oilAmount = 1000
 apps = []
-max_nodes = 40
+max_nodes = 10
 
 outfile_w = open('outfile', 'w')
 

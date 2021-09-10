@@ -1,7 +1,7 @@
 from random import randrange
 from setup import *
 
-max_nodes = 40
+max_nodes = 10
 initial_port = 10000
 apps = []
 oilAmount= 1000
